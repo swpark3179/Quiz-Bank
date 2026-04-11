@@ -4,7 +4,7 @@
  * GitHub 저장소에 올라가 있는 마크다운 파일을 네트워크 통해 실시간으로 다운로드.
  */
 
-const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/main/assets/quiz-data';
+const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/master/assets/quiz-data';
 
 /** 메모리 캐시 (앱 세션 동안 재다운로드 방지) */
 const contentCache: Record<string, string> = {};

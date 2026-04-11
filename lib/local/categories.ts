@@ -5,7 +5,7 @@
  * 마치 Firebase처럼 동작하여, 앱을 재빌드하지 않아도 목록이 업데이트됩니다.
  */
 
-const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/main/assets/quiz-data';
+const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/master/assets/quiz-data';
 
 export interface Category {
   id: string;
