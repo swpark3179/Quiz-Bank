@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
 import type { Choice } from '@/lib/parser/quizParser';
 
@@ -19,7 +19,7 @@ const INDEX_SYMBOLS = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
 
 const stateStyles: Record<
   ChoiceState,
-  { container: object; symbol: object; text: object }
+  { container: ViewStyle; symbol: TextStyle; text: TextStyle }
 > = {
   default: {
     container: {
@@ -80,13 +80,13 @@ export function ChoiceItem({
       disabled={disabled || state === 'correct' || state === 'wrong' || state === 'reveal-correct'}
       style={[styles.container, s.container]}
     >
-      <View style={[styles.symbolBox, { borderColor: (s.container as any).borderColor }]}>
+      <View style={[styles.symbolBox, { borderColor: s.container.borderColor }]}>
         <Text style={[styles.symbol, s.symbol]}>{sym}</Text>
       </View>
       <View style={styles.textBox}>
         <Text style={[styles.label, s.text]}>{choice.label.replace(/^[①②③④⑤⑥⑦⑧\d]+\s*/, '')}</Text>
         {choice.description ? (
-          <Text style={[styles.description, { color: (s.text as any).color ?? Colors.text.secondary }]}>
+          <Text style={[styles.description, { color: s.text.color ?? Colors.text.secondary }]}>
             {choice.description}
           </Text>
         ) : null}
