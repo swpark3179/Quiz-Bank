@@ -97,14 +97,16 @@ export default function CategoryScreen() {
         {}
       );
 
-      const allWrongQuestions: QuizQuestion[] = [];
-      for (const [fileId, questionIds] of Object.entries(fileGroups)) {
-        const file = files.find((f) => f.id === fileId);
-        if (!file) continue;
-        const md = await fetchQuizMarkdown(file.storagePath);
-        const parsed = parseQuizMarkdown(md, fileId);
-        allWrongQuestions.push(...parsed.filter((q) => questionIds.includes(q.id)));
-      }
+      const retryQuestionsResults = await Promise.all(
+        Object.entries(fileGroups).map(async ([fileId, questionIds]) => {
+          const file = files.find((f) => f.id === fileId);
+          if (!file) return [];
+          const md = await fetchQuizMarkdown(file.storagePath);
+          const parsed = parseQuizMarkdown(md, fileId);
+          return parsed.filter((q) => questionIds.includes(q.id));
+        })
+      );
+      const allWrongQuestions = retryQuestionsResults.flat();
 
       const shuffled = shuffleQuiz(allWrongQuestions);
       router.push({
@@ -150,12 +152,13 @@ export default function CategoryScreen() {
         ? [selectedFileForSetup]
         : [];
 
-      const allQuestions: QuizQuestion[] = [];
-      for (const file of targetFiles) {
-        const md = await fetchQuizMarkdown(file.storagePath);
-        const parsed = parseQuizMarkdown(md, file.id);
-        allQuestions.push(...parsed);
-      }
+      const allQuestionsResults = await Promise.all(
+        targetFiles.map(async (file) => {
+          const md = await fetchQuizMarkdown(file.storagePath);
+          return parseQuizMarkdown(md, file.id);
+        })
+      );
+      const allQuestions = allQuestionsResults.flat();
 
       const shuffled = shuffleQuiz(allQuestions, options.count === 'all' ? undefined : options.count);
 
