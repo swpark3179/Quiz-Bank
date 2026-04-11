@@ -1,46 +1,42 @@
 /**
- * 로컬 번들 .md 파일 읽기
+ * GitHub 기반 퀴즈 문제 다운로드
  *
- * expo-asset으로 번들된 .md 파일을 로컬 URI로 다운로드한 후
- * expo-file-system으로 텍스트를 읽어 반환한다.
- *
- * 인자: storagePath = "{categoryId}/{fileId}" (assets/quiz-data/config.ts의 FILE_MODULE_MAP 키)
+ * GitHub 저장소에 올라가 있는 마크다운 파일을 네트워크 통해 실시간으로 다운로드.
  */
 
-import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system';
-import { FILE_MODULE_MAP } from '@/assets/quiz-data/config';
+const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/main/assets/quiz-data';
 
-/** 메모리 캐시 (앱 세션 동안 유지) */
+/** 메모리 캐시 (앱 세션 동안 재다운로드 방지) */
 const contentCache: Record<string, string> = {};
 
 /**
  * storagePath에 해당하는 .md 파일 내용을 반환
- * @param storagePath  "{categoryId}/{fileId}" 형식
+ * @param storagePath "ai-basics/chapter-01.md" 형식
  */
 export async function fetchQuizMarkdown(storagePath: string): Promise<string> {
-  // 캐시 hit
+  // 이미 로드된 적 있으면 캐시 반환
   if (contentCache[storagePath]) {
     return contentCache[storagePath];
   }
 
-  const moduleId = FILE_MODULE_MAP[storagePath];
-  if (moduleId === undefined) {
-    throw new Error(
-      `[QuizBank] 파일을 찾을 수 없습니다: "${storagePath}"\n` +
-      `assets/quiz-data/config.ts 의 FILE_MODULE_MAP 에 등록되어 있는지 확인하세요.`
-    );
+  // 캐시 무효화를 위한 파라미터 (t) 추가 (항상 최신본)
+  const url = `${GITHUB_BASE_URL}/${storagePath}?t=${Date.now()}`;
+
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`[QuizBank] 다운로드 실패 (${response.status}): ${url}`);
+    }
+
+    const content = await response.text();
+    // 성공 시 캐시 저장
+    contentCache[storagePath] = content;
+    
+    return content;
+
+  } catch (error) {
+    console.error(`[QuizBank] 마크다운 다운로드 실패: ${url}`, error);
+    throw error;
   }
-
-  // expo-asset으로 번들 에셋을 로컬 URI로 준비
-  const asset = Asset.fromModule(moduleId);
-  await asset.downloadAsync();
-
-  if (!asset.localUri) {
-    throw new Error(`[QuizBank] 에셋 로컬 URI를 얻지 못했습니다: ${storagePath}`);
-  }
-
-  const content = await FileSystem.readAsStringAsync(asset.localUri);
-  contentCache[storagePath] = content;
-  return content;
 }

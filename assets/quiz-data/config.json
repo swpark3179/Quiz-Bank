@@ -1,0 +1,17 @@
+[
+  {
+    "id": "ai-basics",
+    "name": "AI 기초",
+    "description": "인공지능 기본 개념 및 머신러닝 문제",
+    "icon": "brain-outline",
+    "order": 1,
+    "files": [
+      {
+        "id": "chapter-01",
+        "name": "Chapter 1: AI 개요 & 데이터",
+        "questionCount": 3,
+        "order": 1
+      }
+    ]
+  }
+]

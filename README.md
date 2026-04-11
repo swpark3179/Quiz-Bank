@@ -1,30 +1,26 @@
 # Quiz Bank
 
-객관식 퀴즈 풀기 앱 — Expo (React Native) + Local File Bundle + Nord Light 테마
+객관식 퀴즈 풀기 앱 — Expo (React Native) + GitHub Raw DB + Nord Light 테마
 
 ## 스택
 
 | 구분 | 기술 |
 |------|------|
 | 프레임워크 | Expo (React Native) + expo-router |
-| 문제 저장 | 로컬 에셋 번들 (assets/quiz-data/*.md) |
-| 오프라인 캐시 | expo-asset, expo-file-system |
+| 문제 실시간 로드 | **GitHub Raw Fetching (`assets/quiz-data/`)** |
 | 풀이 이력/통계 | expo-sqlite |
 | 마크다운 렌더러 | react-native-marked |
 | 테마 | Nord Light |
 | CI/CD | GitHub Actions + EAS Build/Update/Submit |
 
-## 화면 구성
+## 구조 및 장점
 
-```
-홈 (카테고리 목록)
- └─ 문제 목록 (카테고리별 파일 목록 + 요약 통계)
-     ├─ 퀴즈 설정 모달 (문제 수, 확인 방식, 파일 선택)
-     └─ 퀴즈 진행
-         └─ 결과 화면
-             └─ 이력 목록 → 차수 상세 → 오답 재시험
-통계 (차수별 정답률 차트)
-```
+이 앱은 Firebase와 같은 백엔드 없이 **GitHub 저장소를 무료 데이터베이스**처럼 활용합니다.
+GitHub의 `assets/quiz-data/config.json`과 마크다운 파일을 실시간(Fetch)으로 읽어오므로 다음과 같은 장점이 있습니다.
+
+✅ **Firebase 설정 불필요**: 네이티브 모듈 및 키 파일 설정 없이 곧바로 실행
+✅ **즉각적인 콘텐츠 업데이트**: 코드를 수정하거나 앱(EAS)을 빌드/배포하지 않아도 GitHub에 `config.json`과 `.md` 파일을 수정(커밋)하는 즉시 앱 화면에 새로운 문제 데이터가 반영됩니다.
+✅ **데이터 요금 무료**: GitHub 서버 환경을 사용하여 트래픽 요금이 발생하지 않습니다.
 
 ---
 
@@ -38,7 +34,7 @@ npm install
 
 ### 2. 앱 실행
 
-Firebase 등 외부 서버 의존성이 없으므로, 로컬 환경에서 Expo Go를 통해 즉시 실행 가능합니다.
+Expo Go 환경에서 추가 설정 없이 곧바로 테스트가 가능합니다.
 
 ```bash
 npx expo start
@@ -46,96 +42,56 @@ npx expo start
 
 ---
 
-## 문제 추가 방법
+## 문제 관리 (GitHub을 DB로 사용하는 법)
 
-Firebase 없이 로컬 번들로 문제를 앱 내부에 포함합니다. 새로운 문제를 추가하려면 다음 단계를 따릅니다.
+새로운 카테고리와 문제를 추가(배포)하려면 `assets/quiz-data/` 내의 파일들을 변경하고 **GitHub에 Push**하면 됩니다.
 
-### 1. 문제 마크다운 파일 작성
-
-`assets/quiz-data/{카테고리ID}/` 폴더에 `.md` 파일을 생성하고 작성합니다.
+1. **마크다운 파일 추가**: 
+`assets/quiz-data/{카테고리ID}/` 폴더 안에 문제를 담은 `.md` 마크다운 파일을 생성합니다.
 
 ```markdown
 ## 문제 1
-### **다음 중 텍스트 외에 음성, 이미지, 비디오 등 다양한 형식의 데이터를 동시에 처리할 수 있는 모델은?**
+### **질문 제목**
 
 | 보기 | 설명 |
 |------|------|
-| ① LLM (Large Language Model) | 대규모 언어 모델, 텍스트 데이터 처리에 특화 |
-| **② LMM (Large Multimodal Model)** | 대형 멀티모달 모델 |
-| ③ RNN (Recurrent Neural Network) | 순환 신경망, 순차 데이터 처리 |
-| ④ CNN (Convolutional Neural Network) | 합성곱 신경망, 이미지 처리에 주로 사용 |
+| ① 보기 1 | 오답 설명 |
+| **② 보기 2** | 정답은 볼드체로 작성해야 합니다. |
 
 **정답: ②**
 
 **해설:**
-LMM(Large Multimodal Model)은 텍스트뿐만 아니라 이미지, 오디오, 비디오 등 다양한 유형의 데이터를 동시에 처리할 수 있는 AI 모델입니다.
+이곳에 해설과 링크 등을 자유롭게 적어줍니다.
 
 ---
 ```
 
-**작성 규칙:**
-- 각 문제는 `## 문제 N`으로 시작
-- 질문은 `### **질문**`으로 작성
-- 정답 보기는 `**볼드**` 처리
-- 문제 간은 `---` 텍스트로 구분
-- 보기는 ①②③④ 형태를 권장
+2. **`config.json` 수정**:
+`assets/quiz-data/config.json`에 새로 추가된 파일 정보를 기입합니다.
+앱은 실행될 때 이 JSON 파일을 가장 먼저 확인합니다.
 
-### 2. config.ts 설정 업데이트
-
-`assets/quiz-data/config.ts` 파일을 열어 다음 두 곳을 수정합니다.
-
-1. **`FILE_MODULE_MAP`에 모듈 등록**:
-```typescript
-export const FILE_MODULE_MAP: Record<string, number> = {
-  // 등록 예시
-  'category-id/file-id': require('./category-id/file-id.md'),
-};
-```
-
-2. **`QUIZ_CONFIG`에 항목 추가**:
-```typescript
-export const QUIZ_CONFIG: CategoryConfig[] = [
+```json
+[
   {
-    id: 'category-id',
-    name: '카테고리 이름',
-    // ...
-    files: [
-      { id: 'file-id', name: '파일 이름', questionCount: 1, order: 1 },
-    ],
+    "id": "ai-basics",
+    "name": "AI 기초",
+    "description": "인공지능 개념 문제",
+    "icon": "brain-outline",
+    "order": 1,
+    "files": [
+      {
+        "id": "chapter-01",
+        "name": "Chapter 1: AI 개요",
+        "questionCount": 5,
+        "order": 1
+      }
+    ]
   }
-];
+]
 ```
 
-저장 후 앱을 재시작하면 새로운 문제가 리스트에 노출됩니다.
-
----
-
-## CI/CD 워크플로
-
-| 워크플로 | 트리거 | 설명 |
-|----------|--------|------|
-| `release.yml` | `workflow_dispatch` | 버전 선택(major/minor/patch) → EAS 빌드 → GitHub Release |
-| `store-release.yml` | `workflow_dispatch` | EAS Submit → App Store / Google Play |
-| `ota-update.yml` | `push to main` | EAS Update → OTA 즉시 배포 (로컬 에셋 포함) |
-
-### 필요한 GitHub Secrets
-
-| 시크릿 | 필수 여부 | 용도 |
-|--------|-----------|------|
-| `EXPO_TOKEN` | 필수 | EAS 인증 |
-| `GOOGLE_SERVICE_ACCOUNT_KEY` | 스토어 배포 시 | Google Play 제출 |
-| `ASC_KEY_ID` | 스토어 배포 시 | App Store Connect |
-| `ASC_ISSUER_ID` | 스토어 배포 시 | App Store Connect |
-| `ASC_API_KEY` | 스토어 배포 시 | App Store Connect |
-| `EXPO_APPLE_TEAM_ID` | 스토어 배포 시 | Apple Team ID |
-
-### 버전 범프 (로컬)
-
-```bash
-npm run bump:patch   # 1.0.0 → 1.0.1
-npm run bump:minor   # 1.0.0 → 1.1.0
-npm run bump:major   # 1.0.0 → 2.0.0
-```
+3. **변경사항을 GitHub의 main 브랜치에 커밋 및 Push**합니다.
+   - 앱스토어나 EAS OTA 배포를 거치지 않고, 사용자가 앱을 여는 즉시 새로운 데이터가 표출됩니다!
 
 ---
 
