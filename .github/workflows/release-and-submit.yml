@@ -84,13 +84,13 @@ jobs:
 
       - name: Build Android APK
         run: |
-          eas build --platform android --profile production-apk --non-interactive --wait --local=false
+          eas build --platform android --profile production-apk --non-interactive --wait
           APK_URL=$(eas build:list --platform android --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
           curl -L -o app-release.apk $APK_URL
 
       - name: Build iOS IPA
         run: |
-          eas build --platform ios --profile production --non-interactive --wait --local=false
+          eas build --platform ios --profile production --non-interactive --wait
           IPA_URL=$(eas build:list --platform ios --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
           curl -L -o app-release.ipa $IPA_URL
 
