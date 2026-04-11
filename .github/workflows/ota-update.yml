@@ -1,0 +1,52 @@
+name: OTA Update (EAS Update)
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      # 아래 파일 변경은 네이티브 빌드가 필요하므로 OTA 제외
+      - 'android/**'
+      - 'ios/**'
+      - 'app.json'
+      - 'eas.json'
+      - 'package.json'
+      - '.github/**'
+
+jobs:
+  ota-update:
+    name: Publish EAS Update (OTA)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish OTA Update
+        run: |
+          eas update \
+            --auto \
+            --non-interactive \
+            --message "OTA: ${{ github.event.head_commit.message }} (${{ github.sha }})"
+
+      - name: Print update summary
+        run: |
+          echo "✅ OTA 업데이트 배포 완료"
+          echo "  브랜치: main → production 채널"
+          echo "  커밋: ${{ github.sha }}"
+          echo "  메시지: ${{ github.event.head_commit.message }}"

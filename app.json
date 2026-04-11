@@ -1,25 +1,32 @@
 {
   "expo": {
-    "name": "quiz-bank",
+    "name": "Quiz Bank",
     "slug": "quiz-bank",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "quizbank",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.swpark3179.quizbank",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#ECEFF4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.swpark3179.quizbank",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -27,22 +34,36 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-firebase/app",
+      "expo-dev-client",
+      "expo-sqlite",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#ECEFF4"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b74ba1e7-e5ce-4572-9ba6-5ef88dd3da1c",
+      "channel": "production"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b74ba1e7-e5ce-4572-9ba6-5ef88dd3da1c"
+      }
+    },
+    "owner": "swpark3179"
   }
 }

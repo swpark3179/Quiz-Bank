@@ -32,6 +32,19 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Firebase credentials (DO NOT COMMIT)
+google-services.json
+GoogleService-Info.plist
+google-service-account.json
+
+# CI build artifacts
+dist/
+build-output.json
+latest-builds.json
+check-builds.json
+artifact-urls.txt
 
 # typescript
 *.tsbuildinfo

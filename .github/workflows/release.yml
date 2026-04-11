@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: '버전 업 유형'
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    name: Bump version, Build & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # git push + GitHub Release 생성에 필요
+
+    steps:
+      # ── 1. 코드 체크아웃 ────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 태그 이력 필요
+
+      # ── 2. Node.js 설정 ─────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      # ── 3. EAS CLI 설정 ──────────────────────────────────────────────────
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # ── 4. 의존성 설치 ───────────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 5. 버전 범프 ─────────────────────────────────────────────────────
+      - name: Bump version (${{ github.event.inputs.bump_type }})
+        run: node scripts/bump-version.js ${{ github.event.inputs.bump_type }}
+
+      - name: Read new version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      # ── 6. 변경사항 커밋 & 태그 ──────────────────────────────────────────
+      - name: Commit & Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json app.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.tag }}"
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin HEAD --tags
+
+      # ── 7. EAS 빌드 ───────────────────────────────────────────────────────
+      - name: EAS Build (iOS + Android)
+        run: eas build --platform all --profile production --non-interactive --json --no-wait > build-output.json 2>&1 || true
+
+      - name: Wait for EAS build completion & download artifacts
+        id: artifacts
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          echo "⏳ EAS 빌드 대기 중..."
+          # EAS CLI로 최신 빌드 2개 대기 후 URL 획득
+          eas build:list --limit 2 --json --status finished > latest-builds.json 2>/dev/null || echo "[]" > latest-builds.json
+
+          sleep 10
+          # 빌드 완료까지 최대 30분 대기
+          MAX_WAIT=1800
+          ELAPSED=0
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            eas build:list --limit 2 --json > check-builds.json 2>/dev/null || echo "[]" > check-builds.json
+            PENDING=$(node -e "
+              const b = require('./check-builds.json');
+              const recent = b.filter(x => x.status !== 'finished' && x.status !== 'errored');
+              console.log(recent.length);
+            " 2>/dev/null || echo "0")
+            if [ "$PENDING" = "0" ]; then
+              echo "✅ 빌드 완료"
+              break
+            fi
+            echo "  빌드 진행 중... (${ELAPSED}s / ${MAX_WAIT}s)"
+            sleep 60
+            ELAPSED=$((ELAPSED + 60))
+          done
+
+          # 아티팩트 URL 추출
+          node -e "
+            const fs = require('fs');
+            const builds = JSON.parse(fs.readFileSync('check-builds.json'));
+            const finished = builds.filter(b => b.status === 'finished').slice(0, 2);
+            finished.forEach(b => {
+              console.log(b.platform + ':' + (b.artifacts?.buildUrl || ''));
+            });
+          " > artifact-urls.txt 2>/dev/null || echo "" > artifact-urls.txt
+
+          cat artifact-urls.txt
+
+          # 다운로드
+          mkdir -p dist
+          while IFS=: read -r platform url; do
+            if [ -n "$url" ]; then
+              EXT="apk"
+              [ "$platform" = "ios" ] && EXT="ipa"
+              FILENAME="quiz-bank-${{ steps.version.outputs.version }}.${EXT}"
+              echo "📥 다운로드: $FILENAME"
+              curl -L -o "dist/$FILENAME" "$url" || echo "  ⚠️ 다운로드 실패: $FILENAME"
+              echo "${platform}_file=dist/$FILENAME" >> $GITHUB_OUTPUT
+            fi
+          done < artifact-urls.txt
+
+      # ── 8. 변경 이력 수집 ────────────────────────────────────────────────
+      - name: Collect changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "${{ steps.version.outputs.tag }}" | head -n 1)
+          if [ -z "$PREVIOUS_TAG" ]; then
+            CHANGELOG="첫 번째 릴리즈입니다."
+          else
+            CHANGELOG=$(git log ${PREVIOUS_TAG}..${{ steps.version.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          # 멀티라인을 Output으로 전달
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+      # ── 9. GitHub Release 생성 ────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "${{ steps.version.outputs.tag }} — $(date +'%Y-%m-%d')"
+          body: |
+            ## 📦 Quiz Bank ${{ steps.version.outputs.tag }}
+
+            **릴리즈 일자**: $(date +'%Y년 %m월 %d일')
+            **버전 업 유형**: `${{ github.event.inputs.bump_type }}`
+            ${{ steps.changelog.outputs.previous_tag != '' && format('**이전 버전**: `{0}`', steps.changelog.outputs.previous_tag) || '' }}
+
+            ---
+
+            ## 🔄 변경 사항
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ---
+
+            ## 📲 설치 방법
+
+            | 플랫폼 | 파일 | 비고 |
+            |--------|------|------|
+            | Android | `quiz-bank-${{ steps.version.outputs.version }}.apk` | 직접 설치 가능 |
+            | iOS | `quiz-bank-${{ steps.version.outputs.version }}.ipa` | TestFlight 또는 직접 설치 |
+
+            > **EAS OTA** 업데이트가 활성화된 경우, 앱을 재시작하면 자동으로 최신 버전이 적용됩니다.
+          files: |
+            dist/*.apk
+            dist/*.ipa
+          draft: false
+          prerelease: false
+          generate_release_notes: false
