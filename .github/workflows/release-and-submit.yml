@@ -81,28 +81,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Prepare Google Service Account Key
-        run: |
-          if [ -n "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" ]; then
-            # Decode if base64 or write directly if JSON
-            if echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" | grep -q "^{"; then
-              echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" > ./google-service-account.json
-            else
-              echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" | base64 --decode > ./google-service-account.json
-            fi
-          fi
-
       - name: Build Android APK
         run: |
           eas build --platform android --profile production-apk --non-interactive --wait --local=false
           APK_URL=$(eas build:list --platform android --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
           curl -L -o app-release.apk $APK_URL
-
-      - name: Build Android AAB (Store)
-        run: |
-          eas build --platform android --profile production --non-interactive --wait --local=false
-          AAB_URL=$(eas build:list --platform android --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
-          curl -L -o app-release.aab $AAB_URL
 
       - name: Build iOS IPA
         run: |
@@ -118,17 +101,7 @@ jobs:
             --title "Release v${{ needs.bump-version.outputs.new_version }}" \
             --generate-notes \
             app-release.apk \
-            app-release.ipa \
-            app-release.aab
-
-      - name: Submit to Google Play
-        run: |
-          if [ -f "./google-service-account.json" ]; then
-            export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/google-service-account.json
-            eas submit -p android --profile production --path app-release.aab --non-interactive
-          else
-            echo "Skipping Android Submit due to missing GOOGLE_SERVICE_ACCOUNT_KEY"
-          fi
+            app-release.ipa
 
       - name: Setup ASC Private Key
         run: |
