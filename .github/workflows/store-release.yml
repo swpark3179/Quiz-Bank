@@ -57,8 +57,8 @@ jobs:
       - name: Submit to App Store(s)
         env:
           EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          EXPO_APPLE_APP_STORE_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_APPLE_APP_STORE_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           GOOGLE_SERVICE_ACCOUNT_KEY_PATH: ./google-service-account.json
         run: |
           if [ "${{ github.event.inputs.platform }}" = "all" ]; then
