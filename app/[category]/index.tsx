@@ -11,8 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchCategories, fetchQuizFiles, QuizFile } from '@/lib/firebase/categories';
-import { fetchQuizMarkdown } from '@/lib/firebase/storage';
+import { fetchCategories, fetchQuizFiles, QuizFile } from '@/lib/local/categories';
+import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown, QuizQuestion } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
 import { fetchCategorySummary, } from '@/lib/db/stats';

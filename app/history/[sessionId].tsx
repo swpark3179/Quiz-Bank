@@ -16,13 +16,13 @@ import {
   deleteSession,
 } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
-import { fetchQuizMarkdown } from '@/lib/firebase/storage';
+import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown, QuizQuestion } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from '@/components/ui/NordButton';
 import { NordBadge } from '@/components/ui/NordBadge';
-import { fetchQuizFiles } from '@/lib/firebase/categories';
+import { fetchQuizFiles } from '@/lib/local/categories';
 
 export default function SessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();

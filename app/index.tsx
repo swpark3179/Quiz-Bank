@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchCategories, Category } from '@/lib/firebase/categories';
+import { fetchCategories, Category } from '@/lib/local/categories';
 import { getDatabase } from '@/lib/db/schema';
 import { fetchCategorySummary } from '@/lib/db/stats';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
@@ -51,7 +51,7 @@ export default function HomeScreen() {
       setSummaries(stats);
     } catch (e) {
       console.error('카테고리 로드 오류:', e);
-      setError('카테고리를 불러오지 못했습니다.\nFirebase 연결을 확인해주세요.');
+      setError('카테고리를 불러오지 못했습니다.\n앱을 다시 시작해주세요.');
     } finally {
       setLoading(false);
       setRefreshing(false);

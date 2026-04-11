@@ -1,15 +1,14 @@
 # Quiz Bank
 
-객관식 퀴즈 풀기 앱 — Expo (React Native) + Firebase + Nord Light 테마
+객관식 퀴즈 풀기 앱 — Expo (React Native) + Local File Bundle + Nord Light 테마
 
 ## 스택
 
 | 구분 | 기술 |
 |------|------|
 | 프레임워크 | Expo (React Native) + expo-router |
-| 문제 저장 | Firebase Storage (.md 파일) |
-| 카테고리 인덱스 | Firebase Firestore |
-| 오프라인 캐시 | expo-file-system |
+| 문제 저장 | 로컬 에셋 번들 (assets/quiz-data/*.md) |
+| 오프라인 캐시 | expo-asset, expo-file-system |
 | 풀이 이력/통계 | expo-sqlite |
 | 마크다운 렌더러 | react-native-marked |
 | 테마 | Nord Light |
@@ -37,74 +36,77 @@
 npm install
 ```
 
-### 2. Firebase 프로젝트 설정
+### 2. 앱 실행
 
-1. [Firebase Console](https://console.firebase.google.com/)에서 프로젝트 생성
-2. **Android 앱 추가** → `google-services.json` 다운로드 → 프로젝트 루트에 배치
-3. **iOS 앱 추가** → `GoogleService-Info.plist` 다운로드 → 프로젝트 루트에 배치
-4. **Firestore Database** 생성 (Native mode)
-5. **Storage** 버킷 생성
-
-> ⚠️ `google-services.json`, `GoogleService-Info.plist`는 `.gitignore`에 포함되어 있어 커밋되지 않습니다.
-
-### 3. Firestore 데이터 구조 설정
-
-```
-categories/
-  {categoryId}/
-    name: "AI 기초"
-    description: "AI 관련 기초 문제"
-    icon: "brain-outline"       ← Ionicons 아이콘 이름
-    order: 1
-    quizFiles/
-      {fileId}/
-        name: "Chapter 1: 개요"
-        storagePath: "quiz-data/ai-basics/chapter-01.md"
-        questionCount: 10
-        order: 1
-```
-
-### 4. Firebase Storage 구조
-
-```
-quiz-data/
-  {categoryId}/
-    chapter-01.md
-    chapter-02.md
-```
-
-### 5. 앱 실행
+Firebase 등 외부 서버 의존성이 없으므로, 로컬 환경에서 Expo Go를 통해 즉시 실행 가능합니다.
 
 ```bash
-# Expo Go (Firebase 네이티브 모듈 미지원 → 개발 빌드 필요)
-npm run start:dev
-
-# 개발 빌드 생성 (최초 1회)
-eas build --profile development --platform android   # 또는 ios
+npx expo start
 ```
 
 ---
 
-## 문제 파일 형식
+## 문제 추가 방법
+
+Firebase 없이 로컬 번들로 문제를 앱 내부에 포함합니다. 새로운 문제를 추가하려면 다음 단계를 따릅니다.
+
+### 1. 문제 마크다운 파일 작성
+
+`assets/quiz-data/{카테고리ID}/` 폴더에 `.md` 파일을 생성하고 작성합니다.
 
 ```markdown
 ## 문제 1
-### **질문 텍스트 (마크다운 지원)**
+### **다음 중 텍스트 외에 음성, 이미지, 비디오 등 다양한 형식의 데이터를 동시에 처리할 수 있는 모델은?**
 
 | 보기 | 설명 |
 |------|------|
-| ① 보기1 | 설명1 |
-| **② 보기2** | 설명2 |   ← 볼드 = 정답
-| ③ 보기3 | 설명3 |
-| ④ 보기4 | 설명4 |
+| ① LLM (Large Language Model) | 대규모 언어 모델, 텍스트 데이터 처리에 특화 |
+| **② LMM (Large Multimodal Model)** | 대형 멀티모달 모델 |
+| ③ RNN (Recurrent Neural Network) | 순환 신경망, 순차 데이터 처리 |
+| ④ CNN (Convolutional Neural Network) | 합성곱 신경망, 이미지 처리에 주로 사용 |
 
 **정답: ②**
 
 **해설:**
-해설 내용 (마크다운 지원, 표·코드블록 포함 가능)
+LMM(Large Multimodal Model)은 텍스트뿐만 아니라 이미지, 오디오, 비디오 등 다양한 유형의 데이터를 동시에 처리할 수 있는 AI 모델입니다.
 
 ---
 ```
+
+**작성 규칙:**
+- 각 문제는 `## 문제 N`으로 시작
+- 질문은 `### **질문**`으로 작성
+- 정답 보기는 `**볼드**` 처리
+- 문제 간은 `---` 텍스트로 구분
+- 보기는 ①②③④ 형태를 권장
+
+### 2. config.ts 설정 업데이트
+
+`assets/quiz-data/config.ts` 파일을 열어 다음 두 곳을 수정합니다.
+
+1. **`FILE_MODULE_MAP`에 모듈 등록**:
+```typescript
+export const FILE_MODULE_MAP: Record<string, number> = {
+  // 등록 예시
+  'category-id/file-id': require('./category-id/file-id.md'),
+};
+```
+
+2. **`QUIZ_CONFIG`에 항목 추가**:
+```typescript
+export const QUIZ_CONFIG: CategoryConfig[] = [
+  {
+    id: 'category-id',
+    name: '카테고리 이름',
+    // ...
+    files: [
+      { id: 'file-id', name: '파일 이름', questionCount: 1, order: 1 },
+    ],
+  }
+];
+```
+
+저장 후 앱을 재시작하면 새로운 문제가 리스트에 노출됩니다.
 
 ---
 
@@ -114,7 +116,7 @@ eas build --profile development --platform android   # 또는 ios
 |----------|--------|------|
 | `release.yml` | `workflow_dispatch` | 버전 선택(major/minor/patch) → EAS 빌드 → GitHub Release |
 | `store-release.yml` | `workflow_dispatch` | EAS Submit → App Store / Google Play |
-| `ota-update.yml` | `push to main` | EAS Update → OTA 즉시 배포 |
+| `ota-update.yml` | `push to main` | EAS Update → OTA 즉시 배포 (로컬 에셋 포함) |
 
 ### 필요한 GitHub Secrets
 

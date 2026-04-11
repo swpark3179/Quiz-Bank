@@ -11,7 +11,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.swpark3179.quizbank",
-      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -25,8 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.swpark3179.quizbank",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.swpark3179.quizbank"
     },
     "web": {
       "output": "static",
@@ -34,8 +32,6 @@
     },
     "plugins": [
       "expo-router",
-      "@react-native-firebase/app",
-      "expo-dev-client",
       "expo-sqlite",
       [
         "expo-splash-screen",
