@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import Markdown, { MarkdownProps } from 'react-native-marked';
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
 
@@ -9,10 +9,10 @@ interface MarkdownViewerProps {
 }
 
 const markdownStyles: MarkdownProps['styles'] = {
-  paragraph: {
-    fontSize: Typography.size.base,
+  text: {
     color: Colors.text.primary,
-    lineHeight: Typography.size.base * 1.7,
+  },
+  paragraph: {
     marginVertical: Spacing.xs,
   },
   strong: {
@@ -28,12 +28,18 @@ const markdownStyles: MarkdownProps['styles'] = {
     fontWeight: Typography.weight.bold,
     color: Colors.text.primary,
     marginVertical: Spacing.sm,
+    paddingBottom: Spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d0d7de',
   },
   h2: {
     fontSize: Typography.size.lg,
     fontWeight: Typography.weight.bold,
     color: Colors.text.primary,
     marginVertical: Spacing.xs,
+    paddingBottom: Spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d0d7de',
   },
   h3: {
     fontSize: Typography.size.md,
@@ -42,28 +48,46 @@ const markdownStyles: MarkdownProps['styles'] = {
     marginVertical: Spacing.xs,
   },
   code: {
-    backgroundColor: Colors.bg.tertiary,
+    backgroundColor: '#f6f8fa',
+    borderRadius: Radius.sm,
+    padding: Spacing.base,
+  },
+  codespan: {
+    backgroundColor: '#f6f8fa',
     borderRadius: Radius.xs,
     paddingHorizontal: Spacing.xs,
     fontFamily: 'monospace',
     fontSize: Typography.size.sm,
-    color: Colors.accent.primary,
+    color: Colors.text.primary,
   },
   blockquote: {
-    backgroundColor: Colors.bg.secondary,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.accent.secondary,
+    borderLeftWidth: 4,
+    borderLeftColor: '#d0d7de',
     paddingLeft: Spacing.md,
-    paddingVertical: Spacing.xs,
     marginVertical: Spacing.xs,
   },
   list: {
     marginVertical: Spacing.xs,
   },
-  listItem: {
+  li: {
     fontSize: Typography.size.base,
     color: Colors.text.primary,
     lineHeight: Typography.size.base * 1.6,
+  },
+  hr: {
+    backgroundColor: '#d0d7de',
+    height: 2,
+    marginVertical: Spacing.md,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: '#d0d7de',
+    borderRadius: Radius.sm,
+  },
+  tableCell: {
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: '#d0d7de',
   },
 };
 
@@ -90,8 +114,10 @@ export function MarkdownViewer({ content, scrollable = false }: MarkdownViewerPr
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
+    backgroundColor: Colors.bg.primary,
   },
   content: {
     paddingVertical: Spacing.xs,
+    backgroundColor: Colors.bg.primary,
   },
 });
