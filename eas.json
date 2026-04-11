@@ -32,8 +32,8 @@
       },
       "ios": {
         "appleTeamId": "$(EXPO_APPLE_TEAM_ID)",
-        "ascKeyId": "$(ASC_KEY_ID)",
-        "ascIssuerId": "$(ASC_ISSUER_ID)"
+        "ascApiKeyId": "$(ASC_KEY_ID)",
+        "ascApiKeyIssuerId": "$(ASC_ISSUER_ID)"
       }
     }
   }
