@@ -54,6 +54,13 @@ jobs:
           echo "$ASC_API_KEY" > ~/.private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
 
       # eas.json의 submit 프로파일에 필요한 환경변수 설정 후 제출
+      - name: Inject ascAppId into eas.json
+        if: ${{ secrets.ASC_APP_ID != '' }}
+        run: |
+          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('eas.json')); data.submit=data.submit||{}; data.submit.production=data.submit.production||{}; data.submit.production.ios=data.submit.production.ios||{}; data.submit.production.ios.ascAppId=process.env.ASC_APP_ID; fs.writeFileSync('eas.json', JSON.stringify(data, null, 2));"
+        env:
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+
       - name: Submit to App Store(s)
         env:
           EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
