@@ -96,7 +96,7 @@ export function MarkdownViewer({ content, scrollable = false }: MarkdownViewerPr
     <Markdown
       value={content}
       styles={markdownStyles}
-      flatListProps={{ scrollEnabled: false }}
+      flatListProps={{ scrollEnabled: false, style: { backgroundColor: 'transparent' } }}
       theme={{ colors: { background: 'transparent', code: '#f6f8fa', link: '#58a6ff', text: Colors.text.primary, border: '#d0d7de' } }}
     />
   );
@@ -115,10 +115,10 @@ export function MarkdownViewer({ content, scrollable = false }: MarkdownViewerPr
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: Colors.bg.primary,
+    backgroundColor: 'transparent',
   },
   content: {
     paddingVertical: Spacing.xs,
-    backgroundColor: Colors.bg.primary,
+    backgroundColor: 'transparent',
   },
 });
