@@ -138,3 +138,9 @@ export async function deleteSession(sessionId: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(`DELETE FROM sessions WHERE id = ?`, [sessionId]);
 }
+
+/** 카테고리의 모든 세션 삭제 (초기화) */
+export async function clearCategorySessions(categoryId: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(`DELETE FROM sessions WHERE category_id = ?`, [categoryId]);
+}

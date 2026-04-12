@@ -9,6 +9,7 @@ export {
   fetchAnswers,
   fetchWrongAnswers,
   deleteSession,
+  clearCategorySessions,
 } from './sessions';
 export type { SessionRow, AnswerRow } from './sessions';
 export { fetchSessionStats, fetchCategorySummary } from './stats';
