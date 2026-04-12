@@ -60,8 +60,8 @@ jobs:
           git push origin HEAD
           git push origin "v$NEW_VERSION"
 
-  build-and-release:
-    name: Build and Release
+  build-and-release-ios:
+    name: Build and Release iOS
     needs: bump-version
     runs-on: ubuntu-latest
     steps:
@@ -89,12 +89,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
-
-      - name: Build Android APK
-        run: |
-          eas build --platform android --profile production-apk --non-interactive --wait
-          APK_URL=$(eas build:list --platform android --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
-          curl -L -o app-release.apk $APK_URL
 
       - name: Build iOS IPA
         run: |
@@ -133,5 +127,4 @@ jobs:
           gh release create "v${{ needs.bump-version.outputs.new_version }}" \
             --title "Release v${{ needs.bump-version.outputs.new_version }}" \
             --notes-file release_notes.txt \
-            app-release.apk \
             app-release.ipa
