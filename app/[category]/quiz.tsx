@@ -108,6 +108,8 @@ export default function QuizScreen() {
       chosenIndex: chosenIdx,
       correctIndex: currentQ.original.answer,
       isCorrect: correct,
+      explanation: currentQ.original.explanation,
+      correctLabel: currentQ.shuffledChoices[currentQ.mappedAnswer]?.label ?? '',
     });
   };
 

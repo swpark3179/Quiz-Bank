@@ -16,7 +16,7 @@ import { MarkdownViewer } from '../MarkdownViewer';
 import { NordButton } from '../ui/NordButton';
 
 interface ExplanationSheetProps {
-  sheetRef: React.RefObject<BottomSheet>;
+  sheetRef: React.RefObject<BottomSheet | null>;
   isCorrect: boolean;
   correctLabel: string;   // 정답 보기 텍스트
   explanation: string;    // 마크다운 해설

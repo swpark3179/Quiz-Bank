@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet from '@gorhom/bottom-sheet';
 import { fetchSession, fetchAnswers, fetchWrongAnswers } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from '@/components/ui/NordButton';
 import { NordBadge } from '@/components/ui/NordBadge';
+import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
 
 export default function ResultScreen() {
   const { sessionId, categoryId } = useLocalSearchParams<{
@@ -25,6 +27,9 @@ export default function ResultScreen() {
   const [session, setSession] = useState<SessionRow | null>(null);
   const [answers, setAnswers] = useState<AnswerRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [selectedAnswer, setSelectedAnswer] = useState<AnswerRow | null>(null);
+  const sheetRef = useRef<BottomSheet>(null);
 
   useEffect(() => {
     (async () => {
@@ -115,9 +120,20 @@ export default function ResultScreen() {
                 size="sm"
               />
             </View>
-            <Text style={styles.answerQuestion} numberOfLines={2}>
-              {ans.question_text}
-            </Text>
+            <View style={styles.answerCenter}>
+              <Text style={styles.answerQuestion} numberOfLines={2}>
+                {ans.question_text}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.explanationBtn}
+              onPress={() => {
+                setSelectedAnswer(ans);
+                sheetRef.current?.expand();
+              }}
+            >
+              <Text style={styles.explanationBtnText}>해설</Text>
+            </TouchableOpacity>
           </View>
         ))}
 
@@ -149,6 +165,16 @@ export default function ResultScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* 해설 바텀시트 */}
+      <ExplanationSheet
+        sheetRef={sheetRef}
+        isCorrect={selectedAnswer?.is_correct === 1}
+        correctLabel={selectedAnswer?.correct_label || '알 수 없음'}
+        explanation={selectedAnswer?.explanation || '해설이 없습니다.'}
+        onNext={() => sheetRef.current?.close()}
+        nextLabel="닫기"
+      />
     </SafeAreaView>
   );
 }
@@ -255,11 +281,26 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weight.bold,
     color: Colors.text.secondary,
   },
-  answerQuestion: {
+  answerCenter: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  answerQuestion: {
     fontSize: Typography.size.sm,
     color: Colors.text.primary,
     lineHeight: Typography.size.sm * 1.5,
+  },
+  explanationBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.accent.primary + '15',
+    borderRadius: Radius.sm,
+    alignSelf: 'center',
+  },
+  explanationBtnText: {
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.bold,
+    color: Colors.accent.primary,
   },
   actions: {
     gap: Spacing.sm,

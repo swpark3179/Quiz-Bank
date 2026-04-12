@@ -23,6 +23,8 @@ export interface AnswerRow {
   chosen_index: number | null;
   correct_index: number;
   is_correct: 0 | 1;
+  explanation: string;
+  correct_label: string;
 }
 
 /** 새 세션 생성 */
@@ -58,12 +60,14 @@ export async function saveAnswer(params: {
   chosenIndex: number | null;
   correctIndex: number;
   isCorrect: boolean;
+  explanation: string;
+  correctLabel: string;
 }): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
     `INSERT INTO answers
-       (id, session_id, question_id, source_file_id, question_text, chosen_index, correct_index, is_correct)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, session_id, question_id, source_file_id, question_text, chosen_index, correct_index, is_correct, explanation, correct_label)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       params.id,
       params.sessionId,
@@ -73,6 +77,8 @@ export async function saveAnswer(params: {
       params.chosenIndex ?? null,
       params.correctIndex,
       params.isCorrect ? 1 : 0,
+      params.explanation,
+      params.correctLabel,
     ]
   );
 }
