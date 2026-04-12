@@ -105,10 +105,12 @@ jobs:
             app-release.ipa
 
       - name: Setup ASC Private Key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
-          if [ -n "${{ secrets.ASC_PRIVATE_KEY }}" ]; then
-            echo "${{ secrets.ASC_PRIVATE_KEY }}" > ./asc-key.p8
-            export EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8
+          if [ -n "$ASC_PRIVATE_KEY" ]; then
+            echo "$ASC_PRIVATE_KEY" > ./asc-key.p8
+            echo "EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8" >> $GITHUB_ENV
           fi
 
       - name: Inject ascAppId into eas.json
