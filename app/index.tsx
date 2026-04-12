@@ -107,6 +107,8 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.historyButton}
           onPress={() => router.push('/history')}
+          accessibilityRole="button"
+          accessibilityLabel="풀이 이력 보기"
         >
           <Ionicons name="time-outline" size={22} color={Colors.text.secondary} />
         </TouchableOpacity>

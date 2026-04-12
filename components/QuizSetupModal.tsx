@@ -83,7 +83,12 @@ export function QuizSetupModal({
         {/* 헤더 */}
         <View style={styles.header}>
           <Text style={styles.title}>퀴즈 설정</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="닫기"
+          >
             <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
         </View>
