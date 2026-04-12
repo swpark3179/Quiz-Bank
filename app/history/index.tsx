@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchAllSessions } from '@/lib/db/sessions';
 import type { SessionRow } from '@/lib/db/sessions';
@@ -19,13 +19,25 @@ export default function HistoryScreen() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      const s = await fetchAllSessions();
-      setSessions(s);
-      setLoading(false);
-    })();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadSessions = async () => {
+        const s = await fetchAllSessions();
+        if (isActive) {
+          setSessions(s);
+          setLoading(false);
+        }
+      };
+
+      loadSessions();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   const formatDate = (ts: number) => {
     const d = new Date(ts);
