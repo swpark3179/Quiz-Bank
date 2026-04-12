@@ -97,6 +97,7 @@ export function MarkdownViewer({ content, scrollable = false }: MarkdownViewerPr
       value={content}
       styles={markdownStyles}
       flatListProps={{ scrollEnabled: false }}
+      theme={{ colors: { background: 'transparent', code: '#f6f8fa', link: '#58a6ff', text: Colors.text.primary, border: '#d0d7de' } }}
     />
   );
 

@@ -45,13 +45,27 @@ async function initializeSchema(database: SQLite.SQLiteDatabase): Promise<void> 
       chosen_index INTEGER,
       -- 정답 보기 인덱스 (0-based, 원래 순서 기준)
       correct_index INTEGER NOT NULL,
-      is_correct   INTEGER NOT NULL DEFAULT 0
+      is_correct   INTEGER NOT NULL DEFAULT 0,
+      explanation  TEXT NOT NULL DEFAULT '',
+      correct_label TEXT NOT NULL DEFAULT ''
     );
 
     CREATE INDEX IF NOT EXISTS idx_answers_session ON answers(session_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_category ON sessions(category_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(created_at DESC);
   `);
+
+  try {
+    await database.execAsync(`ALTER TABLE answers ADD COLUMN explanation TEXT DEFAULT ''`);
+  } catch (e) {
+    // Ignore if column already exists
+  }
+
+  try {
+    await database.execAsync(`ALTER TABLE answers ADD COLUMN correct_label TEXT DEFAULT ''`);
+  } catch (e) {
+    // Ignore if column already exists
+  }
 }
 
 /** DB 연결 닫기 (앱 종료 시) */
