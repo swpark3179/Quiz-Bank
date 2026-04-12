@@ -34,17 +34,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Download IPA from GitHub Latest Release
+      - name: Fetch EAS iOS Build ID from Latest Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download -p "*.ipa"
-          # Ensure there is a file named app-release.ipa for the submit command
-          # If it's already named app-release.ipa, mv will fail, so we check first
-          DOWNLOADED_IPA=$(ls *.ipa | head -n 1)
-          if [ "$DOWNLOADED_IPA" != "app-release.ipa" ]; then
-            mv "$DOWNLOADED_IPA" app-release.ipa
+          # Fetch the latest release body (notes)
+          LATEST_NOTES=$(gh release view --json body -q .body)
+
+          # Extract the EAS iOS Build ID using grep and awk
+          IOS_BUILD_ID=$(echo "$LATEST_NOTES" | grep "**EAS iOS Build ID:**" | awk '{print $5}')
+
+          if [ -z "$IOS_BUILD_ID" ]; then
+            echo "::error::Could not find EAS iOS Build ID in the latest release notes."
+            exit 1
           fi
+
+          echo "Found EAS iOS Build ID: $IOS_BUILD_ID"
+          echo "IOS_BUILD_ID=$IOS_BUILD_ID" >> $GITHUB_ENV
 
       - name: Verify EAS Submit Secrets
         run: |
@@ -78,4 +84,4 @@ jobs:
           EXPO_APPLE_APP_STORE_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_APPLE_APP_STORE_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          eas submit -p ios --profile production --path app-release.ipa --non-interactive
+          eas submit -p ios --profile production --id $IOS_BUILD_ID --non-interactive
