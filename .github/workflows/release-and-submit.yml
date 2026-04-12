@@ -33,6 +33,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Configure Git
         run: |
@@ -43,7 +47,7 @@ jobs:
         id: bump
         run: |
           # Make sure the bump scripts are run to update both package.json and app.json
-          npm run bump:${{ github.event.inputs.version_bump }}
+          pnpm run bump:${{ github.event.inputs.version_bump }}
 
           # Extract new version from package.json
           NEW_VERSION=$(node -p "require('./package.json').version")
@@ -70,17 +74,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
-          packager: npm
+          packager: pnpm
           expo-version: latest
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Build Android APK
         run: |
@@ -104,17 +112,27 @@ jobs:
             app-release.apk \
             app-release.ipa
 
+      - name: Verify EAS Submit Secrets
+        run: |
+          MISSING_SECRETS=""
+          [ -z "${{ secrets.ASC_PRIVATE_KEY }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_PRIVATE_KEY"
+          [ -z "${{ secrets.ASC_KEY_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_KEY_ID"
+          [ -z "${{ secrets.ASC_ISSUER_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_ISSUER_ID"
+          [ -z "${{ secrets.EXPO_APPLE_TEAM_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS EXPO_APPLE_TEAM_ID"
+          [ -z "${{ secrets.ASC_APP_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_APP_ID"
+          if [ -n "$MISSING_SECRETS" ]; then
+            echo "::error::Missing required secrets for iOS App Store submission:$MISSING_SECRETS"
+            exit 1
+          fi
+
       - name: Setup ASC Private Key
         env:
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
-          if [ -n "$ASC_PRIVATE_KEY" ]; then
-            echo "$ASC_PRIVATE_KEY" > ./asc-key.p8
-            echo "EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8" >> $GITHUB_ENV
-          fi
+          echo "$ASC_PRIVATE_KEY" > ./asc-key.p8
+          echo "EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8" >> $GITHUB_ENV
 
       - name: Inject ascAppId into eas.json
-        if: ${{ secrets.ASC_APP_ID != '' }}
         run: |
           node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('eas.json')); data.submit=data.submit||{}; data.submit.production=data.submit.production||{}; data.submit.production.ios=data.submit.production.ios||{}; data.submit.production.ios.ascAppId=process.env.ASC_APP_ID; fs.writeFileSync('eas.json', JSON.stringify(data, null, 2));"
         env:
@@ -126,9 +144,4 @@ jobs:
           EXPO_APPLE_APP_STORE_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_APPLE_APP_STORE_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          if [ -f "./asc-key.p8" ]; then
-            export EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8
-            eas submit -p ios --profile production --path app-release.ipa --non-interactive
-          else
-            echo "Skipping iOS Submit due to missing ASC_PRIVATE_KEY"
-          fi
+          eas submit -p ios --profile production --path app-release.ipa --non-interactive
