@@ -75,3 +75,39 @@ export async function fetchCategorySummary(categoryId: string): Promise<Category
     recentAccuracy: recentTotal > 0 ? recentCorrect / recentTotal : 0,
   };
 }
+
+/** 전체 카테고리 요약 통계 일괄 로드 (N+1 최적화) */
+export async function fetchAllCategorySummaries(
+  categoryIds: string[]
+): Promise<Record<string, { accuracy: number; sessions: number }>> {
+  const db = await getDatabase();
+
+  const result: Record<string, { accuracy: number; sessions: number }> = {};
+  // 카테고리별 초기값 설정 (세션이 없는 경우 대비)
+  for (const id of categoryIds) {
+    result[id] = { accuracy: 0, sessions: 0 };
+  }
+
+  // GROUP BY를 사용하여 DB 레벨에서 집계 (전체 로드 X)
+  const aggRows = await db.getAllAsync<{
+    category_id: string;
+    totalSessions: number;
+    totalQuestions: number;
+    totalCorrect: number;
+  }>(
+    `SELECT category_id, COUNT(*) as totalSessions, SUM(total) as totalQuestions, SUM(correct) as totalCorrect
+     FROM sessions
+     GROUP BY category_id`
+  );
+
+  for (const row of aggRows) {
+    if (result[row.category_id]) {
+      result[row.category_id] = {
+        sessions: row.totalSessions,
+        accuracy: row.totalQuestions > 0 ? row.totalCorrect / row.totalQuestions : 0,
+      };
+    }
+  }
+
+  return result;
+}
