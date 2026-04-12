@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchCategories, Category } from '@/lib/local/categories';
 import { getDatabase } from '@/lib/db/schema';
-import { fetchCategorySummary } from '@/lib/db/stats';
+import { fetchAllCategorySummaries } from '@/lib/db/stats';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
 
@@ -37,17 +37,8 @@ export default function HomeScreen() {
       const cats = await fetchCategories();
       setCategories(cats);
 
-      // 각 카테고리의 통계 로드
-      const stats: Record<string, { accuracy: number; sessions: number }> = {};
-      await Promise.all(
-        cats.map(async (cat) => {
-          const summary = await fetchCategorySummary(cat.id);
-          stats[cat.id] = {
-            accuracy: summary.overallAccuracy,
-            sessions: summary.totalSessions,
-          };
-        })
-      );
+      // 각 카테고리의 통계 일괄 로드 (N+1 최적화)
+      const stats = await fetchAllCategorySummaries(cats.map(c => c.id));
       setSummaries(stats);
     } catch (e) {
       console.error('카테고리 로드 오류:', e);
