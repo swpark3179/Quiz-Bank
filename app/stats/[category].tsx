@@ -5,11 +5,15 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
+  Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { BarChart } from 'react-native-gifted-charts';
+import { Ionicons } from '@expo/vector-icons';
 import { fetchSessionStats, fetchCategorySummary } from '@/lib/db/stats';
+import { clearCategorySessions } from '@/lib/db';
 import type { SessionStat, CategorySummary } from '@/lib/db/stats';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
@@ -18,21 +22,54 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function StatsScreen() {
   const { category: categoryId } = useLocalSearchParams<{ category: string }>();
+  const navigation = useNavigation();
   const [stats, setStats] = useState<SessionStat[]>([]);
   const [summary, setSummary] = useState<CategorySummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      const [s, sum] = await Promise.all([
-        fetchSessionStats(categoryId),
-        fetchCategorySummary(categoryId),
-      ]);
-      setStats(s);
-      setSummary(sum);
-      setLoading(false);
-    })();
+  const loadData = React.useCallback(async () => {
+    setLoading(true);
+    const [s, sum] = await Promise.all([
+      fetchSessionStats(categoryId),
+      fetchCategorySummary(categoryId),
+    ]);
+    setStats(s);
+    setSummary(sum);
+    setLoading(false);
   }, [categoryId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => {
+            Alert.alert(
+              '이력 초기화',
+              '이 카테고리의 모든 풀이 이력을 삭제하시겠습니까?',
+              [
+                { text: '취소', style: 'cancel' },
+                {
+                  text: '초기화',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await clearCategorySessions(categoryId);
+                    await loadData();
+                  },
+                },
+              ]
+            );
+          }}
+          style={{ padding: Spacing.xs }}
+        >
+          <Ionicons name="trash-outline" size={24} color={Colors.status.wrong} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, categoryId, loadData]);
 
   if (loading || !summary) {
     return <View style={styles.safeArea} />;
