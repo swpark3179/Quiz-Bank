@@ -1,4 +1,4 @@
-name: Release and Submit
+name: Release
 
 on:
   workflow_dispatch:
@@ -61,7 +61,7 @@ jobs:
           git push origin "v$NEW_VERSION"
 
   build-and-release:
-    name: Build, Release and Submit
+    name: Build and Release
     needs: bump-version
     runs-on: ubuntu-latest
     steps:
@@ -99,49 +99,39 @@ jobs:
       - name: Build iOS IPA
         run: |
           eas build --platform ios --profile production --non-interactive --wait
-          IPA_URL=$(eas build:list --platform ios --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
+
+          # Fetch the build info
+          BUILD_INFO=$(eas build:list --platform ios --status finished --json --limit 1)
+
+          # Extract URL and ID
+          IPA_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl')
+          IOS_BUILD_ID=$(echo "$BUILD_INFO" | jq -r '.[0].id')
+
+          # Download IPA
           curl -L -o app-release.ipa $IPA_URL
+
+          # Save ID to environment for the next step
+          echo "IOS_BUILD_ID=$IOS_BUILD_ID" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Generate initial notes
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name="v${{ needs.bump-version.outputs.new_version }}" \
+            > notes.json
+
+          # Extract body and append the build ID
+          NOTES_BODY=$(cat notes.json | jq -r .body)
+          printf "%s\n\n**EAS iOS Build ID:** %s\n" "$NOTES_BODY" "$IOS_BUILD_ID" > release_notes.txt
+
+          # Create release
           gh release create "v${{ needs.bump-version.outputs.new_version }}" \
             --title "Release v${{ needs.bump-version.outputs.new_version }}" \
-            --generate-notes \
+            --notes-file release_notes.txt \
             app-release.apk \
             app-release.ipa
-
-      - name: Verify EAS Submit Secrets
-        run: |
-          MISSING_SECRETS=""
-          [ -z "${{ secrets.ASC_PRIVATE_KEY }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_PRIVATE_KEY"
-          [ -z "${{ secrets.ASC_KEY_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_KEY_ID"
-          [ -z "${{ secrets.ASC_ISSUER_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_ISSUER_ID"
-          [ -z "${{ secrets.EXPO_APPLE_TEAM_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS EXPO_APPLE_TEAM_ID"
-          [ -z "${{ secrets.ASC_APP_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_APP_ID"
-          if [ -n "$MISSING_SECRETS" ]; then
-            echo "::error::Missing required secrets for iOS App Store submission:$MISSING_SECRETS"
-            exit 1
-          fi
-
-      - name: Setup ASC Private Key
-        env:
-          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        run: |
-          echo "$ASC_PRIVATE_KEY" > ./asc-key.p8
-          echo "EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8" >> $GITHUB_ENV
-
-      - name: Inject ascAppId into eas.json
-        run: |
-          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('eas.json')); data.submit=data.submit||{}; data.submit.production=data.submit.production||{}; data.submit.production.ios=data.submit.production.ios||{}; data.submit.production.ios.ascAppId=process.env.ASC_APP_ID; fs.writeFileSync('eas.json', JSON.stringify(data, null, 2));"
-        env:
-          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
-
-      - name: Submit to App Store Connect (TestFlight)
-        env:
-          EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
-          EXPO_APPLE_APP_STORE_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          EXPO_APPLE_APP_STORE_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: |
-          eas submit -p ios --profile production --path app-release.ipa --non-interactive
