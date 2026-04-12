@@ -81,15 +81,23 @@ export default function SessionDetailScreen() {
 
       // 파일 목록 로드 후 해당 문제만 필터링
       const quizFiles = await fetchQuizFiles(session.category_id);
-      const allWrongQuestions: QuizQuestion[] = [];
-      for (const [fileId, questionIds] of Object.entries(fileGroups)) {
+
+      const fileEntries = Object.entries(fileGroups).map(entry => {
+        const fileId = entry[0];
+        const questionIds = entry[1];
         const file = quizFiles.find((f) => f.id === fileId);
-        if (!file) continue;
-        const md = await fetchQuizMarkdown(file.storagePath);
-        const parsed = parseQuizMarkdown(md, fileId);
-        const filtered = parsed.filter((q) => questionIds.includes(q.id));
-        allWrongQuestions.push(...filtered);
-      }
+        return { fileId, questionIds, file };
+      }).filter(entry => entry.file);
+
+      const allWrongQuestionsResults = await Promise.all(
+        fileEntries.map(async ({ fileId, questionIds, file }) => {
+          const md = await fetchQuizMarkdown(file!.storagePath);
+          const parsed = parseQuizMarkdown(md, fileId);
+          return parsed.filter((q) => questionIds.includes(q.id));
+        })
+      );
+
+      const allWrongQuestions = allWrongQuestionsResults.flat();
 
       const shuffled = shuffleQuiz(allWrongQuestions);
 
