@@ -1,0 +1,43 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          packager: pnpm
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Android APK
+        run: |
+          eas build --platform android --profile production-apk --non-interactive --wait
+          APK_URL=$(eas build:list --platform android --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
+          curl -L -o app-release.apk $APK_URL
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.apk
+          path: app-release.apk
