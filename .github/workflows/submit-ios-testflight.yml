@@ -1,0 +1,78 @@
+name: Submit iOS to TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  submit-ios:
+    name: Submit iOS IPA to TestFlight
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          packager: pnpm
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Download IPA from GitHub Latest Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download -p "*.ipa"
+          # Ensure there is a file named app-release.ipa for the submit command
+          # If it's already named app-release.ipa, mv will fail, so we check first
+          DOWNLOADED_IPA=$(ls *.ipa | head -n 1)
+          if [ "$DOWNLOADED_IPA" != "app-release.ipa" ]; then
+            mv "$DOWNLOADED_IPA" app-release.ipa
+          fi
+
+      - name: Verify EAS Submit Secrets
+        run: |
+          MISSING_SECRETS=""
+          [ -z "${{ secrets.ASC_PRIVATE_KEY }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_PRIVATE_KEY"
+          [ -z "${{ secrets.ASC_KEY_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_KEY_ID"
+          [ -z "${{ secrets.ASC_ISSUER_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_ISSUER_ID"
+          [ -z "${{ secrets.EXPO_APPLE_TEAM_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS EXPO_APPLE_TEAM_ID"
+          [ -z "${{ secrets.ASC_APP_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_APP_ID"
+          if [ -n "$MISSING_SECRETS" ]; then
+            echo "::error::Missing required secrets for iOS App Store submission:$MISSING_SECRETS"
+            exit 1
+          fi
+
+      - name: Setup ASC Private Key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          echo "$ASC_PRIVATE_KEY" > ./asc-key.p8
+          echo "EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8" >> $GITHUB_ENV
+
+      - name: Inject ascAppId into eas.json
+        run: |
+          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('eas.json')); data.submit=data.submit||{}; data.submit.production=data.submit.production||{}; data.submit.production.ios=data.submit.production.ios||{}; data.submit.production.ios.ascAppId=process.env.ASC_APP_ID; fs.writeFileSync('eas.json', JSON.stringify(data, null, 2));"
+        env:
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+
+      - name: Submit to App Store Connect (TestFlight)
+        env:
+          EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
+          EXPO_APPLE_APP_STORE_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_APPLE_APP_STORE_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          eas submit -p ios --profile production --path app-release.ipa --non-interactive
