@@ -109,6 +109,9 @@ export function NordButton({
     <TouchableOpacity
       activeOpacity={0.75}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       style={[
         styles.base,
         v.container,
