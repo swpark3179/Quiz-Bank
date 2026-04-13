@@ -65,6 +65,8 @@ export default function HistoryScreen() {
               style={styles.card}
               onPress={() => router.push(`/history/${session.id}`)}
               activeOpacity={0.82}
+              accessibilityRole="button"
+              accessibilityLabel={`${session.category_id} 풀이 기록. 정답률 ${accuracyPct}%. ${formatDate(session.created_at)}`}
             >
               <View style={styles.cardHeader}>
                 <View style={styles.rankCircle}>

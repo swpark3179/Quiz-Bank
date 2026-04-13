@@ -73,11 +73,30 @@ export function ChoiceItem({
   const s = stateStyles[state];
   const sym = INDEX_SYMBOLS[displayIndex] ?? `${displayIndex + 1}`;
 
+  const isDisabled = disabled || state === 'correct' || state === 'wrong' || state === 'reveal-correct';
+
+  const stateLabels: Record<ChoiceState, string> = {
+    default: '선택 안됨',
+    selected: '선택됨',
+    correct: '정답',
+    wrong: '오답',
+    'reveal-correct': '정답 (확인용)',
+  };
+
+  const choiceLabelText = choice.label.replace(/^[①②③④⑤⑥⑦⑧\d]+\s*/, '');
+  const accessibilityLabelText = `보기 ${sym}, ${choiceLabelText}, ${stateLabels[state]}`;
+
   return (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={onPress}
-      disabled={disabled || state === 'correct' || state === 'wrong' || state === 'reveal-correct'}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabelText}
+      accessibilityState={{
+        disabled: !!isDisabled,
+        selected: state === 'selected' || state === 'correct' || state === 'wrong',
+      }}
       style={[styles.container, s.container]}
     >
       <View style={[styles.symbolBox, { borderColor: s.container.borderColor }]}>
