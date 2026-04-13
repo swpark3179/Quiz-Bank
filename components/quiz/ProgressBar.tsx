@@ -15,7 +15,12 @@ export function ProgressBar({ current, total, correctCount }: ProgressBarProps) 
     : null;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      accessibilityRole="progressbar"
+      accessibilityLabel={`진행 상황: ${total}문제 중 ${current}번째 문제`}
+      accessibilityValue={{ min: 1, max: total, now: current }}
+    >
       <View style={styles.row}>
         <Text style={styles.label}>
           {current} / {total}
