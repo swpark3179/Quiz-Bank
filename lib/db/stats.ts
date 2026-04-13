@@ -4,6 +4,14 @@
 
 import { getDatabase } from './schema';
 
+export interface QuestionStat {
+  source_file_id: string;
+  question_id: number;
+  total_attempts: number;
+  correct_attempts: number;
+  accuracy: number; // 0.0 ~ 1.0
+}
+
 export interface SessionStat {
   session_id: string;
   created_at: number;
@@ -110,4 +118,33 @@ export async function fetchAllCategorySummaries(
   }
 
   return result;
+}
+
+/** 파일별 문제 정답률 통계 로드 */
+export async function fetchQuestionStats(
+  sourceFileIds: string[]
+): Promise<QuestionStat[]> {
+  if (sourceFileIds.length === 0) return [];
+
+  const db = await getDatabase();
+  const placeholders = sourceFileIds.map(() => '?').join(',');
+
+  const rows = await db.getAllAsync<{
+    source_file_id: string;
+    question_id: number;
+    total_attempts: number;
+    correct_attempts: number;
+  }>(
+    `SELECT source_file_id, question_id, COUNT(*) as total_attempts, SUM(is_correct) as correct_attempts
+     FROM answers
+     WHERE source_file_id IN (${placeholders})
+     GROUP BY source_file_id, question_id
+     ORDER BY source_file_id ASC, question_id ASC`,
+    sourceFileIds
+  );
+
+  return rows.map((r) => ({
+    ...r,
+    accuracy: r.total_attempts > 0 ? r.correct_attempts / r.total_attempts : 0,
+  }));
 }
