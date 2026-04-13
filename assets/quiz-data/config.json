@@ -1,7 +1,7 @@
 [
   {
     "id": "ai-basics",
-    "name": "AI 기초",
+    "name": "샘플",
     "description": "인공지능 기본 개념 및 머신러닝 문제",
     "icon": "brain-outline",
     "order": 1,
@@ -22,26 +22,26 @@
     "order": 2,
     "files": [
       {
-        "id": "chapter-01",
-        "name": "Chapter 1",
+        "id": "chapter-03",
+        "name": "Chapter 3",
         "questionCount": 41,
         "order": 1
       },
       {
-        "id": "chapter-02",
-        "name": "Chapter 2",
+        "id": "chapter-04",
+        "name": "Chapter 4",
         "questionCount": 49,
         "order": 2
       },
       {
-        "id": "chapter-03",
-        "name": "Chapter 3",
+        "id": "chapter-05",
+        "name": "Chapter 5",
         "questionCount": 47,
         "order": 3
       },
       {
-        "id": "chapter-04",
-        "name": "Chapter 4",
+        "id": "chapter-06",
+        "name": "Chapter 6",
         "questionCount": 47,
         "order": 4
       }
