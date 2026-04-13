@@ -15,7 +15,7 @@ interface ChoiceItemProps {
 }
 
 /** 0-based 인덱스 → ①②③④ */
-const INDEX_SYMBOLS = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
+const INDEX_SYMBOLS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 const stateStyles: Record<
   ChoiceState,
@@ -83,7 +83,7 @@ export function ChoiceItem({
     'reveal-correct': '정답 (확인용)',
   };
 
-  const choiceLabelText = choice.label.replace(/^[①②③④⑤⑥⑦⑧\d]+\s*/, '');
+  const choiceLabelText = choice.label.replace(/^([①-⑧]|\d+[\.\)]?|[A-Za-z][\.\)]?)\s*/, '');
   const accessibilityLabelText = `보기 ${sym}, ${choiceLabelText}, ${stateLabels[state]}`;
 
   return (
@@ -103,7 +103,7 @@ export function ChoiceItem({
         <Text style={[styles.symbol, s.symbol]}>{sym}</Text>
       </View>
       <View style={styles.textBox}>
-        <Text style={[styles.label, s.text]}>{choice.label.replace(/^[①②③④⑤⑥⑦⑧\d]+\s*/, '')}</Text>
+        <Text style={[styles.label, s.text]}>{choice.label.replace(/^([①-⑧]|\d+[\.\)]?|[A-Za-z][\.\)]?)\s*/, '')}</Text>
         {choice.description ? (
           <Text style={[styles.description, { color: s.text.color ?? Colors.text.secondary }]}>
             {choice.description}

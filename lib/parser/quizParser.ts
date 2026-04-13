@@ -43,12 +43,25 @@ export interface QuizQuestion {
 const CHOICE_SYMBOLS: Record<string, number> = {
   '①': 0, '②': 1, '③': 2, '④': 3,
   '⑤': 4, '⑥': 5, '⑦': 6, '⑧': 7,
-  '1': 0, '2': 1, '3': 2, '4': 3,
 };
 
 /** 보기 기호에서 0-based index 반환 */
 function symbolToIndex(sym: string): number {
-  return CHOICE_SYMBOLS[sym] ?? -1;
+  const cleanSym = sym.replace(/[\.\)]$/, '').trim();
+
+  if (CHOICE_SYMBOLS[cleanSym] !== undefined) {
+    return CHOICE_SYMBOLS[cleanSym];
+  }
+
+  if (/^\d+$/.test(cleanSym)) {
+    return parseInt(cleanSym, 10) - 1;
+  }
+
+  if (/^[A-Za-z]$/.test(cleanSym)) {
+    return cleanSym.toUpperCase().charCodeAt(0) - 65;
+  }
+
+  return -1;
 }
 
 /** 볼드 마커 제거 */
@@ -82,7 +95,7 @@ function parseChoiceRow(row: string): {
   const cleanLabel = stripBold(rawLabel);
 
   // 보기 기호 추출 (①②③④ 또는 숫자)
-  const symMatch = cleanLabel.match(/^([①②③④⑤⑥⑦⑧]|\d+)/);
+  const symMatch = cleanLabel.match(/^([①-⑧]|\d+[\.\)]?|[A-Za-z][\.\)])/);
   if (!symMatch) return null;
 
   const sym = symMatch[1];
@@ -134,7 +147,7 @@ export function parseQuizMarkdown(
     let answer = -1;
     let explanation = '';
 
-    let state: 'header' | 'question' | 'choices' | 'answer' | 'explanation' | 'done' =
+    let state: 'header' | 'question' | 'choices' | 'answer' | 'explanation' | 'done' | string =
       'header';
     const explLines: string[] = [];
 
@@ -186,7 +199,7 @@ export function parseQuizMarkdown(
 
           // "**정답: ②**" 패턴
           if (/^\*\*정답[:：]/.test(trimmed)) {
-            const ansMatch = trimmed.match(/([①②③④⑤⑥⑦⑧]|\d+)/);
+            const ansMatch = trimmed.match(/([①-⑧]|\d+[\.\)]?|[A-Za-z][\.\)]?)/);
             if (ansMatch) {
               answer = symbolToIndex(ansMatch[1]);
             }
