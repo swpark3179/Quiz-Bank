@@ -105,10 +105,22 @@ function parseChoiceRow(row: string): {
  * @param markdown 원본 마크다운 문자열
  * @param sourceFileId 출처 파일 ID
  */
+/** 메모리 캐시 (동일 마크다운 문자열 재파싱 방지) */
+const parsedCache = new Map<string, QuizQuestion[]>();
+const MAX_CACHE_SIZE = 50; // 메모리 릭 방지를 위한 최대 캐시 수
+
 export function parseQuizMarkdown(
   markdown: string,
   sourceFileId: string
 ): QuizQuestion[] {
+  // 마크다운 원본 문자열 자체를 키로 사용하여 해시 충돌을 원천 차단.
+  // JS 엔진의 내부 string interning 덕분에 메모리나 성능 이슈가 없음.
+  const cacheKey = `${sourceFileId}:${markdown}`;
+
+  if (parsedCache.has(cacheKey)) {
+    return parsedCache.get(cacheKey)!;
+  }
+
   const questions: QuizQuestion[] = [];
 
   // "## 문제 N" 기준으로 블록 분리
@@ -214,5 +226,12 @@ export function parseQuizMarkdown(
     }
   }
 
+  // 캐시 크기 제한 (LRU처럼 정교하지는 않지만 간단한 방어 로직)
+  if (parsedCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = parsedCache.keys().next().value;
+    if (firstKey) parsedCache.delete(firstKey);
+  }
+
+  parsedCache.set(cacheKey, questions);
   return questions;
 }

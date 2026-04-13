@@ -91,7 +91,7 @@ const markdownStyles: MarkdownProps['styles'] = {
   },
 };
 
-export function MarkdownViewer({ content, scrollable = false }: MarkdownViewerProps) {
+export const MarkdownViewer = React.memo(function MarkdownViewer({ content, scrollable = false }: MarkdownViewerProps) {
   const markdown = (
     <Markdown
       value={content}
@@ -110,7 +110,7 @@ export function MarkdownViewer({ content, scrollable = false }: MarkdownViewerPr
   }
 
   return <View style={styles.content}>{markdown}</View>;
-}
+});
 
 const styles = StyleSheet.create({
   scrollView: {
