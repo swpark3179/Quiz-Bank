@@ -124,6 +124,13 @@ export default function ResultScreen() {
               <Text style={styles.answerQuestion} numberOfLines={2}>
                 {ans.question_text}
               </Text>
+              <Text style={styles.answerChoiceInfo}>
+                내 선택: {ans.chosen_index !== null ? ans.chosen_index + 1 : '선택안함'} / 정답: {
+                  ans.mapped_correct_index !== null && ans.mapped_correct_index !== undefined
+                    ? ans.mapped_correct_index + 1
+                    : ans.correct_index + 1
+                }
+              </Text>
             </View>
             <TouchableOpacity
               style={styles.explanationBtn}
@@ -289,6 +296,11 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     color: Colors.text.primary,
     lineHeight: Typography.size.sm * 1.5,
+  },
+  answerChoiceInfo: {
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    marginTop: 4,
   },
   explanationBtn: {
     paddingHorizontal: Spacing.sm,

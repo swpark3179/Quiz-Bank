@@ -111,6 +111,7 @@ export default function QuizScreen() {
       isCorrect: correct,
       explanation: mappedExplanation,
       correctLabel: stripChoiceSymbol(currentQ.shuffledChoices[currentQ.mappedAnswer]?.label ?? ''),
+      mappedCorrectIndex: currentQ.mappedAnswer,
     });
   };
 
