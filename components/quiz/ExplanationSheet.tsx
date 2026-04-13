@@ -1,10 +1,8 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import BottomSheet, {
   BottomSheetScrollView,
@@ -65,7 +63,7 @@ export function ExplanationSheet({
           ]}
         >
           <Text style={styles.resultEmoji}>{isCorrect ? '🎉' : '😥'}</Text>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text
               style={[
                 styles.resultTitle,
