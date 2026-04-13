@@ -13,5 +13,38 @@
         "order": 1
       }
     ]
+  },
+  {
+    "id": "ai-advanced",
+    "name": "AI Advanced",
+    "description": "인공지능 심화 개념 및 딥러닝 문제",
+    "icon": "school-outline",
+    "order": 2,
+    "files": [
+      {
+        "id": "chapter-01",
+        "name": "Chapter 1",
+        "questionCount": 41,
+        "order": 1
+      },
+      {
+        "id": "chapter-02",
+        "name": "Chapter 2",
+        "questionCount": 49,
+        "order": 2
+      },
+      {
+        "id": "chapter-03",
+        "name": "Chapter 3",
+        "questionCount": 47,
+        "order": 3
+      },
+      {
+        "id": "chapter-04",
+        "name": "Chapter 4",
+        "questionCount": 47,
+        "order": 4
+      }
+    ]
   }
 ]
