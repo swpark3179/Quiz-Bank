@@ -16,7 +16,8 @@ import { NordButton } from '../ui/NordButton';
 interface ExplanationSheetProps {
   sheetRef: React.RefObject<BottomSheet | null>;
   isCorrect: boolean;
-  correctLabel: string;   // 정답 보기 텍스트
+  correctLabel: string;   // 정답 보기 텍스트 (화면 표시 번호 기준)
+  selectedLabel?: string; // 사용자가 선택한 답 텍스트 (화면 표시 번호 기준)
   explanation: string;    // 마크다운 해설
   onNext: () => void;
   nextLabel?: string;
@@ -28,6 +29,7 @@ export function ExplanationSheet({
   sheetRef,
   isCorrect,
   correctLabel,
+  selectedLabel,
   explanation,
   onNext,
   nextLabel = '다음 문제',
@@ -72,6 +74,9 @@ export function ExplanationSheet({
             >
               {isCorrect ? '정답입니다!' : '오답입니다'}
             </Text>
+            {!isCorrect && selectedLabel && (
+              <Text style={styles.resultAnswer}>내가 선택한 답: {selectedLabel}</Text>
+            )}
             <Text style={styles.resultAnswer}>정답: {correctLabel}</Text>
           </View>
         </View>

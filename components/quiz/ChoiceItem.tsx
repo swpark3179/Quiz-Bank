@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
 import type { Choice } from '@/lib/parser/quizParser';
+import { stripChoiceSymbol } from '@/lib/utils/quizUtils';
 
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
 
@@ -83,7 +84,7 @@ export function ChoiceItem({
     'reveal-correct': '정답 (확인용)',
   };
 
-  const choiceLabelText = choice.label.replace(/^([①-⑧]|\d+[\.\)]?|[A-Za-z][\.\)]?)\s*/, '');
+  const choiceLabelText = stripChoiceSymbol(choice.label);
   const accessibilityLabelText = `보기 ${sym}, ${choiceLabelText}, ${stateLabels[state]}`;
 
   return (
@@ -103,7 +104,7 @@ export function ChoiceItem({
         <Text style={[styles.symbol, s.symbol]}>{sym}</Text>
       </View>
       <View style={styles.textBox}>
-        <Text style={[styles.label, s.text]}>{choice.label.replace(/^([①-⑧]|\d+[\.\)]?|[A-Za-z][\.\)]?)\s*/, '')}</Text>
+        <Text style={[styles.label, s.text]}>{stripChoiceSymbol(choice.label)}</Text>
         {choice.description ? (
           <Text style={[styles.description, { color: s.text.color ?? Colors.text.secondary }]}>
             {choice.description}

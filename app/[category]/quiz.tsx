@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { NordButton } from '@/components/ui/NordButton';
 import { createSession, saveAnswer, updateSessionCorrect } from '@/lib/db/sessions';
 import type { ShuffledQuestion } from '@/lib/quiz/shuffler';
+import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
 
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
 
@@ -86,7 +87,7 @@ export default function QuizScreen() {
   };
 
   /** DB에 개별 응답 저장 */
-  const persistAnswer = async (chosenIdx: number, correct: boolean) => {
+  const persistAnswer = async (chosenIdx: number, correct: boolean, mappedExplanation: string) => {
     // 최초 1회만 세션 생성
     if (!sessionCreated.current) {
       sessionCreated.current = true;
@@ -108,8 +109,8 @@ export default function QuizScreen() {
       chosenIndex: chosenIdx,
       correctIndex: currentQ.original.answer,
       isCorrect: correct,
-      explanation: currentQ.original.explanation,
-      correctLabel: currentQ.shuffledChoices[currentQ.mappedAnswer]?.label ?? '',
+      explanation: mappedExplanation,
+      correctLabel: stripChoiceSymbol(currentQ.shuffledChoices[currentQ.mappedAnswer]?.label ?? ''),
     });
   };
 
@@ -142,7 +143,13 @@ export default function QuizScreen() {
       setCorrectCount(correctCountRef.current);
     }
 
-    await persistAnswer(choiceArrayIdx, correct);
+    const mappedExplanation = mapExplanationSymbols(
+      currentQ.original.explanation,
+      currentQ.original.choices,
+      currentQ.shuffledChoices
+    );
+
+    await persistAnswer(choiceArrayIdx, correct, mappedExplanation);
     sheetRef.current?.expand();
   };
 
@@ -160,7 +167,13 @@ export default function QuizScreen() {
       setCorrectCount(correctCountRef.current);
     }
 
-    await persistAnswer(selectedIdx, correct);
+    const mappedExplanation = mapExplanationSymbols(
+      currentQ.original.explanation,
+      currentQ.original.choices,
+      currentQ.shuffledChoices
+    );
+
+    await persistAnswer(selectedIdx, correct, mappedExplanation);
     await moveNext(correctCountRef.current);
   };
 
@@ -235,9 +248,18 @@ export default function QuizScreen() {
           sheetRef={sheetRef}
           isCorrect={isCorrect}
           correctLabel={
-            currentQ.shuffledChoices[currentQ.mappedAnswer]?.label ?? ''
+            `${currentQ.mappedAnswer + 1}. ${stripChoiceSymbol(currentQ.shuffledChoices[currentQ.mappedAnswer]?.label ?? '')}`
           }
-          explanation={currentQ.original.explanation}
+          selectedLabel={
+            selectedIdx !== null
+              ? `${selectedIdx + 1}. ${stripChoiceSymbol(currentQ.shuffledChoices[selectedIdx]?.label ?? '')}`
+              : undefined
+          }
+          explanation={mapExplanationSymbols(
+            currentQ.original.explanation,
+            currentQ.original.choices,
+            currentQ.shuffledChoices
+          )}
           onNext={handleExplanationNext}
           nextLabel={currentIdx + 1 >= total ? '결과 보기' : '다음 문제'}
         />
