@@ -22,25 +22,25 @@
     "order": 2,
     "files": [
       {
-        "id": "chapter-03",
+        "id": "chapter03",
         "name": "Chapter 3",
         "questionCount": 41,
         "order": 1
       },
       {
-        "id": "chapter-04",
+        "id": "chapter04",
         "name": "Chapter 4",
         "questionCount": 49,
         "order": 2
       },
       {
-        "id": "chapter-05",
+        "id": "chapter05",
         "name": "Chapter 5",
         "questionCount": 47,
         "order": 3
       },
       {
-        "id": "chapter-06",
+        "id": "chapter06",
         "name": "Chapter 6",
         "questionCount": 47,
         "order": 4
