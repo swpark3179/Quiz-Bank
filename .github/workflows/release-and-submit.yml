@@ -1,0 +1,272 @@
+name: Release and Submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    name: Bump Version and Tag
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump Version
+        id: bump
+        run: |
+          npm install -g pnpm@10
+          pnpm run bump:${{ github.event.inputs.version_bump }}
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          git add package.json app.json
+          git commit -m "chore: bump version to v$NEW_VERSION"
+          git tag "v$NEW_VERSION"
+          git push origin HEAD
+          git push origin "v$NEW_VERSION"
+
+  build-ios:
+    name: Build iOS
+    needs: bump-version
+    runs-on: ubuntu-latest
+    outputs:
+      ios_build_id: ${{ steps.extract-id.outputs.ios_build_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.bump-version.outputs.new_version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          packager: pnpm
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm@10
+          pnpm install
+
+      - name: Build iOS IPA
+        run: |
+          eas build --platform ios --profile production --non-interactive --wait
+
+          BUILD_INFO=$(eas build:list --platform ios --status finished --json --limit 1)
+          IPA_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl')
+          IOS_BUILD_ID=$(echo "$BUILD_INFO" | jq -r '.[0].id')
+
+          curl -L -o app-release.ipa $IPA_URL
+
+          # output ID for next jobs
+          echo "ios_build_id=$IOS_BUILD_ID" >> $GITHUB_ENV
+          echo "ios_build_id=$IOS_BUILD_ID" >> $GITHUB_OUTPUT
+        id: extract-id
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-ipa
+          path: app-release.ipa
+
+  build-android:
+    name: Build Android
+    needs: bump-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.bump-version.outputs.new_version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          packager: pnpm
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm@10
+          pnpm install
+
+      - name: Build Android APK
+        run: |
+          eas build --platform android --profile production-apk --non-interactive --wait
+
+          APK_URL=$(eas build:list --platform android --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
+          if [ -z "$APK_URL" ] || [ "$APK_URL" = "null" ]; then
+            echo "::error::Could not extract APK_URL from eas build list."
+            exit 1
+          fi
+
+          curl -L -o app-release.apk "$APK_URL"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app-release.apk
+
+  create-release:
+    name: Create GitHub Release
+    needs: [bump-version, build-ios, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.bump-version.outputs.new_version }}
+
+      - name: Download iOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-ipa
+
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IOS_BUILD_ID: ${{ needs.build-ios.outputs.ios_build_id }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name="v${{ needs.bump-version.outputs.new_version }}" \
+            > notes.json
+
+          NOTES_BODY=$(cat notes.json | jq -r .body)
+          printf "%s\n\n**EAS iOS Build ID:** %s\n" "$NOTES_BODY" "$IOS_BUILD_ID" > release_notes.txt
+
+          gh release create "v${{ needs.bump-version.outputs.new_version }}" \
+            --title "Release v${{ needs.bump-version.outputs.new_version }}" \
+            --notes-file release_notes.txt \
+            app-release.ipa app-release.apk
+
+  submit-ios:
+    name: Submit iOS to TestFlight
+    needs: build-ios
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          packager: pnpm
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm@10
+          pnpm install
+
+      - name: Verify EAS Submit Secrets
+        run: |
+          MISSING_SECRETS=""
+          [ -z "${{ secrets.ASC_PRIVATE_KEY }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_PRIVATE_KEY"
+          [ -z "${{ secrets.ASC_KEY_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_KEY_ID"
+          [ -z "${{ secrets.ASC_ISSUER_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_ISSUER_ID"
+          [ -z "${{ secrets.EXPO_APPLE_TEAM_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS EXPO_APPLE_TEAM_ID"
+          [ -z "${{ secrets.ASC_APP_ID }}" ] && MISSING_SECRETS="$MISSING_SECRETS ASC_APP_ID"
+          if [ -n "$MISSING_SECRETS" ]; then
+            echo "::error::Missing required secrets for iOS App Store submission:$MISSING_SECRETS"
+            exit 1
+          fi
+
+      - name: Setup ASC Private Key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          echo "$ASC_PRIVATE_KEY" > ./asc-key.p8
+          echo "EXPO_APPLE_APP_STORE_KEY_PATH=$(pwd)/asc-key.p8" >> $GITHUB_ENV
+
+      - name: Inject ascAppId into eas.json
+        run: |
+          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('eas.json')); data.submit=data.submit||{}; data.submit.production=data.submit.production||{}; data.submit.production.ios=data.submit.production.ios||{}; data.submit.production.ios.ascAppId=process.env.ASC_APP_ID; fs.writeFileSync('eas.json', JSON.stringify(data, null, 2));"
+        env:
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+
+      - name: Submit to App Store Connect (TestFlight)
+        env:
+          EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
+          EXPO_APPLE_APP_STORE_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_APPLE_APP_STORE_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          IOS_BUILD_ID: ${{ needs.build-ios.outputs.ios_build_id }}
+        run: |
+          eas submit -p ios --profile production --id $IOS_BUILD_ID --non-interactive
