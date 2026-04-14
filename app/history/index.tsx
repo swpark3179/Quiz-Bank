@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchAllSessions } from '@/lib/db/sessions';
 import type { SessionRow } from '@/lib/db/sessions';
@@ -16,8 +16,16 @@ import { NordBadge } from '@/components/ui/NordBadge';
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    navigation.setOptions({
+      headerBackTitle: from === 'main' ? '메인' : '문제목록',
+    });
+  }, [from, navigation]);
 
   useFocusEffect(
     useCallback(() => {

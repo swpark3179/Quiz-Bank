@@ -27,7 +27,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen
           name="[category]/index"
-          options={{ title: '문제 목록' }}
+          options={{ title: '문제 목록', headerBackTitle: '메인' }}
         />
         <Stack.Screen
           name="[category]/quiz"
@@ -51,11 +51,11 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="history/[sessionId]"
-          options={{ title: '차수 상세' }}
+          options={{ title: '차수 상세', headerBackTitle: '목록' }}
         />
         <Stack.Screen
           name="stats/[category]"
-          options={{ title: '정답률 통계' }}
+          options={{ title: '정답률 통계', headerBackTitle: '문제목록' }}
         />
       </Stack>
     </GestureHandlerRootView>
