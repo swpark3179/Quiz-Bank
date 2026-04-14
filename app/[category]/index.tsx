@@ -65,10 +65,8 @@ export default function CategoryScreen() {
       setTotalSessions(summary.totalSessions);
       setOverallAccuracy(summary.totalSessions > 0 ? summary.overallAccuracy : null);
 
-      // 카테고리 이름을 헤더에 반영 (파일 목록에서 첫 번째 카테고리 기준)
-      const cats = await fetchCategories();
-      const cat = cats.find((c) => c.id === categoryId);
-      if (cat) navigation.setOptions({ title: cat.name });
+      // 헤더 타이틀을 '문제 목록'으로 고정
+      navigation.setOptions({ title: '문제 목록' });
     } catch (e) {
       console.error('파일 목록 로드 오류:', e);
     } finally {
