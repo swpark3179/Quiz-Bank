@@ -5,3 +5,7 @@
 ## 2024-05-18 - Added Screen Reader Attributes to Interactive Components
 **Learning:** In React Native, components that act as interactive elements like cards (`TouchableOpacity`) or present state/progress (`ProgressBar`) need explicit accessibility attributes (`accessibilityRole`, `accessibilityLabel`, `accessibilityState`, `accessibilityValue`) to be correctly announced and understood by screen readers, beyond what the visual layout implies.
 **Action:** Always verify that interactive custom components have explicit `accessibilityRole` and state attributes matching their semantic purpose (e.g., "button", "progressbar") and provide descriptive `accessibilityLabel` texts, especially when combining text and icons.
+
+## 2026-04-14 - Accessible Custom Selection Components
+**Learning:** When creating custom checkbox or radio button groups in React Native using `TouchableOpacity`, screen readers don't inherently know their semantics or state.
+**Action:** Always provide explicit `accessibilityRole="checkbox"` or `"radio"` along with `accessibilityState={{ checked: boolean }}` and a descriptive `accessibilityLabel` to ensure equivalent experience for assistive technologies.

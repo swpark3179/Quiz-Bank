@@ -106,6 +106,9 @@ export function QuizSetupModal({
                     style={[styles.fileChip, isSelected && styles.fileChipSelected]}
                     onPress={() => toggleFile(file.id)}
                     activeOpacity={0.8}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected }}
+                    accessibilityLabel={`${file.name}, ${file.questionCount}문제`}
                   >
                     <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                       {isSelected && <Text style={styles.checkMark}>✓</Text>}
@@ -132,6 +135,9 @@ export function QuizSetupModal({
                   style={[styles.countChip, selectedCount === c && styles.countChipSelected]}
                   onPress={() => setSelectedCount(c)}
                   activeOpacity={0.8}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selectedCount === c }}
+                  accessibilityLabel={`${c}문제`}
                 >
                   <Text style={[styles.countText, selectedCount === c && styles.countTextSelected]}>
                     {c}문제
@@ -143,6 +149,9 @@ export function QuizSetupModal({
                   style={[styles.countChip, selectedCount === 'all' && styles.countChipSelected]}
                   onPress={() => setSelectedCount('all')}
                   activeOpacity={0.8}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selectedCount === 'all' }}
+                  accessibilityLabel={`전체 (${effectiveTotal})`}
                 >
                   <Text style={[styles.countText, selectedCount === 'all' && styles.countTextSelected]}>
                     전체 ({effectiveTotal})
@@ -161,6 +170,9 @@ export function QuizSetupModal({
                 style={[styles.modeOption, mode === m && styles.modeOptionSelected]}
                 onPress={() => setMode(m)}
                 activeOpacity={0.8}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: mode === m }}
+                accessibilityLabel={m === 'deferred' ? '모두 풀고 나서 확인, 전체 문제를 풀고 한번에 해설 확인' : '문제마다 즉시 확인, 각 문제 제출 후 바로 해설 표시'}
               >
                 <View style={[styles.radio, mode === m && styles.radioSelected]}>
                   {mode === m && <View style={styles.radioDot} />}
