@@ -41,6 +41,16 @@
           "resizeMode": "contain",
           "backgroundColor": "#ECEFF4"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraGradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+            }
+          }
+        }
       ]
     ],
     "experiments": {
