@@ -92,12 +92,12 @@ export default function HomeScreen() {
       {/* 헤더 */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.appName}>Quiz Bank</Text>
+          <Text style={styles.appName}>문제은행</Text>
           <Text style={styles.subtitle}>카테고리를 선택해주세요</Text>
         </View>
         <TouchableOpacity
           style={styles.historyButton}
-          onPress={() => router.push('/history')}
+          onPress={() => router.push('/history?from=main')}
           accessibilityRole="button"
           accessibilityLabel="풀이 이력 보기"
         >
