@@ -138,6 +138,8 @@ export default function ResultScreen() {
                 setSelectedAnswer(ans);
                 sheetRef.current?.expand();
               }}
+              accessibilityRole="button"
+              accessibilityLabel={`문제 ${i + 1} 해설 보기`}
             >
               <Text style={styles.explanationBtnText}>해설</Text>
             </TouchableOpacity>

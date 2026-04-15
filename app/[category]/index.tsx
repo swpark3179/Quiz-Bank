@@ -242,6 +242,8 @@ export default function CategoryScreen() {
           <TouchableOpacity
             style={styles.smallButton}
             onPress={() => router.push(`/stats/${categoryId}`)}
+            accessibilityRole="button"
+            accessibilityLabel="통계 보기"
           >
             <Ionicons name="bar-chart-outline" size={15} color={Colors.accent.secondary} />
             <Text style={styles.smallButtonText}>통계 보기</Text>
@@ -249,6 +251,8 @@ export default function CategoryScreen() {
           <TouchableOpacity
             style={styles.smallButton}
             onPress={() => router.push(`/history`)}
+            accessibilityRole="button"
+            accessibilityLabel="풀이 이력"
           >
             <Ionicons name="time-outline" size={15} color={Colors.accent.secondary} />
             <Text style={styles.smallButtonText}>풀이 이력</Text>
@@ -278,6 +282,8 @@ export default function CategoryScreen() {
             style={styles.fileCard}
             onPress={() => openSingleFileSetup(file)}
             activeOpacity={0.82}
+            accessibilityRole="button"
+            accessibilityLabel={`${file.name}, ${file.questionCount}문제`}
           >
             <View style={styles.fileIconBox}>
               <Ionicons name="document-text-outline" size={22} color={Colors.accent.secondary} />

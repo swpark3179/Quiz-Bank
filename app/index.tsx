@@ -132,6 +132,8 @@ export default function HomeScreen() {
               style={styles.card}
               onPress={() => handleSelect(cat)}
               activeOpacity={0.82}
+              accessibilityRole="button"
+              accessibilityLabel={`${cat.name}, ${cat.description || ''}${hasHistory ? `, 정답률 ${accuracyPct} 퍼센트, ${stat.sessions}회 풀이` : ''}`}
             >
               {/* 아이콘 영역 */}
               <View style={styles.iconBox}>
