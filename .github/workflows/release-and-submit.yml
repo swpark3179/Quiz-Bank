@@ -116,7 +116,7 @@ jobs:
 
   build-android:
     name: Build Android
-    needs: bump-version
+    needs: [bump-version, build-ios]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
