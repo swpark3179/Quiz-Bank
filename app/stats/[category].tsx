@@ -102,6 +102,8 @@ export default function StatsScreen() {
             );
           }}
           style={{ padding: Spacing.xs }}
+          accessibilityRole="button"
+          accessibilityLabel="이력 초기화"
         >
           <Ionicons name="trash-outline" size={24} color={Colors.status.wrong} />
         </TouchableOpacity>
@@ -356,6 +358,9 @@ export default function StatsScreen() {
                     style={[styles.fileChip, isSelected && styles.fileChipSelected]}
                     onPress={() => toggleFileSelection(file.id)}
                     activeOpacity={0.8}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected }}
+                    accessibilityLabel={file.name}
                   >
                     <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                       {isSelected && <Text style={styles.checkMark}>✓</Text>}
@@ -384,7 +389,11 @@ export default function StatsScreen() {
                     <View key={fileId} style={styles.fileQuestionGroup}>
                       <View style={styles.fileQuestionHeader}>
                         <Text style={styles.fileQuestionTitle}>{file.name}</Text>
-                        <TouchableOpacity onPress={() => toggleAllQuestionsForFile(fileId)}>
+                        <TouchableOpacity
+                          onPress={() => toggleAllQuestionsForFile(fileId)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${file.name} 전체 선택 및 해제`}
+                        >
                           <Text style={styles.selectAllText}>전체 선택/해제</Text>
                         </TouchableOpacity>
                       </View>
@@ -399,6 +408,9 @@ export default function StatsScreen() {
                             key={key}
                             style={[styles.questionRow, isSelected && styles.questionRowSelected]}
                             onPress={() => toggleQuestionSelection(fileId, q.question_id)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: isSelected }}
+                            accessibilityLabel={`${q.question_id}번 문제, 정답률 ${pct}%`}
                           >
                             <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                               {isSelected && <Text style={styles.checkMark}>✓</Text>}
