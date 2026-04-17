@@ -79,7 +79,12 @@ export default function HomeScreen() {
         <View style={styles.centered}>
           <Ionicons name="cloud-offline-outline" size={56} color={Colors.text.tertiary} />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => load()}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => load()}
+            accessibilityRole="button"
+            accessibilityLabel="다시 시도"
+          >
             <Text style={styles.retryText}>다시 시도</Text>
           </TouchableOpacity>
         </View>
