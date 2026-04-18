@@ -13,3 +13,7 @@
 ## 2024-05-18 - Consolidated Screen Reader Labels for Complex Cards
 **Learning:** When adding accessibility to complex interactive components (like cards with multiple text/icon children) in React Native, providing individual accessibility roles or leaving them default can result in disjointed or missing announcements for screen reader users.
 **Action:** Use a single, consolidated `accessibilityLabel` on the parent container (e.g., `TouchableOpacity`) using template literals to combine relevant text context (like titles, descriptions, and dynamic stats) smoothly into one announcement.
+
+## 2024-05-19 - Accessible Collapsible Components
+**Learning:** For expanding/collapsing accordion UI components in React Native (`TouchableOpacity`), providing an `accessibilityRole="button"` and `accessibilityLabel` isn't enough. Screen readers need to know if the content is currently visible.
+**Action:** Always include `accessibilityState={{ expanded: boolean }}` tied to the component's internal open/close state so screen reader users know whether activating the button will reveal or hide content.
