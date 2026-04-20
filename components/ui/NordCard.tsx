@@ -47,14 +47,27 @@ export function NordCard({
   );
 
   if (pressable) {
+    // Consolidate accessibility label
+    const a11yLabelParts = [];
+    if (title) a11yLabelParts.push(title);
+    if (subtitle) a11yLabelParts.push(subtitle);
+    if (badge) a11yLabelParts.push(`상태: ${badge}`);
+    const a11yLabel = a11yLabelParts.join(', ');
+
     return (
-      <TouchableOpacity activeOpacity={0.82} {...rest}>
+      <TouchableOpacity
+        activeOpacity={0.82}
+        accessibilityRole="button"
+        accessibilityLabel={rest.accessibilityLabel || (a11yLabel ? a11yLabel : undefined)}
+        {...rest}
+      >
         {content}
       </TouchableOpacity>
     );
   }
 
-  return <View style={rest.style}>{content}</View>;
+  // Use the style prop if rest.style is not available (though it shouldn't be anyway since rest shouldn't have style)
+  return <View style={style}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
