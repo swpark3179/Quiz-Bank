@@ -1,20 +1,5 @@
 [
   {
-    "id": "ai-basics",
-    "name": "샘플",
-    "description": "인공지능 기본 개념 및 머신러닝 문제",
-    "icon": "brain-outline",
-    "order": 1,
-    "files": [
-      {
-        "id": "chapter-01",
-        "name": "Chapter 1: AI 개요 & 데이터",
-        "questionCount": 3,
-        "order": 1
-      }
-    ]
-  },
-  {
     "id": "ai-advanced",
     "name": "AI Advanced",
     "description": "인공지능 심화 개념 및 딥러닝 문제",
@@ -44,6 +29,24 @@
         "name": "Chapter 6",
         "questionCount": 47,
         "order": 4
+      },
+      {
+        "id": "chapter07",
+        "name": "Chapter 7",
+        "questionCount": 20,
+        "order": 5
+      },
+      {
+        "id": "chapter08",
+        "name": "Chapter 8",
+        "questionCount": 18,
+        "order": 6
+      },
+      {
+        "id": "chapter09",
+        "name": "Chapter 9",
+        "questionCount": 14,
+        "order": 7
       }
     ]
   }
