@@ -37,14 +37,14 @@
         "order": 5
       },
       {
-        "id": "chapter08",
-        "name": "Chapter 8",
+        "id": "realprob02",
+        "name": "기출문제-251212_오후",
         "questionCount": 18,
         "order": 6
       },
       {
-        "id": "chapter09",
-        "name": "Chapter 9",
+        "id": "realprob03",
+        "name": "기출문제-251219_오전",
         "questionCount": 14,
         "order": 7
       }
