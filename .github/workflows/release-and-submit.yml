@@ -116,8 +116,10 @@ jobs:
 
   build-android:
     name: Build Android
-    needs: [bump-version, build-ios]
+    needs: bump-version
     runs-on: ubuntu-latest
+    outputs:
+      android_build_id: ${{ steps.extract-id.outputs.android_build_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -148,16 +150,22 @@ jobs:
           pnpm install
 
       - name: Build Android APK
+        id: extract-id
         run: |
           eas build --platform android --profile production-apk --non-interactive --wait
 
-          APK_URL=$(eas build:list --platform android --status finished --json --limit 1 | jq -r '.[0].artifacts.buildUrl')
+          BUILD_INFO=$(eas build:list --platform android --status finished --json --limit 1)
+          APK_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl')
+          ANDROID_BUILD_ID=$(echo "$BUILD_INFO" | jq -r '.[0].id')
+
           if [ -z "$APK_URL" ] || [ "$APK_URL" = "null" ]; then
             echo "::error::Could not extract APK_URL from eas build list."
             exit 1
           fi
 
           curl -L -o app-release.apk "$APK_URL"
+
+          echo "android_build_id=$ANDROID_BUILD_ID" >> $GITHUB_OUTPUT
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -270,3 +278,53 @@ jobs:
           IOS_BUILD_ID: ${{ needs.build-ios.outputs.ios_build_id }}
         run: |
           eas submit -p ios --profile production --id $IOS_BUILD_ID --non-interactive
+
+  submit-android:
+    name: Submit Android to Google Play
+    needs: build-android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          packager: pnpm
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm@10
+          pnpm install
+
+      - name: Verify EAS Submit Secrets
+        run: |
+          if [ -z "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}" ]; then
+            echo "::error::Missing required secret GOOGLE_SERVICE_ACCOUNT_JSON for Android submission."
+            exit 1
+          fi
+
+      - name: Setup Google Service Account Key
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > ./google-service-account.json
+
+      - name: Submit to Google Play (Internal Track)
+        env:
+          ANDROID_BUILD_ID: ${{ needs.build-android.outputs.android_build_id }}
+        run: |
+          eas submit -p android --profile production --id $ANDROID_BUILD_ID --non-interactive
