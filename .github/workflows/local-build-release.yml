@@ -258,6 +258,20 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN
 
           echo "$IOS_P12_BASE64" | base64 -d > cert.p12
+
+          # Diagnostic: verify p12 file integrity and password before importing.
+          # If this fails, either IOS_P12_BASE64 is corrupted or IOS_P12_PASSWORD is wrong.
+          echo "p12 file size: $(wc -c < cert.p12) bytes"
+          echo "p12 password length: ${#IOS_P12_PASSWORD}"
+          if openssl pkcs12 -in cert.p12 -nokeys -passin "pass:$IOS_P12_PASSWORD" -info -noout 2>&1; then
+            echo "p12 verification OK"
+          else
+            echo "::error::p12 verification FAILED — file is corrupted or password is wrong"
+            echo "Hint: re-export the .p12 and re-encode with 'base64 -i cert.p12 -o cert.p12.b64' (macOS)."
+            echo "Hint: ensure IOS_P12_PASSWORD secret has no trailing newline/whitespace."
+            exit 1
+          fi
+
           security import cert.p12 -k $KEYCHAIN -P "$IOS_P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$IOS_KEYCHAIN_PASSWORD" $KEYCHAIN
 
