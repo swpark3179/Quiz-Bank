@@ -272,7 +272,15 @@ jobs:
             exit 1
           fi
 
-          security import cert.p12 -k $KEYCHAIN -P "$IOS_P12_PASSWORD" -T /usr/bin/codesign
+          # Convert to legacy PKCS#12 format (SHA1 MAC + 3DES) for Apple's `security` tool.
+          # Modern OpenSSL 3 defaults (AES-256-CBC, PBKDF2-SHA256) are not accepted by
+          # macOS Security framework, which reports a misleading "MAC verification failed".
+          openssl pkcs12 -in cert.p12 -nodes -passin "pass:$IOS_P12_PASSWORD" \
+            | openssl pkcs12 -export -legacy \
+                -out cert-legacy.p12 \
+                -passout "pass:$IOS_P12_PASSWORD"
+
+          security import cert-legacy.p12 -k $KEYCHAIN -P "$IOS_P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$IOS_KEYCHAIN_PASSWORD" $KEYCHAIN
 
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
