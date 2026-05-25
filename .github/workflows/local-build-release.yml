@@ -202,7 +202,7 @@ jobs:
     name: Build iOS IPA (local)
     needs: bump-version
     if: ${{ github.event.inputs.build_ios == 'true' }}
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout tagged code
         uses: actions/checkout@v4
@@ -220,7 +220,15 @@ jobs:
           version: 10
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app || true
+        run: |
+          # React Native 0.81 / Expo 54 require Xcode 16+
+          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=/Applications/Xcode.app
+          fi
+          echo "Using $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
