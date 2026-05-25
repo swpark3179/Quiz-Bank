@@ -272,7 +272,27 @@ jobs:
             exit 1
           fi
 
-          security import cert.p12 -k $KEYCHAIN -P "$IOS_P12_PASSWORD" -T /usr/bin/codesign
+          # macOS Security framework rejects modern PKCS#12 (PBES2 / PBKDF2-SHA256 /
+          # AES-256-CBC) with a misleading "MAC verification failed" error. macOS ships
+          # LibreSSL by default, which cannot decrypt that format either, so we install
+          # OpenSSL 3 via Homebrew and use it to re-encrypt the p12 as legacy
+          # (SHA1 MAC + 3DES) before handing it to `security import`.
+          echo "Installing OpenSSL 3 for legacy p12 conversion..."
+          brew install --quiet openssl@3
+          OPENSSL3="$(brew --prefix openssl@3)/bin/openssl"
+          echo "Using $OPENSSL3"
+          "$OPENSSL3" version
+
+          "$OPENSSL3" pkcs12 -in cert.p12 -nodes \
+            -passin "pass:$IOS_P12_PASSWORD" \
+            -out cert.pem
+          "$OPENSSL3" pkcs12 -export -legacy \
+            -in cert.pem \
+            -out cert-legacy.p12 \
+            -passout "pass:$IOS_P12_PASSWORD"
+          rm -f cert.pem
+
+          security import cert-legacy.p12 -k $KEYCHAIN -P "$IOS_P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$IOS_KEYCHAIN_PASSWORD" $KEYCHAIN
 
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
