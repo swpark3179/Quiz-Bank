@@ -9,7 +9,7 @@ import { Colors } from '@/lib/theme';
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar style="dark" backgroundColor={Colors.bg.primary} />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: Colors.bg.primary },
