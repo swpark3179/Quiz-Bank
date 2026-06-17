@@ -319,7 +319,10 @@ jobs:
           IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
         working-directory: ios
         run: |
-          WORKSPACE=$(ls *.xcworkspace | head -n1)
+          # NOTE: `ls *.xcworkspace` (without -d) lists the *contents* of the
+          # .xcworkspace bundle (e.g. contents.xcworkspacedata) rather than the
+          # bundle itself, which then breaks the xcodebuild invocation below.
+          WORKSPACE=$(ls -d *.xcworkspace | head -n1)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
 
           # TestFlight 는 동일 marketing version 에 대해 고유한 build number 를 요구하므로
