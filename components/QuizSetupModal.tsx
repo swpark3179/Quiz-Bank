@@ -9,7 +9,7 @@ import {
 import Modal from 'react-native-modal';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from './ui/NordButton';
-import type { QuizFile } from '@/lib/firebase/categories';
+import type { QuizFile } from '@/lib/local/categories';
 
 export interface QuizSetupOptions {
   count: number | 'all';
