@@ -410,8 +410,42 @@ jobs:
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
           # altool 은 ~/private_keys 등 정해진 경로에서 AuthKey_<KEY_ID>.p8 를 찾는다.
+          #
+          # 주의:
+          #   1) `echo "$ASC_PRIVATE_KEY"` 는 백슬래시/옵션-유사 토큰 처리 때문에
+          #      PEM 본문(특히 `-----BEGIN PRIVATE KEY-----` 줄)을 깨뜨릴 수 있다.
+          #      => `printf '%s\n'` 으로 안전하게 기록한다.
+          #   2) Secret 에 PEM 원문이 아니라 base64 로 인코딩된 .p8 가 저장된 경우도
+          #      흔하므로 첫 줄에 BEGIN 마커가 없으면 base64 로 디코딩해서 다시 쓴다.
+          #   3) PEM 본문에 CRLF 가 섞이면 altool 이 키 파싱에 실패하므로 CRLF 제거.
           mkdir -p ~/private_keys
-          echo "$ASC_PRIVATE_KEY" > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          KEY_PATH="$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
+
+          # Strip potential CRLF that GitHub Secrets UI may introduce.
+          tr -d '\r' < "$KEY_PATH" > "$KEY_PATH.tmp" && mv "$KEY_PATH.tmp" "$KEY_PATH"
+
+          # If the file does not look like a PEM, assume base64-encoded .p8 and decode.
+          if ! head -n1 "$KEY_PATH" | grep -q "BEGIN PRIVATE KEY"; then
+            echo "AuthKey does not start with PEM header; attempting base64 decode."
+            # Remove whitespace/newlines before decoding to tolerate wrapped or
+            # single-line base64 inputs.
+            tr -d ' \t\r\n' < "$KEY_PATH" | base64 -d > "$KEY_PATH.decoded" 2>/dev/null || {
+              echo "::error::ASC_PRIVATE_KEY is neither a PEM nor valid base64."
+              exit 1
+            }
+            mv "$KEY_PATH.decoded" "$KEY_PATH"
+          fi
+
+          chmod 600 "$KEY_PATH"
+
+          # Sanity check — fail fast with a clear message rather than letting
+          # altool produce its cryptic "Failed to load AuthKey file" error.
+          if ! head -n1 "$KEY_PATH" | grep -q "BEGIN PRIVATE KEY"; then
+            echo "::error::AuthKey file is not a valid PEM private key. Re-export the .p8 from App Store Connect and store its raw contents (or base64) in the ASC_PRIVATE_KEY secret."
+            exit 1
+          fi
+          echo "AuthKey written to $KEY_PATH ($(wc -c < "$KEY_PATH") bytes)"
 
       - name: Upload to TestFlight
         env:
