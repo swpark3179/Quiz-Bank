@@ -1,5 +1,20 @@
 [
   {
+    "id": "claude-certicate-architecture",
+    "name": "Claude Certificate Architecture",
+    "description": "Claude Code 인증 대비 - 아키텍처 및 자동화 실전 문제",
+    "icon": "ribbon-outline",
+    "order": 1,
+    "files": [
+      {
+        "id": "example",
+        "name": "샘플 문제",
+        "questionCount": 2,
+        "order": 1
+      }
+    ]
+  },
+  {
     "id": "ai-advanced",
     "name": "AI Advanced",
     "description": "인공지능 심화 개념 및 딥러닝 문제",
