@@ -232,7 +232,9 @@ jobs:
   build-ios:
     name: Build iOS IPA (local)
     needs: bump-version
-    runs-on: macos-15
+    # Apple requires apps uploaded to App Store Connect (incl. TestFlight) to be
+    # built with the iOS 26 SDK / Xcode 26+. Only macos-26 runners ship Xcode 26.
+    runs-on: macos-26
     steps:
       - name: Checkout tagged code
         uses: actions/checkout@v4
@@ -251,14 +253,20 @@ jobs:
 
       - name: Select Xcode
         run: |
-          # React Native 0.81 / Expo 54 require Xcode 16+
-          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n1)
+          # App Store Connect requires builds produced with the iOS 26 SDK (Xcode 26+).
+          # Prefer Xcode 26 if present; fall back to the highest available Xcode otherwise.
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n1)
+          fi
           if [ -z "$XCODE_PATH" ]; then
             XCODE_PATH=/Applications/Xcode.app
           fi
           echo "Using $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH"
           xcodebuild -version
+          # Sanity check: surface the active SDK so failures are obvious in logs.
+          xcrun --sdk iphoneos --show-sdk-version || true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -386,7 +394,8 @@ jobs:
     name: Upload iOS to TestFlight (altool)
     needs: build-ios
     if: ${{ github.event.inputs.upload_testflight == 'true' }}
-    runs-on: macos-15
+    # Use the same Xcode 26 runner so altool ships with the matching toolchain.
+    runs-on: macos-26
     steps:
       - name: Download iOS artifact
         uses: actions/download-artifact@v4
