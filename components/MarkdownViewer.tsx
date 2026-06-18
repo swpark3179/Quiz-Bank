@@ -48,17 +48,21 @@ const markdownStyles: MarkdownProps['styles'] = {
     marginVertical: Spacing.xs,
   },
   code: {
-    backgroundColor: '#f6f8fa',
+    backgroundColor: Colors.code.bg,
     borderRadius: Radius.sm,
     padding: Spacing.base,
+    borderWidth: 1,
+    borderColor: Colors.code.border,
   },
   codespan: {
-    backgroundColor: '#f6f8fa',
+    backgroundColor: Colors.code.bg,
     borderRadius: Radius.xs,
     paddingHorizontal: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.code.border,
     fontFamily: 'monospace',
     fontSize: Typography.size.sm,
-    color: Colors.text.primary,
+    color: Colors.code.text,
   },
   blockquote: {
     borderLeftWidth: 4,
@@ -97,7 +101,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({ content, scro
       value={content}
       styles={markdownStyles}
       flatListProps={{ scrollEnabled: false, style: { backgroundColor: 'transparent' } }}
-      theme={{ colors: { background: 'transparent', code: '#f6f8fa', link: '#58a6ff', text: Colors.text.primary, border: '#d0d7de' } }}
+      theme={{ colors: { background: 'transparent', code: Colors.code.bg, link: '#58a6ff', text: Colors.text.primary, border: '#d0d7de' } }}
     />
   );
 
