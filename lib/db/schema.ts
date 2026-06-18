@@ -50,7 +50,9 @@ async function initializeSchema(database: SQLite.SQLiteDatabase): Promise<void> 
       explanation  TEXT NOT NULL DEFAULT '',
       correct_label TEXT NOT NULL DEFAULT '',
       -- 섞인 후의 정답 인덱스 (0-based)
-      mapped_correct_index INTEGER
+      mapped_correct_index INTEGER,
+      -- 출제(셔플) 순서, 1-indexed. 결과 화면에서 푼 순서대로 표시하기 위함
+      display_order INTEGER
     );
 
     CREATE INDEX IF NOT EXISTS idx_answers_session ON answers(session_id);
@@ -72,6 +74,12 @@ async function initializeSchema(database: SQLite.SQLiteDatabase): Promise<void> 
 
   try {
     await database.execAsync(`ALTER TABLE answers ADD COLUMN mapped_correct_index INTEGER`);
+  } catch (e) {
+    // Ignore if column already exists
+  }
+
+  try {
+    await database.execAsync(`ALTER TABLE answers ADD COLUMN display_order INTEGER`);
   } catch (e) {
     // Ignore if column already exists
   }
