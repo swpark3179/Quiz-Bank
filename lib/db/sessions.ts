@@ -26,6 +26,7 @@ export interface AnswerRow {
   explanation: string;
   correct_label: string;
   mapped_correct_index: number | null;
+  display_order: number | null;
 }
 
 /** 새 세션 생성 */
@@ -64,12 +65,13 @@ export async function saveAnswer(params: {
   explanation: string;
   correctLabel: string;
   mappedCorrectIndex: number;
+  displayOrder: number;
 }): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
     `INSERT INTO answers
-       (id, session_id, question_id, source_file_id, question_text, chosen_index, correct_index, is_correct, explanation, correct_label, mapped_correct_index)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, session_id, question_id, source_file_id, question_text, chosen_index, correct_index, is_correct, explanation, correct_label, mapped_correct_index, display_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       params.id,
       params.sessionId,
@@ -82,6 +84,7 @@ export async function saveAnswer(params: {
       params.explanation,
       params.correctLabel,
       params.mappedCorrectIndex,
+      params.displayOrder,
     ]
   );
 }
@@ -122,7 +125,7 @@ export async function fetchSession(sessionId: string): Promise<SessionRow | null
 export async function fetchAnswers(sessionId: string): Promise<AnswerRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<AnswerRow>(
-    `SELECT * FROM answers WHERE session_id = ? ORDER BY question_id ASC`,
+    `SELECT * FROM answers WHERE session_id = ? ORDER BY display_order ASC, rowid ASC`,
     [sessionId]
   );
 }
