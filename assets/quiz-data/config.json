@@ -1,6 +1,6 @@
 [
   {
-    "id": "claude-certicate-architecture",
+    "id": "claude-certificate-architecture",
     "name": "Claude Certificate Architecture",
     "description": "Claude Code 인증 대비 - 아키텍처 및 자동화 실전 문제",
     "icon": "ribbon-outline",
@@ -11,6 +11,12 @@
         "name": "샘플 문제",
         "questionCount": 60,
         "order": 1
+      },
+      {
+        "id": "example-kor",
+        "name": "샘플 문제 (한글버전)",
+        "questionCount": 60,
+        "order": 2
       }
     ]
   },
