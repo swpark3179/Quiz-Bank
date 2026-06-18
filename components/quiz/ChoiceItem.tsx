@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle } from '
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
 import type { Choice } from '@/lib/parser/quizParser';
 import { stripChoiceSymbol } from '@/lib/utils/quizUtils';
+import { InlineCodeText } from '@/components/InlineCodeText';
 
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
 
@@ -104,11 +105,12 @@ export function ChoiceItem({
         <Text style={[styles.symbol, s.symbol]}>{sym}</Text>
       </View>
       <View style={styles.textBox}>
-        <Text style={[styles.label, s.text]}>{stripChoiceSymbol(choice.label)}</Text>
+        <InlineCodeText style={[styles.label, s.text]} text={choiceLabelText} />
         {choice.description ? (
-          <Text style={[styles.description, { color: s.text.color ?? Colors.text.secondary }]}>
-            {choice.description}
-          </Text>
+          <InlineCodeText
+            style={[styles.description, { color: s.text.color ?? Colors.text.secondary }]}
+            text={choice.description}
+          />
         ) : null}
       </View>
     </TouchableOpacity>

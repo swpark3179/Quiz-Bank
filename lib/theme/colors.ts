@@ -80,6 +80,13 @@ export const Colors = {
     wrong: '#FAF0F0',          // nord11 10% opacity
     wrongBorder: Nord.nord11,
   },
+
+  // Inline code blocks (Claude warm clay pastel)
+  code: {
+    bg: '#F6EDE6',
+    border: '#E8D5C4',
+    text: '#9D5A3C',
+  },
 } as const;
 
 export type NordColorKey = keyof typeof Nord;
