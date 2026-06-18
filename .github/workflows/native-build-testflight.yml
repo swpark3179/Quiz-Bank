@@ -333,8 +333,9 @@ jobs:
           WORKSPACE=$(ls -d *.xcworkspace | head -n1)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
 
-          # TestFlight 는 동일 marketing version 에 대해 고유한 build number 를 요구하므로
-          # GitHub run number 를 CFBundleVersion(CURRENT_PROJECT_VERSION)으로 주입한다.
+          # build number(CFBundleVersion)는 app.json 의 expo.ios.buildNumber 로 관리하며
+          # bump-version 잡에서 릴리스마다 1씩 증가시킨다. expo prebuild 가 이 값을
+          # Info.plist 에 그대로 기록하므로 여기서 별도로 주입하지 않는다.
           xcodebuild \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
@@ -345,8 +346,7 @@ jobs:
             DEVELOPMENT_TEAM="$IOS_TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="$IOS_CODE_SIGN_IDENTITY" \
-            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME"
 
       - name: Export IPA (app-store)
         env:
