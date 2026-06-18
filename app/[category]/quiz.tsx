@@ -241,6 +241,18 @@ export default function QuizScreen() {
             style={styles.nextButton}
           />
         )}
+
+        {/* 즉시 확인 모드: 제출 후 해설 시트를 닫았을 때 다시 열 수 있는 버튼 */}
+        {mode === 'immediate' && isSubmitted && (
+          <NordButton
+            label="해설 다시 보기"
+            variant="secondary"
+            onPress={() => sheetRef.current?.expand()}
+            fullWidth
+            size="lg"
+            style={styles.nextButton}
+          />
+        )}
       </ScrollView>
 
       {/* 즉시 확인 모드: 해설 바텀시트 */}
