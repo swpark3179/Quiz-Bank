@@ -1,7 +1,7 @@
 [
   {
-    "id": "claude-certificate-architecture",
-    "name": "Claude Certificate Architecture",
+    "id": "claude-certified-architect",
+    "name": "Claude Certified Architect",
     "description": "Claude Code 인증 대비 - 아키텍처 및 자동화 실전 문제",
     "icon": "ribbon-outline",
     "order": 1,
