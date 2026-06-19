@@ -47,10 +47,27 @@ function main() {
   // app.json 업데이트
   const appJson = JSON.parse(fs.readFileSync(APP_JSON_PATH, 'utf8'));
   appJson.expo.version = newVersion;
-  fs.writeFileSync(APP_JSON_PATH, JSON.stringify(appJson, null, 2) + '\n');
-  console.log(`✅ Updated app.json`);
 
-  console.log(`\n🎉 Version bumped to ${newVersion}`);
+  // 빌드 번호(전역 단조 카운터) 증가
+  //   - iOS  : CFBundleVersion 으로 매핑되며 문자열이어야 한다.
+  //   - Android: versionCode 로 매핑되며 정수여야 한다.
+  // marketing version 과 무관하게 매 릴리스마다 1씩 증가시켜 두 플랫폼을 동일 값으로 맞춘다.
+  appJson.expo.ios = appJson.expo.ios || {};
+  appJson.expo.android = appJson.expo.android || {};
+  const prevIosBuild = parseInt(appJson.expo.ios.buildNumber, 10);
+  const prevAndroidCode = parseInt(appJson.expo.android.versionCode, 10);
+  const prevBuild = Math.max(
+    Number.isNaN(prevIosBuild) ? 0 : prevIosBuild,
+    Number.isNaN(prevAndroidCode) ? 0 : prevAndroidCode
+  );
+  const newBuild = prevBuild + 1;
+  appJson.expo.ios.buildNumber = String(newBuild);
+  appJson.expo.android.versionCode = newBuild;
+
+  fs.writeFileSync(APP_JSON_PATH, JSON.stringify(appJson, null, 2) + '\n');
+  console.log(`✅ Updated app.json (build number ${prevBuild} → ${newBuild})`);
+
+  console.log(`\n🎉 Version bumped to ${newVersion} (build ${newBuild})`);
   console.log(`   → Run: git add -A && git commit -m "chore: bump version to v${newVersion}" && git tag v${newVersion}`);
 }
 
