@@ -1,4 +1,4 @@
-name: Native Build, Release and TestFlight (No Expo Cloud)
+name: App Build & Release — Android APK · iOS TestFlight (Main)
 
 # Expo Cloud(EAS Build/Submit)를 전혀 사용하지 않고 GitHub Actions runner 에서
 # 직접 native build 를 수행한다.
@@ -498,8 +498,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 설치 안내 본문을 작성한 뒤 --notes-file 로 전달한다.
+          # --generate-notes 를 함께 쓰면 gh 가 이 본문 뒤에 자동 변경 이력을 덧붙인다.
+          cat > release-notes.md <<'EOF'
+          ## 📲 설치 방법
+
+          ### Android
+          아래 **Assets** 의 `app-release.apk` 파일을 안드로이드 기기에서 직접 다운로드한 뒤 실행하여 설치하세요.
+          (출처를 알 수 없는 앱 설치 허용이 필요할 수 있습니다.)
+
+          ### iOS
+          App Store 에서 **"문제은행 sds"** 로 검색한 뒤, 이 아이콘을 가진 앱을 설치하세요.
+          (iOS 빌드는 TestFlight/App Store 를 통해 배포되며, IPA 파일을 직접 설치할 수는 없습니다.)
+
+          ---
+          EOF
+
           gh release create "v${{ needs.bump-version.outputs.new_version }}" \
             --title "Release v${{ needs.bump-version.outputs.new_version }}" \
+            --notes-file release-notes.md \
             --generate-notes \
             app-release.apk \
             app-release.ipa
