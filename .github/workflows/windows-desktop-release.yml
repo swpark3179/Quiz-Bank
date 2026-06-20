@@ -116,3 +116,45 @@ jobs:
             release-artifacts/QuizBank-*-portable.zip \
             --repo "${{ github.repository }}" \
             --clobber
+
+      # 릴리스 본문에 Windows 데스크탑 사용 안내를 1회만 추가한다.
+      # 이미 추가된 경우(= 본문에 마커 주석이 존재)에는 중복 추가하지 않는다.
+      # 마커는 사용자에게 보이지 않는 HTML 주석으로, 추가 여부를 판단하는 플래그다.
+      - name: Append Windows desktop guide to release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          MARKER="<!-- windows-desktop-guide -->"
+
+          BODY=$(gh release view "$TAG" --repo "${{ github.repository }}" --json body -q .body)
+
+          if printf '%s' "$BODY" | grep -qF "$MARKER"; then
+            echo "Windows desktop guide already present in release '$TAG' notes — skipping."
+            exit 0
+          fi
+
+          GUIDE=$(cat <<'EOF'
+<!-- windows-desktop-guide -->
+
+## 🖥️ Windows 데스크탑 사용 안내
+
+1. `QuizBank-*-portable.zip` 파일을 다운로드한 뒤 원하는 폴더에 **압축을 해제**합니다.
+2. 압축 해제된 폴더 안의 **`Quiz Bank.exe`** 를 실행하면 앱이 시작됩니다.
+
+### 📂 문제 파일 (오프라인 제공)
+
+- 문제 파일은 별도 다운로드 없이 **오프라인으로 함께 제공**됩니다.
+- 압축 해제된 폴더 안의 **`quiz-data`** 폴더(`Quiz Bank.exe` 와 같은 위치)에 문제 파일이 들어 있습니다.
+- 오프라인 구성이므로 이 `quiz-data` 폴더의 문제 파일을 **직접 수정하거나 새로운 문제를 추가**하여 자유롭게 활용할 수 있습니다. (앱 재설치 없이 폴더 내용만 교체하면 됩니다.)
+EOF
+)
+
+          NEW_BODY=$(printf '%s\n\n%s' "$BODY" "$GUIDE")
+
+          printf '%s' "$NEW_BODY" | gh release edit "$TAG" \
+            --repo "${{ github.repository }}" \
+            --notes-file -
+
+          echo "Appended Windows desktop guide to release '$TAG' notes."
