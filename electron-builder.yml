@@ -18,11 +18,14 @@ files:
   - package.json
 
 win:
+  # Ship as a ZIP of the unpacked app directory rather than a single portable
+  # .exe. The portable target re-extracts the entire app to %TEMP% on every
+  # launch, which dominated cold-start time. With the zip target the user
+  # unpacks once and launches `Quiz Bank.exe` directly from the folder, so
+  # subsequent starts skip the extraction step entirely. The `quiz-data/`
+  # folder convention is unchanged — drop it next to the unpacked .exe.
   target:
-    - portable
+    - zip
   # electron-builder auto-converts a >=256px PNG to a multi-size .ico.
   icon: assets/images/icon.png
-  artifactName: QuizBank-${version}-portable.${ext}
-
-portable:
   artifactName: QuizBank-${version}-portable.${ext}
