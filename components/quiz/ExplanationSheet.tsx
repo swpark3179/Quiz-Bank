@@ -9,7 +9,8 @@ import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { MarkdownViewer } from '../MarkdownViewer';
 import { NordButton } from '../ui/NordButton';
 
@@ -57,34 +58,39 @@ export function ExplanationSheet({
       backgroundStyle={styles.background}
     >
       <BottomSheetScrollView contentContainerStyle={styles.scrollContent}>
-        {/* 정답/오답 헤더 */}
+        {/* 솔리드 결과 헤더 */}
         <View
           style={[
-            styles.resultBanner,
-            { backgroundColor: isCorrect ? Colors.status.correct + '18' : Colors.status.wrong + '15' },
+            styles.resultHeader,
+            { backgroundColor: isCorrect ? Colors.status.correct : Colors.status.wrong },
           ]}
         >
-          <Text style={styles.resultEmoji}>{isCorrect ? '🎉' : '😥'}</Text>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={[
-                styles.resultTitle,
-                { color: isCorrect ? Colors.status.correct : Colors.status.wrong },
-              ]}
-            >
-              {isCorrect ? '정답입니다!' : '오답입니다'}
-            </Text>
-            {!isCorrect && selectedLabel && (
-              <Text style={styles.resultAnswer}>내가 선택한 답: {selectedLabel}</Text>
-            )}
-            <Text style={styles.resultAnswer}>정답: {correctLabel}</Text>
+          <View style={styles.resultIcon}>
+            <Ionicons name={isCorrect ? 'checkmark' : 'close'} size={26} color="#FFFFFF" />
           </View>
+          <Text style={styles.resultTitle}>{isCorrect ? '정답입니다!' : '오답입니다'}</Text>
+        </View>
+
+        {/* 정답 · 내 선택 칩 */}
+        <View style={styles.answerRow}>
+          <View style={[styles.answerChip, styles.answerChipCorrect]}>
+            <Text style={styles.answerChipLabel}>정답</Text>
+            <Text style={styles.answerChipValue}>{correctLabel}</Text>
+          </View>
+          {!isCorrect && selectedLabel && (
+            <View style={[styles.answerChip, styles.answerChipWrong]}>
+              <Text style={styles.answerChipLabel}>내 선택</Text>
+              <Text style={styles.answerChipValue}>{selectedLabel}</Text>
+            </View>
+          )}
         </View>
 
         {/* 해설 */}
         <View style={styles.explanationBox}>
           <Text style={styles.sectionLabel}>📖 해설</Text>
-          <MarkdownViewer content={explanation} />
+          <View style={styles.explanationCard}>
+            <MarkdownViewer content={explanation} />
+          </View>
         </View>
 
         {/* 다음 버튼 */}
@@ -102,7 +108,7 @@ export function ExplanationSheet({
 
 const styles = StyleSheet.create({
   background: {
-    backgroundColor: Colors.bg.primary,
+    backgroundColor: Colors.surface.sheet,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     shadowColor: '#2E3440',
@@ -121,25 +127,67 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     paddingBottom: Spacing.xxxl,
   },
-  resultBanner: {
+  resultHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    borderRadius: Radius.md,
-    padding: Spacing.base,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.base,
+    marginHorizontal: -Spacing.base,
+    marginTop: -Spacing.xs,
     marginBottom: Spacing.base,
   },
-  resultEmoji: {
-    fontSize: 32,
+  resultIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   resultTitle: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.bold,
+    fontSize: Typography.size.xl,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
-  resultAnswer: {
-    fontSize: Typography.size.sm,
+  answerRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.base,
+  },
+  answerChip: {
+    flex: 1,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    padding: Spacing.sm + 2,
+  },
+  answerChipCorrect: {
+    backgroundColor: Colors.status.correctBg,
+    borderColor: Colors.status.correctBorder,
+  },
+  answerChipWrong: {
+    backgroundColor: Colors.status.wrongBg,
+    borderColor: Colors.status.wrongBorder,
+  },
+  answerChipLabel: {
+    fontSize: Typography.size.xs,
+    fontWeight: '700',
     color: Colors.text.secondary,
-    marginTop: 2,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  answerChipValue: {
+    fontSize: Typography.size.sm,
+    fontWeight: '700',
+    color: Colors.text.primary,
+  },
+  explanationCard: {
+    backgroundColor: Colors.surface.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    padding: Spacing.base,
+    ...Shadow.sm,
   },
   explanationBox: {
     marginBottom: Spacing.xl,

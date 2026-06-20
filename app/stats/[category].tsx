@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.base,
     borderWidth: 1,
-    borderColor: Colors.border + '80',
+    borderColor: Colors.border,
     ...Shadow.sm,
     gap: Spacing.md,
   },
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.base,
     borderWidth: 1,
-    borderColor: Colors.border + '80',
+    borderColor: Colors.border,
     ...Shadow.sm,
     gap: Spacing.xs,
     overflow: 'hidden',
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   questionRowSelected: {
-    backgroundColor: Colors.choice.selected + '50',
+    backgroundColor: Colors.choice.selected,
     borderRadius: Radius.xs,
   },
   questionIdText: {

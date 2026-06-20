@@ -21,47 +21,57 @@ const INDEX_SYMBOLS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 const stateStyles: Record<
   ChoiceState,
-  { container: ViewStyle; symbol: TextStyle; text: TextStyle }
+  { container: ViewStyle; symbol: TextStyle; symbolBg: string; text: TextStyle }
 > = {
   default: {
     container: {
       backgroundColor: Colors.choice.default,
       borderColor: Colors.choice.defaultBorder,
+      borderWidth: 1.5,
     },
     symbol: { color: Colors.text.secondary },
+    symbolBg: 'transparent',
     text: { color: Colors.text.primary },
   },
   selected: {
     container: {
       backgroundColor: Colors.choice.selected,
       borderColor: Colors.choice.selectedBorder,
+      borderWidth: 2,
     },
-    symbol: { color: Colors.accent.primary },
-    text: { color: Colors.accent.primary, fontWeight: Typography.weight.semibold },
+    symbol: { color: '#FFFFFF' },
+    symbolBg: Colors.accent.primary,
+    text: { color: '#2C4B73', fontWeight: Typography.weight.bold },
   },
   correct: {
     container: {
       backgroundColor: Colors.choice.correct,
       borderColor: Colors.choice.correctBorder,
+      borderWidth: 2,
     },
-    symbol: { color: Colors.status.correct },
-    text: { color: Colors.status.correct, fontWeight: Typography.weight.semibold },
+    symbol: { color: '#FFFFFF' },
+    symbolBg: Colors.status.correct,
+    text: { color: Colors.status.correct, fontWeight: Typography.weight.bold },
   },
   wrong: {
     container: {
       backgroundColor: Colors.choice.wrong,
       borderColor: Colors.choice.wrongBorder,
+      borderWidth: 2,
     },
-    symbol: { color: Colors.status.wrong },
+    symbol: { color: '#FFFFFF' },
+    symbolBg: Colors.status.wrong,
     text: { color: Colors.status.wrong, fontWeight: Typography.weight.semibold },
   },
   'reveal-correct': {
     container: {
       backgroundColor: Colors.choice.correct,
       borderColor: Colors.choice.correctBorder,
+      borderWidth: 2,
     },
-    symbol: { color: Colors.status.correct },
-    text: { color: Colors.status.correct, fontWeight: Typography.weight.semibold },
+    symbol: { color: '#FFFFFF' },
+    symbolBg: Colors.status.correct,
+    text: { color: Colors.status.correct, fontWeight: Typography.weight.bold },
   },
 };
 
@@ -101,7 +111,12 @@ export function ChoiceItem({
       }}
       style={[styles.container, s.container]}
     >
-      <View style={[styles.symbolBox, { borderColor: s.container.borderColor }]}>
+      <View
+        style={[
+          styles.symbolBox,
+          { backgroundColor: s.symbolBg, borderColor: s.container.borderColor },
+        ]}
+      >
         <Text style={[styles.symbol, s.symbol]}>{sym}</Text>
       </View>
       <View style={styles.textBox}>
@@ -121,8 +136,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    borderWidth: 1.5,
-    borderRadius: Radius.md,
+    // borderWidth 는 state.container 에서 상태별로 지정 (1.5 / 2)
+    borderRadius: 13,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     gap: Spacing.sm,

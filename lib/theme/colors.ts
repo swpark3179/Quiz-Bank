@@ -29,63 +29,81 @@ export const Nord = {
 
 // Semantic aliases for the app
 export const Colors = {
-  // Background hierarchy
+  // 배경: 카드와 분리되도록 한 단계 깊게
   bg: {
-    primary: Nord.nord6,     // 앱 전체 배경
-    secondary: Nord.nord5,   // 카드, 셀 배경
-    tertiary: Nord.nord4,    // 구분선, 입력 배경
-    overlay: 'rgba(46,52,64,0.5)', // 모달 오버레이
+    primary: '#DCE3ED',      // ← was Nord.nord6(#ECEFF4) · 앱/헤더 배경
+    secondary: Nord.nord5,   // #E5E9F0
+    tertiary: Nord.nord4,    // #D8DEE9 · 진행바 트랙 등
+    overlay: 'rgba(46,52,64,0.55)', // 모달 오버레이
+  },
+
+  // 면(카드/시트) — 순백으로 띄운다 [신규]
+  surface: {
+    card: '#FFFFFF',
+    sheet: '#F4F7FB',
   },
 
   // Text hierarchy
   text: {
-    primary: Nord.nord0,     // 주요 본문
-    secondary: Nord.nord3,   // 보조 텍스트
-    tertiary: Nord.nord2,    // 힌트, 비활성
-    inverse: Nord.nord6,     // 다크 배경 위 텍스트
-    link: Nord.nord10,       // 링크, 선택됨
+    primary: '#1E2530',      // ← 살짝 더 진하게
+    secondary: '#4C566A',    // Nord.nord3
+    tertiary: '#5A6577',
+    inverse: '#FFFFFF',      // 다크 배경 위 텍스트
+    link: '#4C6F9C',         // ← GitHub 블루(#58a6ff) 대체
   },
 
   // Brand / Action
   accent: {
-    primary: Nord.nord10,    // 주요 버튼, 활성 상태
+    primary: '#4C6F9C',      // ← Nord.nord10(#5E81AC) 다크닝 · 버튼/선택/링크
+    primaryFill: Nord.nord10,// 밝은 채움이 필요할 때
     secondary: Nord.nord9,   // 보조 강조
     light: Nord.nord8,       // 밝은 강조
   },
 
   // Status
   status: {
-    correct: Nord.nord14,    // 정답
-    wrong: Nord.nord11,      // 오답
+    correct: '#5E7E3E',      // ← 텍스트/아이콘/보더용 다크닝 (was nord14)
+    correctBg: '#E7F1E0',
+    correctBorder: '#9DB87E',
+    wrong: '#B0414B',        // ← 다크닝 (was nord11)
+    wrongBg: '#FBEAEB',
+    wrongBorder: '#DBA9AE',
     warning: Nord.nord12,    // 경고
     neutral: Nord.nord13,    // 미채점
     special: Nord.nord15,    // 특수
   },
 
   // UI Elements
-  border: Nord.nord4,
-  divider: Nord.nord5,
-  shadow: 'rgba(46,52,64,0.12)',
-  card: Nord.nord6,
+  border: '#C2CCD9',         // ← 100% 실선 (was nord4 + 50% alpha)
+  borderStrong: '#A9B6C9',
+  divider: '#E5E9F0',
+  shadow: 'rgba(46,52,64,0.16)',
+
+  // 하위호환 별칭
+  card: '#FFFFFF',           // ← 순백 (was nord6 = 배경과 동일색)
   cardPressed: Nord.nord5,
 
   // Choice states
   choice: {
-    default: Nord.nord6,
-    defaultBorder: Nord.nord4,
-    selected: '#EEF4FB',       // nord10 15% opacity
-    selectedBorder: Nord.nord10,
-    correct: '#EBF5EC',        // nord14 20% opacity
-    correctBorder: Nord.nord14,
-    wrong: '#FAF0F0',          // nord11 10% opacity
-    wrongBorder: Nord.nord11,
+    default: '#FFFFFF',
+    defaultBorder: '#C2CCD9',
+    selected: '#EAF1FB',
+    selectedBorder: '#4C6F9C',
+    correct: '#E7F1E0',
+    correctBorder: '#6E8B4E',
+    wrong: '#FBEAEB',
+    wrongBorder: '#C2606A',
   },
 
   // Inline code blocks (Claude warm clay pastel)
   code: {
-    bg: '#F6EDE6',
+    bg: '#F6EDE6',           // warm clay (유지)
+    bgHeader: '#EFE0D2',     // [신규] 코드블록 헤더 바
     border: '#E8D5C4',
-    text: '#9D5A3C',
+    text: '#9D5A3C',         // 인라인/키워드
+    base: '#5A4636',         // [신규] 코드 본문 기본색
+    func: '#3D7A6E',         // [신규]
+    number: '#8A6FA0',       // [신규]
   },
 } as const;
 

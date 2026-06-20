@@ -10,13 +10,15 @@ interface NordBadgeProps {
   size?: 'sm' | 'md';
 }
 
+// 알파 합성('+25'/'+20') 제거 — 다크닝된 status 색을 그대로 텍스트로,
+// 솔리드 배경 토큰을 배경으로 사용
 const variantConfig: Record<BadgeVariant, { bg: string; text: string }> = {
-  default:  { bg: Colors.accent.primary + '20', text: Colors.accent.primary },
-  success:  { bg: Colors.status.correct + '25', text: '#4a7f3e' },
-  error:    { bg: Colors.status.wrong + '20',   text: Colors.status.wrong },
-  warning:  { bg: Colors.status.warning + '25', text: '#8a6d0a' },
-  info:     { bg: Colors.accent.light + '25',   text: Colors.accent.secondary },
-  neutral:  { bg: Colors.bg.tertiary,            text: Colors.text.secondary },
+  default:  { bg: Colors.choice.selected,    text: Colors.accent.primary },
+  success:  { bg: Colors.status.correctBg,   text: Colors.status.correct },
+  error:    { bg: Colors.status.wrongBg,     text: Colors.status.wrong },
+  warning:  { bg: '#FBF3DE',                  text: '#8A6D0A' },
+  info:     { bg: '#EFF4F8',                  text: Colors.accent.secondary },
+  neutral:  { bg: Colors.bg.tertiary,        text: Colors.text.secondary },
 };
 
 export function NordBadge({ label, variant = 'default', size = 'md' }: NordBadgeProps) {
