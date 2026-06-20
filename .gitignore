@@ -41,6 +41,7 @@ google-service-account.json
 
 # CI build artifacts
 dist/
+release-artifacts/
 build-output.json
 latest-builds.json
 check-builds.json
