@@ -1,7 +1,10 @@
 name: Windows Desktop Release
 
-# Expo 웹 정적 export 를 Electron 으로 패키징하여 윈도우 포터블 .exe 를 만들고,
+# Expo 웹 정적 export 를 Electron 으로 패키징하여 윈도우 데스크탑 zip 을 만들고,
 # 이미 발행된 릴리스(기본: 최신)에 자산으로 첨부한다.
+# (이전에는 단일 portable .exe 였으나, 매 실행마다 %TEMP% 압축 해제로 인한
+# 기동 지연이 커서 zip 폴더형으로 전환되었다. 사용자는 zip 을 한 번 풀고
+# 폴더 내 `Quiz Bank.exe` 를 실행한다.)
 #
 # 자동 실행:
 #   native-build-testflight.yml 워크플로가 성공적으로 완료되면(= APK/IPA 릴리스 생성 후)
@@ -29,7 +32,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows Desktop (portable .exe)
+    name: Build Windows Desktop (zip)
     runs-on: windows-latest
     # workflow_run 으로 트리거된 경우 선행 워크플로가 성공했을 때만 실행한다.
     # 수동 dispatch 는 항상 실행한다.
@@ -98,34 +101,18 @@ jobs:
       - name: Export web (static)
         run: pnpm exec expo export --platform web
 
-      - name: Build Windows portable executable
+      # electron-builder `extraFiles` 가 `assets/quiz-data` 를 패키지된 앱
+      # 루트의 `quiz-data/` 로 복사하므로, 산출 zip 만으로 오프라인 동작이
+      # 완성된다. 별도 `quiz-data.zip` 을 만들 필요가 없다.
+      - name: Build Windows desktop zip
         run: pnpm exec electron-builder --win --config electron-builder.yml
 
-      # 데스크탑 앱은 .exe 옆 `quiz-data/` 폴더에서 문제 파일을 로컬 로드한다.
-      # 사용자가 .exe 와 동일한 폴더에 풀어 두면 오프라인에서도 풀이가 가능하다.
-      # GitHub 저장소의 디렉토리 구조(`config.json` + `<category>/<file>.md`)를
-      # 그대로 유지한 채 zip 으로 묶는다.
-      - name: Package quiz-data for offline use
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path release-artifacts | Out-Null
-          $zipPath = "release-artifacts/quiz-data.zip"
-          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-          # `quiz-data/` 가 zip 최상위에 오도록 부모 폴더를 임시 복사한다.
-          $staging = Join-Path $env:RUNNER_TEMP "quiz-data-staging"
-          if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
-          New-Item -ItemType Directory -Force -Path $staging | Out-Null
-          Copy-Item -Path "assets/quiz-data" -Destination (Join-Path $staging "quiz-data") -Recurse
-          Compress-Archive -Path (Join-Path $staging "quiz-data") -DestinationPath $zipPath
-          Write-Host "Created $zipPath"
-
-      - name: Upload .exe and quiz-data.zip to release
+      - name: Upload desktop zip to release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ steps.tag.outputs.tag }}" \
-            release-artifacts/*.exe \
-            release-artifacts/quiz-data.zip \
+            release-artifacts/QuizBank-*-portable.zip \
             --repo "${{ github.repository }}" \
             --clobber

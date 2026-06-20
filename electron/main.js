@@ -8,7 +8,7 @@
 //   2. A scheme registered as `secure` is treated as a secure context, which
 //      is what expo-sqlite's web (OPFS) implementation needs to persist data.
 
-const { app, protocol, BrowserWindow, net } = require('electron');
+const { app, protocol, BrowserWindow, Menu, net } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const url = require('node:url');
@@ -57,6 +57,57 @@ const MIME_TYPES = {
   '.txt': 'text/plain',
 };
 
+// Long-cache headers for hashed/static bundle assets. Two warm-start wins:
+//   1. Chromium's HTTP cache skips re-reading bytes from disk on later loads.
+//   2. V8 code cache for .js responses only kicks in when the response is
+//      considered cacheable, which requires a max-age.
+// quiz-data is excluded (handled separately with no-store) so problem sets
+// can be hot-swapped next to the .exe without an app restart.
+const LONG_CACHE = 'public, max-age=31536000, immutable';
+
+// Zoom persistence: stored in userData so it survives reinstalls of a portable
+// build (userData lives under %APPDATA% on Windows, not next to the .exe).
+const ZOOM_MIN = -3;
+const ZOOM_MAX = 5;
+const ZOOM_STEP = 0.5;
+
+function settingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+
+function loadZoomLevel() {
+  try {
+    const raw = fs.readFileSync(settingsPath(), 'utf8');
+    const parsed = JSON.parse(raw);
+    const z = Number(parsed.zoomLevel);
+    if (Number.isFinite(z) && z >= ZOOM_MIN && z <= ZOOM_MAX) {
+      return z;
+    }
+  } catch {
+    // First run or corrupt file — fall through to default.
+  }
+  return 0;
+}
+
+function saveZoomLevel(level) {
+  try {
+    fs.mkdirSync(path.dirname(settingsPath()), { recursive: true });
+    fs.writeFileSync(settingsPath(), JSON.stringify({ zoomLevel: level }));
+  } catch {
+    // Persisting zoom is best-effort; ignore disk errors.
+  }
+}
+
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function applyZoom(win, nextLevel) {
+  const level = clamp(nextLevel, ZOOM_MIN, ZOOM_MAX);
+  win.webContents.setZoomLevel(level);
+  saveZoomLevel(level);
+}
+
 // Register the custom scheme as standard + secure BEFORE app is ready so that
 // the renderer treats `app://local/` as a secure, fetch-capable origin.
 protocol.registerSchemesAsPrivileged([
@@ -72,7 +123,59 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+function buildMenu(getWindow) {
+  // Korean labels match the rest of the app's UI.
+  const zoomMenu = {
+    label: '보기',
+    submenu: [
+      {
+        label: '확대',
+        // CommandOrControl++ covers both '=' and numeric-keypad '+'; the
+        // explicit '+' accelerator improves discoverability in the menu.
+        accelerator: 'CommandOrControl+=',
+        click: () => {
+          const win = getWindow();
+          if (!win) return;
+          applyZoom(win, win.webContents.getZoomLevel() + ZOOM_STEP);
+        },
+      },
+      {
+        // Hidden duplicate so Ctrl++ on the main row also works.
+        accelerator: 'CommandOrControl+Plus',
+        visible: false,
+        click: () => {
+          const win = getWindow();
+          if (!win) return;
+          applyZoom(win, win.webContents.getZoomLevel() + ZOOM_STEP);
+        },
+      },
+      {
+        label: '축소',
+        accelerator: 'CommandOrControl+-',
+        click: () => {
+          const win = getWindow();
+          if (!win) return;
+          applyZoom(win, win.webContents.getZoomLevel() - ZOOM_STEP);
+        },
+      },
+      {
+        label: '기본 크기',
+        accelerator: 'CommandOrControl+0',
+        click: () => {
+          const win = getWindow();
+          if (!win) return;
+          applyZoom(win, 0);
+        },
+      },
+      { type: 'separator' },
+      { role: 'togglefullscreen', label: '전체 화면' },
+    ],
+  };
+  return Menu.buildFromTemplate([zoomMenu]);
+}
+
 function createWindow() {
+  const initialZoom = loadZoomLevel();
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -80,13 +183,31 @@ function createWindow() {
     minHeight: 640,
     backgroundColor: '#ECEFF4',
     autoHideMenuBar: true,
+    // Defer showing the window until the renderer has painted its first
+    // frame. Without this the user sees a blank white window for the
+    // duration of the bundle parse, which reads as "slow startup" even
+    // when the actual time-to-interactive hasn't changed.
+    show: false,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
+  win.webContents.once('did-finish-load', () => {
+    // setZoomLevel must run after the page has loaded; setting it before
+    // navigation is silently reset by Chromium. `once` so a later reload
+    // doesn't clobber a zoom level the user adjusted in-session.
+    win.webContents.setZoomLevel(initialZoom);
+  });
+
+  win.once('ready-to-show', () => {
+    win.show();
+  });
+
   win.loadURL('app://local/');
+
+  return win;
 }
 
 app.whenReady().then(() => {
@@ -145,17 +266,26 @@ app.whenReady().then(() => {
 
     const headers = new Headers(response.headers);
     headers.set('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+    // index.html must always be re-validated so a new export is picked up
+    // without users wiping cache; other bundle assets are content-hashed by
+    // Expo's web export and safe to cache forever.
+    if (ext === '.html') {
+      headers.set('Cache-Control', 'no-cache');
+    } else {
+      headers.set('Cache-Control', LONG_CACHE);
+    }
     return new Response(response.body, {
       status: response.status,
       headers,
     });
   });
 
-  createWindow();
+  let mainWindow = createWindow();
+  Menu.setApplicationMenu(buildMenu(() => mainWindow));
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      mainWindow = createWindow();
     }
   });
 });
