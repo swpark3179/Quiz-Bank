@@ -20,6 +20,9 @@ on:
       tag:
         description: '첨부할 릴리스 태그 (비우면 최신 릴리스)'
         required: false
+      ref:
+        description: '체크아웃할 ref (브랜치/태그/SHA). 비우면 기본 브랜치 사용 — 코드는 항상 최신 fix가 포함된 ref 에서 빌드된다.'
+        required: false
 
 permissions:
   contents: write
@@ -52,10 +55,31 @@ jobs:
           echo "Resolved release tag: $TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout tagged code
+      # 빌드용 코드는 릴리스 태그가 아니라 기본 브랜치(또는 입력 ref)에서 가져온다.
+      # 이유: 릴리스 태그 시점 이후 web/Electron 빌드에 필요한 fix(예: Metro
+      # resolver 패치)가 머지될 수 있는데, 그 fix를 태그가 가리키는 커밋에
+      # 다시 포함시키려면 매번 새 릴리스를 잘라야 하기 때문이다. 데스크톱
+      # 패키징은 동일 버전의 웹 export 이므로 최신 master 의 빌드 fix 를
+      # 사용해도 무방하다. 결과 .exe 는 여전히 steps.tag.outputs.tag 가
+      # 가리키는 릴리스에 첨부된다.
+      - name: Resolve checkout ref
+        id: ref
+        shell: bash
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref }}
+        run: |
+          if [ -n "$INPUT_REF" ]; then
+            REF="$INPUT_REF"
+          else
+            REF="${{ github.event.repository.default_branch }}"
+          fi
+          echo "Resolved checkout ref: $REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout build code
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.tag.outputs.tag }}
+          ref: ${{ steps.ref.outputs.ref }}
           fetch-depth: 0
 
       - name: Setup Node.js
