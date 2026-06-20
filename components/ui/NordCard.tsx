@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.base,
     borderWidth: 1,
-    borderColor: Colors.border + '60',
+    borderColor: Colors.border,
     ...Shadow.sm,
   },
   header: {

@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.base,
     borderWidth: 1,
-    borderColor: Colors.border + '80',
+    borderColor: Colors.border,
     ...Shadow.sm,
     gap: Spacing.md,
     marginBottom: Spacing.sm,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     paddingLeft: Spacing.md,
     borderLeftWidth: 3,
     borderWidth: 1,
-    borderColor: Colors.border + '60',
+    borderColor: Colors.border,
     gap: Spacing.sm,
   },
   answerMeta: {

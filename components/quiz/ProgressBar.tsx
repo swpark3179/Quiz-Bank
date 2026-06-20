@@ -26,7 +26,14 @@ export function ProgressBar({ current, total, correctCount }: ProgressBarProps) 
           {current} / {total}
         </Text>
         {accuracy !== null && (
-          <Text style={[styles.accuracy, { color: accuracy >= 0.7 ? Colors.status.correct : Colors.status.wrong }]}>
+          <Text
+            style={[
+              styles.accuracy,
+              accuracy >= 0.7
+                ? { color: Colors.status.correct, backgroundColor: Colors.status.correctBg }
+                : { color: Colors.status.wrong, backgroundColor: Colors.status.wrongBg },
+            ]}
+          >
             정답률 {Math.round(accuracy * 100)}%
           </Text>
         )}
@@ -55,16 +62,27 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.size.sm,
-    fontWeight: Typography.weight.semibold,
-    color: Colors.text.secondary,
+    fontWeight: '800',
+    color: Colors.text.primary,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.full,
+    paddingHorizontal: 11,
+    paddingVertical: 4,
+    overflow: 'hidden',
   },
   accuracy: {
-    fontSize: Typography.size.sm,
-    fontWeight: Typography.weight.semibold,
+    fontSize: Typography.size.xs,
+    fontWeight: '700',
+    borderRadius: Radius.full,
+    paddingHorizontal: 11,
+    paddingVertical: 4,
+    overflow: 'hidden',
   },
   track: {
-    height: 6,
-    backgroundColor: Colors.bg.tertiary,
+    height: 9,
+    backgroundColor: '#C7D0DE',
     borderRadius: Radius.full,
     overflow: 'hidden',
   },

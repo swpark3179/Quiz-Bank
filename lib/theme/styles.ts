@@ -63,16 +63,16 @@ export const Shadow = {
   },
   md: {
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 1,
-    shadowRadius: 6,
+    shadowRadius: 10, // radius 6→10
     elevation: 4,
   },
   lg: {
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 1,
-    shadowRadius: 12,
+    shadowRadius: 18, // radius 12→18
     elevation: 8,
   },
 };

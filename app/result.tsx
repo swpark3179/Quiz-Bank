@@ -10,12 +10,39 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '@gorhom/bottom-sheet';
+import Svg, { Circle } from 'react-native-svg';
 import { fetchSession, fetchAnswers, fetchWrongAnswers } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from '@/components/ui/NordButton';
-import { NordBadge } from '@/components/ui/NordBadge';
 import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
+
+/** 점수 링 — react-native-svg 기반 도넛 게이지 */
+function ScoreRing({ pct, color }: { pct: number; color: string }) {
+  const size = 132, stroke = 11, r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct / 100);
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke="#D7DEE9" strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={color}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+        />
+      </Svg>
+      <Text style={{ fontSize: 32, fontWeight: '800', color }}>{pct}%</Text>
+      <Text style={{ fontSize: 11, color: Colors.text.secondary }}>정답률</Text>
+    </View>
+  );
+}
 
 export default function ResultScreen() {
   const { sessionId, categoryId } = useLocalSearchParams<{
@@ -77,25 +104,20 @@ export default function ResultScreen() {
           }</Text>
           <Text style={[styles.gradeText, { color: grade.color }]}>{grade.label}</Text>
 
-          {/* 점수 원형 표시 */}
-          <View style={styles.scoreCircle}>
-            <Text style={[styles.scoreValue, { color: grade.color }]}>{accuracyPct}%</Text>
-            <Text style={styles.scoreLabel}>정답률</Text>
-          </View>
+          {/* 점수 링 표시 */}
+          <ScoreRing pct={accuracyPct} color={grade.color} />
 
-          {/* 상세 수치 */}
+          {/* 상세 수치 — 분리된 색 카드 */}
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
+            <View style={[styles.statCard, styles.statCardTotal]}>
               <Text style={styles.statNum}>{session.total}</Text>
               <Text style={styles.statLabel}>총 문제</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
+            <View style={[styles.statCard, styles.statCardCorrect]}>
               <Text style={[styles.statNum, { color: Colors.status.correct }]}>{session.correct}</Text>
               <Text style={styles.statLabel}>정답</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
+            <View style={[styles.statCard, styles.statCardWrong]}>
               <Text style={[styles.statNum, { color: Colors.status.wrong }]}>{wrongCount}</Text>
               <Text style={styles.statLabel}>오답</Text>
             </View>
@@ -114,11 +136,14 @@ export default function ResultScreen() {
           >
             <View style={styles.answerLeft}>
               <Text style={styles.answerNum}>Q{i + 1}</Text>
-              <NordBadge
-                label={ans.is_correct ? '정답' : '오답'}
-                variant={ans.is_correct ? 'success' : 'error'}
-                size="sm"
-              />
+              <View
+                style={[
+                  styles.answerBadge,
+                  { backgroundColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
+                ]}
+              >
+                <Ionicons name={ans.is_correct ? 'checkmark' : 'close'} size={15} color="#FFFFFF" />
+              </View>
             </View>
             <View style={styles.answerCenter}>
               <Text style={styles.answerQuestion} numberOfLines={2}>
@@ -199,12 +224,12 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   resultCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.surface.card,
     borderRadius: Radius.xl,
     padding: Spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border + '80',
+    borderColor: Colors.border,
     ...Shadow.md,
     gap: Spacing.md,
   },
@@ -215,36 +240,32 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.xl,
     fontWeight: Typography.weight.bold,
   },
-  scoreCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 6,
-    borderColor: Colors.bg.tertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  scoreValue: {
-    fontSize: Typography.size.xxl,
-    fontWeight: Typography.weight.bold,
-  },
-  scoreLabel: {
-    fontSize: Typography.size.xs,
-    color: Colors.text.secondary,
-  },
   statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     width: '100%',
+    gap: Spacing.sm,
     paddingTop: Spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.divider,
   },
-  statItem: {
+  statCard: {
     flex: 1,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    paddingVertical: 11,
     alignItems: 'center',
     gap: 2,
+  },
+  statCardTotal: {
+    backgroundColor: Colors.surface.sheet,
+    borderColor: Colors.border,
+  },
+  statCardCorrect: {
+    backgroundColor: Colors.status.correctBg,
+    borderColor: Colors.status.correctBorder,
+  },
+  statCardWrong: {
+    backgroundColor: Colors.status.wrongBg,
+    borderColor: Colors.status.wrongBorder,
   },
   statNum: {
     fontSize: Typography.size.xl,
@@ -254,11 +275,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: Typography.size.xs,
     color: Colors.text.secondary,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: Colors.divider,
   },
   sectionTitle: {
     fontSize: Typography.size.sm,
@@ -271,19 +287,26 @@ const styles = StyleSheet.create({
   answerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.surface.card,
     borderRadius: Radius.sm,
     padding: Spacing.sm,
     paddingLeft: Spacing.md,
     borderLeftWidth: 3,
     borderWidth: 1,
-    borderColor: Colors.border + '60',
+    borderColor: Colors.border,
     gap: Spacing.sm,
   },
   answerLeft: {
     alignItems: 'center',
     gap: 4,
     minWidth: 42,
+  },
+  answerBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   answerNum: {
     fontSize: Typography.size.sm,
@@ -307,7 +330,9 @@ const styles = StyleSheet.create({
   explanationBtn: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    backgroundColor: Colors.accent.primary + '15',
+    backgroundColor: Colors.choice.selected,
+    borderWidth: 1,
+    borderColor: Colors.choice.selectedBorder,
     borderRadius: Radius.sm,
     alignSelf: 'center',
   },
