@@ -1,0 +1,88 @@
+name: Windows Desktop Release
+
+# Expo 웹 정적 export 를 Electron 으로 패키징하여 윈도우 포터블 .exe 를 만들고,
+# 이미 발행된 릴리스(기본: 최신)에 자산으로 첨부한다.
+#
+# 자동 실행:
+#   native-build-testflight.yml 워크플로가 성공적으로 완료되면(= APK/IPA 릴리스 생성 후)
+#   workflow_run 으로 이 워크플로가 트리거되어 방금 만들어진 최신 릴리스에 .exe 를 첨부한다.
+#   주의: workflow_run 트리거는 이 파일이 기본 브랜치에 머지된 뒤에만 동작한다.
+#
+# 수동 실행:
+#   workflow_dispatch 로 실행하며 tag 입력으로 특정 릴리스를 지정할 수 있다(비우면 최신).
+
+on:
+  workflow_run:
+    workflows: ["Native Build, Release and TestFlight (No Expo Cloud)"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '첨부할 릴리스 태그 (비우면 최신 릴리스)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows Desktop (portable .exe)
+    runs-on: windows-latest
+    # workflow_run 으로 트리거된 경우 선행 워크플로가 성공했을 때만 실행한다.
+    # 수동 dispatch 는 항상 실행한다.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Resolve target release tag
+        id: tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            # 최신(비-draft) 릴리스의 태그를 조회한다.
+            TAG=$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName)
+          fi
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "::error::Could not resolve a release tag to attach the Windows build to."
+            exit 1
+          fi
+          echo "Resolved release tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tagged code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Export web (static)
+        run: pnpm exec expo export --platform web
+
+      - name: Build Windows portable executable
+        run: pnpm exec electron-builder --win --config electron-builder.yml
+
+      - name: Upload .exe to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ steps.tag.outputs.tag }}" \
+            release-artifacts/*.exe \
+            --repo "${{ github.repository }}" \
+            --clobber

@@ -1,0 +1,28 @@
+appId: com.swpark3179.quizbank
+productName: Quiz Bank
+copyright: Copyright © swpark3179
+
+directories:
+  output: release-artifacts
+  buildResources: assets/images
+
+# Only ship the Electron shell and the exported web app. Override the packaged
+# app entry point to the Electron main process without touching the root
+# package.json "main" (which must stay "expo-router/entry" for Expo builds).
+extraMetadata:
+  main: electron/main.js
+
+files:
+  - electron/**/*
+  - dist/**/*
+  - package.json
+
+win:
+  target:
+    - portable
+  # electron-builder auto-converts a >=256px PNG to a multi-size .ico.
+  icon: assets/images/icon.png
+  artifactName: QuizBank-${version}-portable.${ext}
+
+portable:
+  artifactName: QuizBank-${version}-portable.${ext}

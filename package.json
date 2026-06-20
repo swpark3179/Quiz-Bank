@@ -12,7 +12,10 @@
     "bump:patch": "node scripts/bump-version.js patch",
     "bump:minor": "node scripts/bump-version.js minor",
     "bump:major": "node scripts/bump-version.js major",
-    "test": "jest"
+    "test": "jest",
+    "desktop:export": "expo export --platform web",
+    "desktop:dev": "electron electron/main.js",
+    "desktop:build": "electron-builder --win --config electron-builder.yml"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -27,6 +30,7 @@
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",
+    "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.11",
     "expo-router": "~6.0.23",
     "expo-splash-screen": "~31.0.13",
@@ -54,6 +58,8 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "jest": "^30.3.0",
