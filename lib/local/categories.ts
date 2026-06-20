@@ -1,11 +1,15 @@
 /**
- * GitHub 기반 카테고리 & 퀴즈 파일 목록 조회
+ * 카테고리 & 퀴즈 파일 목록 조회
  *
- * GitHub 저장소의 main 브랜치에 있는 config.json을 실시간으로 가져옵니다.
- * 마치 Firebase처럼 동작하여, 앱을 재빌드하지 않아도 목록이 업데이트됩니다.
+ * - 일반 웹/모바일: GitHub 저장소의 master 브랜치 config.json을 실시간 조회
+ * - Windows Electron 데스크탑: .exe 옆 `quiz-data/config.json`에서 로컬 로드
  */
 
 const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/master/assets/quiz-data';
+
+function isDesktop(): boolean {
+  return typeof window !== 'undefined' && window.location?.protocol === 'app:';
+}
 
 export interface Category {
   id: string;
@@ -55,8 +59,9 @@ async function fetchConfig(): Promise<any[]> {
   if (configCache) return configCache;
 
   try {
-    // 캐시 방지를 위해 랜덤 쿼리 파라미터 추가
-    const url = `${GITHUB_BASE_URL}/config.json?t=${Date.now()}`;
+    const url = isDesktop()
+      ? `/quiz-data/config.json`
+      : `${GITHUB_BASE_URL}/config.json?t=${Date.now()}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`[QuizBank] Config 로드 실패: ${response.status}`);
@@ -66,7 +71,7 @@ async function fetchConfig(): Promise<any[]> {
     configCache = data;
     return data;
   } catch (error) {
-    console.error('GitHub Config 다운로드 오류:', error);
+    console.error('Config 로드 오류:', error);
     // [Fallback] 앱에 내장된 파일로 임시 대체 (오프라인 지원)
     const localData = require('@/assets/quiz-data/config.json');
     return localData;

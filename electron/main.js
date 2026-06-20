@@ -9,11 +9,31 @@
 //      is what expo-sqlite's web (OPFS) implementation needs to persist data.
 
 const { app, protocol, BrowserWindow, net } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
 const url = require('node:url');
 
 // Static export lives next to this file's parent (packaged: resources/app/dist).
 const DIST_DIR = path.join(__dirname, '..', 'dist');
+
+// Quiz markdown data is shipped as a separate `quiz-data` folder next to the
+// portable .exe so users can update problem sets without re-downloading the
+// app. In dev (unpackaged), fall back to the repo's `assets/quiz-data`.
+//
+// `PORTABLE_EXECUTABLE_DIR` is set by electron-builder's portable target and
+// points to the directory of the .exe the user actually launched.
+function resolveQuizDataDir() {
+  const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+  if (portableDir) {
+    return path.join(portableDir, 'quiz-data');
+  }
+  if (app.isPackaged) {
+    return path.join(path.dirname(process.execPath), 'quiz-data');
+  }
+  return path.join(__dirname, '..', 'assets', 'quiz-data');
+}
+
+const QUIZ_DATA_DIR = resolveQuizDataDir();
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -79,13 +99,33 @@ app.whenReady().then(() => {
       relativePath = 'index.html';
     }
 
-    // Resolve within DIST_DIR and guard against path traversal.
-    let filePath = path.normalize(path.join(DIST_DIR, relativePath));
-    if (!filePath.startsWith(DIST_DIR)) {
+    // `quiz-data/*` is served from a sibling folder next to the .exe so that
+    // problem sets can be updated independently of the app binary.
+    const isQuizData = relativePath === 'quiz-data' || relativePath.startsWith('quiz-data/');
+    const baseDir = isQuizData ? QUIZ_DATA_DIR : DIST_DIR;
+    const subPath = isQuizData ? relativePath.replace(/^quiz-data\/?/, '') : relativePath;
+
+    // Resolve within baseDir and guard against path traversal.
+    let filePath = path.normalize(path.join(baseDir, subPath));
+    if (!filePath.startsWith(baseDir)) {
       return new Response('Forbidden', { status: 403 });
     }
 
     let ext = path.extname(filePath).toLowerCase();
+
+    // For quiz-data requests we must not fall back to the SPA index.html when
+    // the file is missing; surface a real 404 so the renderer can react.
+    if (isQuizData) {
+      if (!fs.existsSync(filePath)) {
+        return new Response('Not Found', { status: 404 });
+      }
+      const fileUrl = url.pathToFileURL(filePath).toString();
+      const response = await net.fetch(fileUrl);
+      const headers = new Headers(response.headers);
+      headers.set('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+      headers.set('Cache-Control', 'no-store');
+      return new Response(response.body, { status: response.status, headers });
+    }
 
     // Expo static export pre-renders routes to <route>.html, but client-side
     // navigation requests extension-less paths. Fall back to index.html so the
