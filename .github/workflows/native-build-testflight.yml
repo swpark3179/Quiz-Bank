@@ -62,10 +62,20 @@ jobs:
     outputs:
       new_version: ${{ steps.bump.outputs.new_version }}
     steps:
+      # master 브랜치 보호 룰셋(Changes must be made through a pull request)을
+      # 우회하려면 룰셋 Bypass list 에 등록된 GitHub App 토큰으로 push 해야 한다.
+      # 기본 GITHUB_TOKEN(github-actions[bot])은 bypass 대상이 아니므로 막힌다.
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
       - name: Setup Node.js
