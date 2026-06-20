@@ -101,34 +101,18 @@ jobs:
       - name: Export web (static)
         run: pnpm exec expo export --platform web
 
+      # electron-builder `extraFiles` 가 `assets/quiz-data` 를 패키지된 앱
+      # 루트의 `quiz-data/` 로 복사하므로, 산출 zip 만으로 오프라인 동작이
+      # 완성된다. 별도 `quiz-data.zip` 을 만들 필요가 없다.
       - name: Build Windows desktop zip
         run: pnpm exec electron-builder --win --config electron-builder.yml
 
-      # 데스크탑 앱은 .exe 옆 `quiz-data/` 폴더에서 문제 파일을 로컬 로드한다.
-      # 사용자가 .exe 와 동일한 폴더에 풀어 두면 오프라인에서도 풀이가 가능하다.
-      # GitHub 저장소의 디렉토리 구조(`config.json` + `<category>/<file>.md`)를
-      # 그대로 유지한 채 zip 으로 묶는다.
-      - name: Package quiz-data for offline use
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path release-artifacts | Out-Null
-          $zipPath = "release-artifacts/quiz-data.zip"
-          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-          # `quiz-data/` 가 zip 최상위에 오도록 부모 폴더를 임시 복사한다.
-          $staging = Join-Path $env:RUNNER_TEMP "quiz-data-staging"
-          if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
-          New-Item -ItemType Directory -Force -Path $staging | Out-Null
-          Copy-Item -Path "assets/quiz-data" -Destination (Join-Path $staging "quiz-data") -Recurse
-          Compress-Archive -Path (Join-Path $staging "quiz-data") -DestinationPath $zipPath
-          Write-Host "Created $zipPath"
-
-      - name: Upload desktop zip and quiz-data.zip to release
+      - name: Upload desktop zip to release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ steps.tag.outputs.tag }}" \
             release-artifacts/QuizBank-*-portable.zip \
-            release-artifacts/quiz-data.zip \
             --repo "${{ github.repository }}" \
             --clobber

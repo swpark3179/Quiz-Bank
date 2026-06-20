@@ -22,10 +22,20 @@ win:
   # .exe. The portable target re-extracts the entire app to %TEMP% on every
   # launch, which dominated cold-start time. With the zip target the user
   # unpacks once and launches `Quiz Bank.exe` directly from the folder, so
-  # subsequent starts skip the extraction step entirely. The `quiz-data/`
-  # folder convention is unchanged — drop it next to the unpacked .exe.
+  # subsequent starts skip the extraction step entirely.
   target:
     - zip
   # electron-builder auto-converts a >=256px PNG to a multi-size .ico.
   icon: assets/images/icon.png
   artifactName: QuizBank-${version}-portable.${ext}
+  # Bundle the quiz markdown set into the same zip, next to the .exe.
+  # `electron/main.js` resolveQuizDataDir() looks for `quiz-data/` alongside
+  # process.execPath in packaged mode, so this gives a fully offline-ready
+  # experience the moment the user unpacks the zip — no separate quiz-data
+  # download required. Users who want to swap in a newer problem set can
+  # still overwrite the folder in place.
+  extraFiles:
+    - from: assets/quiz-data
+      to: quiz-data
+      filter:
+        - "**/*"
