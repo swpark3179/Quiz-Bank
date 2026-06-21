@@ -16,7 +16,7 @@ name: Windows Desktop Release
 
 on:
   workflow_run:
-    workflows: ["Native Build, Release and TestFlight (No Expo Cloud)"]
+    workflows: ["App Build & Release — Android APK · iOS TestFlight (Main)"]
     types: [completed]
   workflow_dispatch:
     inputs:
