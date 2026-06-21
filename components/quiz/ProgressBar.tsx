@@ -38,9 +38,9 @@ export function ProgressBar({ current, total, correctCount, showScore }: Progres
                 ? { color: Colors.status.correct, backgroundColor: Colors.status.correctBg }
                 : { color: Colors.status.wrong, backgroundColor: Colors.status.wrongBg },
             ]}
-            accessibilityLabel={`지금까지 ${answered}문제 중 ${correctCount}문제 맞힘`}
+            accessibilityLabel={`지금까지 ${answered}문제 중 ${correctCount}문제 정답`}
           >
-            맞힘 {correctCount}/{answered}
+            정답 {correctCount}/{answered}
           </Text>
         )}
       </View>
