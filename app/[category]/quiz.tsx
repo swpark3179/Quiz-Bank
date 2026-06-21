@@ -195,6 +195,7 @@ export default function QuizScreen() {
           current={currentIdx + 1}
           total={total}
           correctCount={correctCount}
+          showScore={mode === 'immediate'}
         />
 
         {/* 문제 영역 */}
