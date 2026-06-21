@@ -3,6 +3,7 @@ export {
   createSession,
   saveAnswer,
   updateSessionCorrect,
+  updateSessionProgress,
   fetchSessions,
   fetchAllSessions,
   fetchSession,

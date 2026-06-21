@@ -16,7 +16,7 @@ import { ChoiceItem } from '@/components/quiz/ChoiceItem';
 import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { NordButton } from '@/components/ui/NordButton';
-import { createSession, saveAnswer, updateSessionCorrect } from '@/lib/db/sessions';
+import { createSession, saveAnswer, updateSessionProgress } from '@/lib/db/sessions';
 import type { ShuffledQuestion } from '@/lib/quiz/shuffler';
 import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
 
@@ -57,6 +57,8 @@ export default function QuizScreen() {
   // 누적 정답 수 (ref로 최신값 보장)
   const correctCountRef = useRef(0);
   const [correctCount, setCorrectCount] = useState(0);
+  // 실제로 푼(응답한) 문제 수 — 모수(total)로 사용
+  const answeredCountRef = useRef(0);
 
   const sheetRef = useRef<BottomSheet>(null);
 
@@ -88,14 +90,14 @@ export default function QuizScreen() {
 
   /** DB에 개별 응답 저장 */
   const persistAnswer = async (chosenIdx: number, correct: boolean, mappedExplanation: string) => {
-    // 최초 1회만 세션 생성
+    // 최초 1회만 세션 생성 (total은 0에서 시작해 응답할 때마다 누적)
     if (!sessionCreated.current) {
       sessionCreated.current = true;
       await createSession({
         id: sessionId,
         categoryId,
         sourceFileIds,
-        total,
+        total: 0,
         mode,
       });
     }
@@ -114,6 +116,10 @@ export default function QuizScreen() {
       mappedCorrectIndex: currentQ.mappedAnswer,
       displayOrder: currentIdx + 1,
     });
+
+    // 실제로 푼 문제만 모수에 반영 (중간에 나가도 풀지 않은 문제는 제외됨)
+    answeredCountRef.current += 1;
+    await updateSessionProgress(sessionId, answeredCountRef.current, correctCountRef.current);
   };
 
   /** 다음 문제 이동 또는 결과 화면 */
@@ -121,8 +127,8 @@ export default function QuizScreen() {
     sheetRef.current?.close();
 
     if (currentIdx + 1 >= total) {
-      // 모든 문제 완료
-      await updateSessionCorrect(sessionId, finalCorrect);
+      // 모든 문제 완료 — 실제 푼 문제 수 기준으로 최종 반영
+      await updateSessionProgress(sessionId, answeredCountRef.current, finalCorrect);
       router.replace({
         pathname: '/result',
         params: { sessionId, categoryId },

@@ -95,6 +95,23 @@ export async function updateSessionCorrect(sessionId: string, correct: number): 
   await db.runAsync(`UPDATE sessions SET correct = ? WHERE id = ?`, [correct, sessionId]);
 }
 
+/**
+ * 세션의 풀이 진행 상황 업데이트.
+ * total은 실제로 푼(응답한) 문제 수를 의미한다. 문제를 풀다 중간에 나가는 경우
+ * 풀지 않은 문제가 모수(total)에 포함되지 않도록 응답할 때마다 갱신한다.
+ */
+export async function updateSessionProgress(
+  sessionId: string,
+  answered: number,
+  correct: number
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE sessions SET total = ?, correct = ? WHERE id = ?`,
+    [answered, correct, sessionId]
+  );
+}
+
 /** 카테고리별 세션 목록 조회 (최신순) */
 export async function fetchSessions(categoryId: string): Promise<SessionRow[]> {
   const db = await getDatabase();
