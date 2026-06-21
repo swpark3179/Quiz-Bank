@@ -1,8 +1,9 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
 import BottomSheet, {
   BottomSheetScrollView,
@@ -35,6 +36,8 @@ export function ExplanationSheet({
   onNext,
   nextLabel = '다음 문제',
 }: ExplanationSheetProps) {
+  const scrollRef = useRef<ScrollView>(null);
+
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -47,6 +50,14 @@ export function ExplanationSheet({
     []
   );
 
+  // 시트가 열릴 때(목표 인덱스 >= 0) 항상 맨 위(정답/오답 헤더)부터 보이도록
+  // 열림 애니메이션 시작 시점에 스크롤 위치를 초기화한다.
+  const handleAnimate = useCallback((fromIndex: number, toIndex: number) => {
+    if (toIndex >= 0) {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, []);
+
   return (
     <BottomSheet
       ref={sheetRef}
@@ -56,8 +67,12 @@ export function ExplanationSheet({
       backdropComponent={renderBackdrop}
       handleIndicatorStyle={styles.handle}
       backgroundStyle={styles.background}
+      onAnimate={handleAnimate}
     >
-      <BottomSheetScrollView contentContainerStyle={styles.scrollContent}>
+      <BottomSheetScrollView
+        ref={scrollRef as never}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* 솔리드 결과 헤더 */}
         <View
           style={[
