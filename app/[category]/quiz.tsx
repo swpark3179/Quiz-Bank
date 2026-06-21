@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -161,28 +160,77 @@ export default function QuizScreen() {
     sheetRef.current?.expand();
   };
 
-  /** 일괄 확인 모드: 다음 버튼 누를 때 제출 */
-  const handleDeferredNext = async () => {
-    if (selectedIdx === null) {
-      Alert.alert('보기를 선택해주세요');
-      return;
+  /** 일괄 확인 모드: 이전 문제로 이동 */
+  const goToPrev = () => {
+    if (currentIdx > 0) {
+      setCurrentIdx((i) => i - 1);
     }
-    setSubmitted((prev) => ({ ...prev, [currentIdx]: true }));
+  };
 
-    const correct = selectedIdx === currentQ.mappedAnswer;
-    if (correct) {
-      correctCountRef.current += 1;
-      setCorrectCount(correctCountRef.current);
+  /**
+   * 일괄 확인 모드: 다음 문제로 이동하거나, 마지막 문제면 채점 후 결과 화면으로.
+   * 일괄 확인 모드에서는 푸는 도중 정답을 채점/저장하지 않고, 이미 푼 문제 사이를
+   * 자유롭게 오가며 답을 번복할 수 있다. 실제 저장·채점은 마지막에 한 번에 수행한다.
+   */
+  const goToNext = async () => {
+    if (selectedIdx === null) return;
+
+    if (currentIdx + 1 >= total) {
+      await finalizeDeferred();
+    } else {
+      setCurrentIdx((i) => i + 1);
+    }
+  };
+
+  /** 일괄 확인 모드: 모든 응답을 한 번에 저장하고 결과 화면으로 이동 */
+  const finalizeDeferred = async () => {
+    // 실제로 응답한 문제 인덱스(오름차순)
+    const answeredIndices = Object.keys(selections)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    await createSession({
+      id: sessionId,
+      categoryId,
+      sourceFileIds,
+      total: 0,
+      mode,
+    });
+
+    let correct = 0;
+    for (const idx of answeredIndices) {
+      const q = shuffled[idx];
+      const chosenIdx = selections[idx];
+      const isAnswerCorrect = chosenIdx === q.mappedAnswer;
+      if (isAnswerCorrect) correct += 1;
+
+      const mappedExplanation = mapExplanationSymbols(
+        q.original.explanation,
+        q.original.choices,
+        q.shuffledChoices
+      );
+
+      await saveAnswer({
+        id: uuid.v4() as string,
+        sessionId,
+        questionId: q.original.id,
+        sourceFileId: q.original.sourceFileId,
+        questionText: q.original.question,
+        chosenIndex: chosenIdx,
+        correctIndex: q.original.answer,
+        isCorrect: isAnswerCorrect,
+        explanation: mappedExplanation,
+        correctLabel: stripChoiceSymbol(q.shuffledChoices[q.mappedAnswer]?.label ?? ''),
+        mappedCorrectIndex: q.mappedAnswer,
+        displayOrder: idx + 1,
+      });
     }
 
-    const mappedExplanation = mapExplanationSymbols(
-      currentQ.original.explanation,
-      currentQ.original.choices,
-      currentQ.shuffledChoices
-    );
-
-    await persistAnswer(selectedIdx, correct, mappedExplanation);
-    await moveNext(correctCountRef.current);
+    await updateSessionProgress(sessionId, answeredIndices.length, correct);
+    router.replace({
+      pathname: '/result',
+      params: { sessionId, categoryId },
+    });
   };
 
   const handleExplanationNext = async () => {
@@ -238,16 +286,27 @@ export default function QuizScreen() {
           })}
         </View>
 
-        {/* 일괄 확인 모드: 다음/완료 버튼 */}
+        {/* 일괄 확인 모드: 이전/다음(결과 확인) 이동 버튼.
+            이미 푼 문제 사이를 오가며 답을 번복할 수 있고,
+            현재 문제를 풀지 않았으면 다음 이동이 비활성화된다. */}
         {mode === 'deferred' && (
-          <NordButton
-            label={currentIdx + 1 >= total ? '결과 확인' : '다음 문제'}
-            onPress={handleDeferredNext}
-            fullWidth
-            size="lg"
-            disabled={selectedIdx === null}
-            style={styles.nextButton}
-          />
+          <View style={styles.navRow}>
+            <NordButton
+              label="이전 문제"
+              variant="secondary"
+              onPress={goToPrev}
+              disabled={currentIdx === 0}
+              size="lg"
+              style={styles.navButton}
+            />
+            <NordButton
+              label={currentIdx + 1 >= total ? '결과 확인' : '다음 문제'}
+              onPress={goToNext}
+              disabled={selectedIdx === null}
+              size="lg"
+              style={styles.navButton}
+            />
+          </View>
         )}
 
         {/* 즉시 확인 모드: 제출 후 해설 시트를 닫았을 때 다시 열 수 있는 버튼 */}
@@ -340,6 +399,15 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     marginTop: Spacing.sm,
+    borderRadius: Radius.lg,
+  },
+  navRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  navButton: {
+    flex: 1,
     borderRadius: Radius.lg,
   },
   centered: {
