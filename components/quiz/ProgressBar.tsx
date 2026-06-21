@@ -6,13 +6,18 @@ interface ProgressBarProps {
   current: number;  // 현재 문제 번호 (1-indexed)
   total: number;
   correctCount?: number;
+  // 누적 점수(맞힘 개수)를 표시할지 여부.
+  // 즉시 확인 모드처럼 푸는 도중 정답이 채점되는 경우에만 true.
+  showScore?: boolean;
 }
 
-export function ProgressBar({ current, total, correctCount }: ProgressBarProps) {
+export function ProgressBar({ current, total, correctCount, showScore }: ProgressBarProps) {
   const progress = total > 0 ? (current - 1) / total : 0;
-  const accuracy = current > 1 && correctCount !== undefined
-    ? correctCount / (current - 1)
-    : null;
+  // 지금까지 채점이 끝난 문제 수
+  const answered = current - 1;
+  // 누적 점수 표시 조건: showScore가 켜져 있고, 채점된 문제가 1개 이상일 때
+  const scoreVisible = !!showScore && answered > 0 && correctCount !== undefined;
+  const accuracy = scoreVisible ? (correctCount as number) / answered : 0;
 
   return (
     <View
@@ -25,7 +30,7 @@ export function ProgressBar({ current, total, correctCount }: ProgressBarProps) 
         <Text style={styles.label}>
           {current} / {total}
         </Text>
-        {accuracy !== null && (
+        {scoreVisible && (
           <Text
             style={[
               styles.accuracy,
@@ -33,8 +38,9 @@ export function ProgressBar({ current, total, correctCount }: ProgressBarProps) 
                 ? { color: Colors.status.correct, backgroundColor: Colors.status.correctBg }
                 : { color: Colors.status.wrong, backgroundColor: Colors.status.wrongBg },
             ]}
+            accessibilityLabel={`지금까지 ${answered}문제 중 ${correctCount}문제 맞힘`}
           >
-            정답률 {Math.round(accuracy * 100)}%
+            맞힘 {correctCount}/{answered}
           </Text>
         )}
       </View>
