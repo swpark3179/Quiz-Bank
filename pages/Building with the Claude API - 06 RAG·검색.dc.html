@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ⑥ / 자습 정리</span></div>
+    <h1>RAG와 에이전틱 검색</h1>
+    <p class="sub">청킹 · 임베딩 · 벡터/BM25 검색 · 멀티 인덱스 · 리랭킹 · 컨텍스추얼</p>
+    <div class="secrow">
+      <span class="s">① 시작·개요</span><span class="s">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s">④ 엔지니어링</span><span class="s">⑤ 도구 사용</span><span class="s on">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s">⑧ MCP</span><span class="s">⑨ Anthropic 앱</span><span class="s">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede"><strong>RAG(검색 증강 생성)</strong> = 언어 모델로 대용량 문서를 질의하는 기법. 컨텍스트 한계에 부딪히지 않고 <em>100~1000+ 페이지</em>에서 특정 정보를 추출한다.</p>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>RAG 소개</h3><span class="unit-en">Introducing RAG</span></div>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--line)">
+        <span class="badge" style="background:#f1ece5;color:var(--soft)">Option 1 · 직접</span>
+        <div class="pt2">전체 문서를 프롬프트에</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">토큰 한계, 긴 프롬프트로 효과↓, 비용↑, 느림.</p>
+      </div>
+      <div class="pane" style="border-top:3px solid var(--teal)">
+        <span class="badge" style="background:var(--teal-tint);color:var(--teal-deep)">Option 2 · RAG</span>
+        <div class="pt2">관련 청크만 찾아 포함</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">문서를 작은 청크로 분할 → 질문마다 관련 청크만. 확장·저비용·빠름.</p>
+      </div>
+    </div>
+    <div class="note"><span class="lbl">핵심 과제</span><p>RAG는 단순성을 내주고 확장성·효율을 얻지만, 사용 사례에 맞는 <strong>관련성 정의</strong>와 <strong>최적 청킹 전략</strong>이라는 신중한 구현·평가가 필요하다(청크가 완전한 맥락을 담는다는 보장 없음).</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>텍스트 청킹 전략</h3><span class="unit-en">Text chunking strategies</span></div>
+    <p>청킹 품질이 RAG 성능을 좌우한다. 나쁜 청킹은 무관한 컨텍스트 검색을 부른다(소프트웨어 "bug" 질의에 의학 "bug" 검색).</p>
+    <div class="tri">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt">크기 기반</div><div class="pd">같은 길이로 분할. 가장 흔함 / 단어 잘림 → <strong>오버랩</strong>으로 보완.</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt">구조 기반</div><div class="pd">헤더·문단·섹션으로 분할. 마크다운/HTML에 최적(예: <code>##</code>).</div></div>
+      <div class="pane" style="border-top:3px solid var(--blue)"><div class="pt">시맨틱 기반</div><div class="pd">NLP로 의미 유사 문장 묶음. 가장 고급, 구현 복잡.</div></div>
+    </div>
+    <div class="note tip"><span class="lbl">규칙</span><p>보편적 최선의 청킹법은 없다. <strong>문자 단위</strong>(신뢰할 폴백) · <strong>문장 단위</strong>(좋은 중간 지점) · <strong>섹션 단위</strong>(최적이나 구조화 입력 필요) — 문서 구조와 사용 사례로 결정.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>텍스트 임베딩</h3><span class="unit-en">Text embeddings</span></div>
+    <p><strong>텍스트 임베딩</strong> = 텍스트 의미의 수치 표현. 임베딩 모델이 텍스트 → 긴 숫자 리스트(-1 ~ +1) 출력. 각 숫자는 텍스트의 미지의 특성을 점수화한다.</p>
+    <ul>
+      <li><strong>시맨틱 검색</strong> = 임베딩으로 질문과 관련된 청크를 찾기 → RAG의 검색 문제(질의↔청크 매칭) 해결.</li>
+      <li><strong>파이프라인:</strong> 청크 추출 → 질의 → 시맨틱 검색 → 관련 청크를 프롬프트 컨텍스트로 추가.</li>
+      <li><strong>구현:</strong> Anthropic은 임베딩 생성에 <strong>Voyage AI</strong> 권장(별도 계정/키, 무료 시작, SDK 통합).</li>
+    </ul>
+    <div class="note"><span class="lbl">핵심</span><p>임베딩은 키워드 매칭이 아닌 <strong>의미 유사도 매칭</strong>을 가능케 해 더 나은 텍스트 관계 이해를 제공한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>전체 RAG 흐름</h3><span class="unit-en">The full RAG flow</span></div>
+    <ol class="proc">
+      <li><strong>텍스트 청킹</strong> — 소스 문서를 조각으로 분할</li>
+      <li><strong>임베딩 생성</strong> — 청크를 수치 벡터로 변환</li>
+      <li><strong>정규화</strong> — 벡터 크기를 1.0으로 스케일(API가 자동 처리)</li>
+      <li><strong>벡터 DB 저장</strong> — 벡터 연산에 최적화된 DB에 저장</li>
+      <li><strong>질의 처리</strong> — 사용자 질문을 같은 모델로 임베딩</li>
+      <li><strong>유사도 검색</strong> — 코사인 유사도로 가장 유사한 임베딩 찾기</li>
+      <li><strong>프롬프트 조립</strong> — 질문 + 검색된 청크를 LLM에 전송</li>
+    </ol>
+    <div class="note"><span class="lbl">핵심 수학</span><p><strong>코사인 유사도</strong> = 벡터 사이 각도의 코사인(-1~1, 1에 가까울수록 유사). <strong>코사인 거리</strong> = 1 − 유사도(0에 가까울수록 유사). 전처리(1~4) → 질의 → 실시간 검색(5~7) → LLM 응답.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>RAG 흐름 구현하기</h3><span class="unit-en">Implementing the RAG flow</span></div>
+    <ol class="proc">
+      <li><strong>청킹</strong> — <code>report.md</code>에 <code>chunk_by_section</code>으로 섹션 분할</li>
+      <li><strong>임베딩</strong> — <code>generate_embedding</code>으로 각 청크 벡터 생성</li>
+      <li><strong>벡터 스토어 채우기</strong> — <code>zip()</code>으로 청크-임베딩 쌍 순회, <code>store.add_vector(embedding, {content: chunk})</code></li>
+      <li><strong>질의 처리</strong> — 사용자 질문을 임베딩</li>
+      <li><strong>유사도 검색</strong> — <code>store.search(user_embedding, 2)</code>로 관련 청크 2개(코사인 거리 예: 0.71, 0.72)</li>
+    </ol>
+    <div class="note tip"><span class="lbl">메타데이터 저장</span><p><strong>원본 텍스트를 임베딩과 함께 저장</strong>해야 의미 있는 검색 결과를 얻는다. 이 워크플로우는 완성됐지만 한계가 있어 BM25·멀티 인덱스·리랭킹으로 개선한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>BM25 렉시컬 검색</h3><span class="unit-en">BM25 lexical search</span></div>
+    <p><strong>BM25</strong>(Best Match 25) = 시맨틱 검색을 보완하는 <strong>렉시컬(어휘) 검색</strong>. 시맨틱만으론 정확한 용어 매칭을 놓칠 수 있다. <strong>하이브리드 검색</strong> = 시맨틱(벡터) + 렉시컬(BM25)을 병렬 결합 후 병합.</p>
+    <ol class="proc">
+      <li>질의를 개별 용어로 토큰화(구두점 제거, 공백 분할)</li>
+      <li>모든 청크에서 각 용어 빈도 카운트</li>
+      <li>사용 빈도 기반 중요도 부여(<strong>희귀 용어 = 높은 중요도</strong>, "a" 같은 흔한 용어 = 낮음)</li>
+      <li>높은 가중치 용어를 자주 포함하는 청크 순으로 랭킹</li>
+    </ol>
+    <p class="cap">BM25는 정확한 용어 매칭에 강해 시맨틱의 약점을 보완. 둘 다 유사한 API(<code>add_document</code>, <code>search</code>)라 결합이 쉽다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>멀티 인덱스 RAG 파이프라인</h3><span class="unit-en">A Multi-Index RAG pipeline</span></div>
+    <p>시맨틱(벡터 인덱스)과 렉시컬(BM25 인덱스)을 <strong>Retriever 클래스</strong>로 결합해 두 인덱스 결과를 병합한다.</p>
+    <h4>Reciprocal Rank Fusion (RRF)</h4>
+    <div class="code"><span class="c"># 각 문서에 대해 모든 검색 방법에 걸쳐 합산</span>
+RRF_score = Σ ( 1 / (rank + 1) )
+
+<span class="c"># 예</span>
+벡터:  [doc2, doc7, doc6]
+BM25:  [doc6, doc2, doc7]
+최종:  [doc2, doc6, doc7]   <span class="c"># doc2가 양쪽에서 높음</span></div>
+    <div class="note best"><span class="lbl">이점</span><p>서로 다른 검색 패러다임 결합으로 정확도↑, 표준 API(<code>search()</code>·<code>add_document()</code>)의 모듈식 설계로 인덱스 추가 확장이 쉽고 단일 방법 실패 케이스를 더 잘 처리한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>결과 리랭킹</h3><span class="unit-en">Reranking results</span></div>
+    <p><strong>리랭킹</strong> = 초기 검색 후 LLM으로 결과를 관련성 순으로 <strong>재정렬</strong>하는 후처리 단계.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">1</div><div class="ft">벡터+BM25 검색</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2</div><div class="ft">결과 병합</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">3</div><div class="ft">LLM이 관련성 순 랭킹</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">4</div><div class="ft">재정렬 결과</div></div>
+    </div>
+    <div class="note"><span class="lbl">트레이드오프</span><p>효율을 위해 전체 텍스트 대신 <strong>문서 ID</strong> 사용 + 프리필/정지 시퀀스로 구조화 JSON. 정확도↑ ↔ 추가 LLM 호출로 지연↑. 초기 검색이 뉘앙스를 놓칠 때 효과적(예: "ENG team" vs "engineering team").</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">09</span><h3>컨텍스추얼 검색</h3><span class="unit-en">Contextual retrieval</span></div>
+    <p><strong>컨텍스추얼 검색</strong> = 임베딩 전에 <strong>각 청크에 맥락을 추가</strong>해 정확도를 높이는 기법. 청크가 원본의 맥락을 잃는 문제를 해결한다.</p>
+    <ol class="proc">
+      <li>개별 청크 + 원본 소스 문서 준비</li>
+      <li>LLM(Claude)에 "이 청크의 맥락을 생성하라" 전송</li>
+      <li>LLM이 청크와 더 큰 문서의 관계를 설명하는 짧은 맥락 생성</li>
+      <li>생성 맥락 + 원본 청크 결합 = <strong>"맥락화된 청크"</strong></li>
+      <li>맥락화된 청크를 벡터/BM25 인덱스 입력으로 사용</li>
+    </ol>
+    <div class="note tip"><span class="lbl">대용량 문서 전략</span><p>시작부 스타터 청크(1~3개, 요약용) + 대상 청크 바로 앞 청크(국소 맥락) 포함, 관련성 낮은 중간 청크는 건너뜀. <code>add_context</code> 함수가 맥락화 버전을 반환한다.</p></div>
+  </div>
+
+  <div class="note" style="margin-top:34px"><span class="lbl">다음 섹션</span><p><strong>⑦ Claude의 기능들</strong> — 확장 사고, 이미지/PDF, 인용, 프롬프트 캐싱, 코드 실행.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

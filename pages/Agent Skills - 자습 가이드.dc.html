@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2A241D; --soft:#6E6358; --faint:#938A7E;
+    --accent:#BC5A38; --accent-deep:#8E3E22; --accent-tint:#F7EDE6;
+    --teal:#356C61; --teal-deep:#274E46; --teal-tint:#E9F0EE;
+    --blue:#3C6388; --blue-tint:#E9EFF4;
+    --line:#E7DED3; --paper:#FBF7F2; --card:#FFFFFF;
+  }
+  body{ margin:0; background:#fff; color:var(--ink);
+    font-family:'Pretendard','Pretendard Variable',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased; }
+  .doc{ box-sizing:border-box; max-width:8.5in; margin:0 auto; background:inherit;
+    padding:64px clamp(24px,5vw,0.85in) 96px; font-size:15.5px; line-height:1.72; }
+  .doc-frame{ width:100%; border-collapse:collapse; }
+  .doc-frame td{ padding:0; }
+  .running-hdr,.running-ftr,.hdr-space,.ftr-space{ display:none; }
+  h1,h2,h3{ text-wrap:balance; }
+  p,li{ text-wrap:pretty; }
+  p{ margin:10px 0; }
+  a{ color:var(--accent-deep); text-decoration:none; border-bottom:1px solid rgba(142,62,34,.3); }
+  strong{ font-weight:700; color:#211C16; }
+
+  .mast{ border-bottom:3px solid var(--accent); padding-bottom:30px; margin-bottom:14px; }
+  .mast .eyebrow{ font-size:12.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--accent); font-weight:700; margin-bottom:14px; }
+  .mast h1{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:42px;
+    line-height:1.14; margin:0 0 12px; letter-spacing:-.01em; }
+  .mast .sub{ font-size:18px; color:var(--soft); font-weight:500; margin:0; }
+  .mast .meta{ margin-top:18px; font-size:13.5px; color:var(--faint); }
+  .mast .meta a{ color:var(--faint); border-bottom-color:rgba(0,0,0,.12); }
+
+  .lede{ font-size:16.5px; color:#3a342c; background:var(--paper); border:1px solid var(--line);
+    border-radius:10px; padding:18px 22px; margin:22px 0; }
+  .lede em{ font-style:normal; color:var(--accent-deep); font-weight:600; }
+
+  h2.sec{ font-family:'Noto Serif KR',serif; font-size:26px; font-weight:700;
+    margin:8px 0 4px; letter-spacing:-.01em; }
+  .unit{ margin-top:40px; }
+  .unit-h{ display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--line);
+    padding-bottom:9px; margin-bottom:10px; flex-wrap:wrap; }
+  .unit-n{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:18px; color:var(--accent);
+    flex:none; }
+  .unit-h h3{ font-size:21px; font-weight:700; margin:0; flex:1 1 auto; min-width:0; }
+  .unit-en{ font-size:13.5px; color:var(--faint); font-weight:500; flex:none; }
+  .unit h4{ font-size:15.5px; font-weight:700; color:var(--accent-deep); margin:20px 0 4px;
+    padding-left:12px; border-left:3px solid var(--accent); }
+  .obj{ background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:12px 18px 12px 16px;
+    margin:10px 0 4px; }
+  .obj .lbl{ font-size:11.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--soft); }
+  .obj ul{ margin:6px 0 0; }
+  ul,ol{ margin:8px 0; padding-left:22px; }
+  li{ margin:5px 0; }
+  code{ font-family:'JetBrains Mono',monospace; font-size:.86em; background:var(--accent-tint);
+    color:var(--accent-deep); padding:1.5px 6px; border-radius:5px; }
+
+  .note{ border-left:4px solid var(--accent); background:var(--accent-tint);
+    padding:13px 18px; border-radius:0 8px 8px 0; margin:18px 0; break-inside:avoid; }
+  .note .lbl{ display:block; font-weight:700; font-size:11.5px; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--accent-deep); margin-bottom:3px; }
+  .note p{ margin:0; }
+  .note.tip{ border-color:var(--teal); background:var(--teal-tint); }
+  .note.tip .lbl{ color:var(--teal-deep); }
+  .note.best{ border-color:var(--blue); background:var(--blue-tint); }
+  .note.best .lbl{ color:#274d6e; }
+
+  .t{ width:100%; border-collapse:collapse; margin:18px 0; font-size:14px; break-inside:avoid; }
+  .t caption{ text-align:left; font-size:13px; color:var(--soft); margin-bottom:7px; font-weight:600; }
+  .t th{ text-align:left; background:var(--accent-tint); color:var(--accent-deep);
+    font-weight:700; padding:9px 13px; border-bottom:2px solid var(--accent); font-size:13px; }
+  .t td{ padding:9px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .t tr:nth-child(even) td{ background:var(--paper); }
+  .t td strong{ color:var(--accent-deep); }
+
+  .code{ background:#2B2620; color:#EFE6DB; border-radius:9px; padding:15px 18px; margin:14px 0;
+    font-family:'JetBrains Mono',monospace; font-size:12.6px; line-height:1.65;
+    white-space:pre; overflow-x:auto; break-inside:avoid; }
+  .code .c{ color:#8E8475; }
+  .code .k{ color:#E89B6C; }
+  .cap{ font-size:12.5px; color:var(--soft); margin:-6px 0 18px; }
+
+  .proc{ list-style:none; counter-reset:step; margin:16px 0; padding:0; }
+  .proc li{ counter-increment:step; position:relative; padding:0 0 16px 48px; min-height:32px; }
+  .proc li::before{ content:counter(step); position:absolute; left:0; top:-2px; width:32px; height:32px;
+    border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center;
+    font-weight:700; font-size:14px; }
+  .proc li::after{ content:''; position:absolute; left:15px; top:34px; bottom:2px; width:2px;
+    background:var(--line); }
+  .proc li:last-child::after{ display:none; }
+  .proc.teal li::before{ background:var(--teal); }
+
+  .flow{ display:flex; align-items:stretch; margin:20px 0; break-inside:avoid; }
+  .flow-step{ flex:1 1 0; min-width:0; background:var(--paper); border:1px solid var(--line);
+    border-top:3px solid var(--accent); border-radius:8px; padding:13px 11px; text-align:center; }
+  .flow-step .fn{ font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.04em; }
+  .flow-step .ft{ font-size:13.5px; font-weight:600; margin-top:3px; }
+  .flow-arrow{ display:flex; align-items:center; justify-content:center; padding:0 7px;
+    color:var(--accent); font-size:20px; font-weight:700; flex:none; }
+
+  .scope{ margin:18px 0; break-inside:avoid; }
+  .scope .lv{ border:1.5px solid; border-radius:10px; padding:13px 16px; }
+  .scope .lvt{ font-weight:700; font-size:14.5px; }
+  .scope .lvd{ font-size:13px; color:var(--soft); }
+
+  .tri{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:18px 0; break-inside:avoid; }
+  .tri .pane{ border:1px solid var(--line); border-radius:10px; padding:15px 16px; background:var(--card); }
+  .tri .pane .pt{ font-weight:700; font-size:15px; margin-bottom:5px; }
+  .tri .pane .pd{ font-size:13px; color:var(--soft); }
+  .tri .pane .tag{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.05em;
+    padding:2px 8px; border-radius:20px; margin-bottom:8px; }
+
+  .cheat{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+  .cheat .cc{ break-inside:avoid; border:1px solid var(--line); border-radius:10px;
+    padding:15px 17px; background:var(--paper); }
+  .cheat .cc h4{ all:unset; display:block; font-size:14px; font-weight:700; color:var(--accent-deep);
+    margin-bottom:9px; padding-bottom:7px; border-bottom:1px solid var(--line); }
+  .cheat .cc ul{ margin:0; padding:0; list-style:none; font-size:13px; }
+  .cheat .cc li{ display:flex; gap:10px; align-items:baseline; margin:6px 0; }
+  .cheat .cc li .kk{ flex:none; }
+  .cheat .cc li .vv{ color:var(--soft); }
+  kbd{ font-family:'JetBrains Mono',monospace; background:#fff; border:1px solid var(--line);
+    border-bottom-width:2px; border-radius:5px; padding:1.5px 7px; font-size:11.5px; color:#2A241D;
+    white-space:nowrap; }
+
+  @page{ size:letter; margin:0; }
+  @media print{
+    html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    html,body{ margin:0; padding:0; }
+    .doc{ max-width:none !important; margin:0 !important; padding:0 0.75in !important;
+      box-shadow:none !important; border:none !important; }
+    #dc-root,.sc-host{ height:auto !important; }
+    .hdr-space,.ftr-space{ display:table-cell; height:0.6in !important; }
+    .screen-only{ display:none !important; }
+    .note,.t,.code,.flow,.scope,.tri,.cheat .cc,.obj{ break-inside:avoid; }
+    h1,h2,h3,h4{ break-after:avoid; }
+    p,li{ orphans:3; widows:3; }
+  }
+</style>
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Anthropic Academy · 자습 학습 정리</div>
+    <h1>Introduction to Agent Skills</h1>
+    <p class="sub">Skill 생성 · 설정 · 공유 · 문제 해결 + 핵심 개념 도식 + 치트시트</p>
+    <p class="meta">강의 홈 · <a href="https://anthropic.skilljar.com/introduction-to-agent-skills/434525">anthropic.skilljar.com/introduction-to-agent-skills</a> &nbsp;|&nbsp; 6개 단원 · 예상 학습 시간 약 105분</p>
+  </header>
+
+  <p class="lede"><strong>Skill이란?</strong> Claude가 적절한 작업에 <em>자동으로 적용</em>하는 재사용 가능한 마크다운 지침 묶음. 코딩 표준·PR 리뷰 방식·커밋 형식을 매번 설명하는 대신 <em>한 번만 가르치면</em> 된다. 각 Skill은 <code>SKILL.md</code>(이름·설명 frontmatter + 실제 지침)를 담은 폴더다.</p>
+
+  <div class="note tip">
+    <span class="lbl">이렇게 학습하세요</span>
+    <p>① 단원 순서대로 정독하고 ② <strong>매칭 흐름 · 우선순위 · progressive disclosure</strong> 도식으로 동작 원리를 잡은 뒤 ③ 마지막 <strong>치트시트</strong>로 메타데이터 필드·커맨드·문제 해결을 빠르게 복습하세요.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>Skill이란 무엇인가?</h3><span class="unit-en">What are skills?</span></div>
+    <div class="obj"><span class="lbl">학습 목표</span>
+      <ul><li>Skill의 정의와 동작, 저장 위치(개인 vs. 프로젝트) 이해</li><li>Skill · CLAUDE.md · 슬래시 커맨드의 차이 구분</li><li>Skill이 적절한 커스터마이징 도구가 되는 상황 식별</li></ul>
+    </div>
+
+    <h4>핵심 개념</h4>
+    <ul>
+      <li><strong>Skill은 "한 번만 가르치면" 되는 지침 묶음</strong>이다. 작성해 두면 Claude가 관련 상황마다 자동 적용한다.</li>
+      <li>명령어·리소스가 담긴 <strong>폴더</strong>이며, 각 Skill은 <code>SKILL.md</code>에 frontmatter(이름·설명) + 그 아래 실제 지침을 둔다.</li>
+      <li><strong><code>description</code>(설명)이 매칭의 핵심.</strong> Claude는 사용자 요청을 모든 Skill의 설명과 비교(시맨틱 매칭)해 활성화한다.</li>
+    </ul>
+    <div class="code"><span class="c">---</span>
+<span class="k">name</span>: pr-review
+<span class="k">description</span>: Reviews pull requests for code quality. Use when reviewing PRs or checking code changes.
+<span class="c">---</span>
+<span class="c"># 아래에 리뷰 체크리스트·형식 선호 등 실제 지침을 작성</span></div>
+    <p class="cap">SKILL.md frontmatter 예시 — 이름과 설명 아래에 Claude가 따를 실제 지침이 온다.</p>
+
+    <h4>저장 위치</h4>
+    <table class="t">
+      <thead><tr><th style="width:20%">종류</th><th style="width:34%">위치</th><th>특징</th></tr></thead>
+      <tbody>
+        <tr><td><strong>개인 Skill</strong></td><td><code>~/.claude/skills</code></td><td>모든 프로젝트에서 따라다님 (개인 커밋 스타일·문서 형식)</td></tr>
+        <tr><td><strong>프로젝트 Skill</strong></td><td>저장소 루트의 <code>.claude/skills</code></td><td>clone하는 모든 팀원이 자동 공유 (팀 표준·브랜드 가이드) · 코드와 함께 커밋</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Skill vs. CLAUDE.md vs. 슬래시 커맨드</h4>
+    <div class="tri">
+      <div class="pane" style="border-top:3px solid var(--blue)"><span class="tag" style="background:var(--blue-tint);color:#274d6e">항상 로드</span><div class="pt">CLAUDE.md</div><div class="pd">모든 대화에 항상 포함 (예: "항상 TypeScript strict 사용")</div></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><span class="tag" style="background:var(--accent-tint);color:var(--accent-deep)">온디맨드</span><div class="pt">Skill</div><div class="pd">요청과 일치할 때만 로드. 초기엔 이름·설명만 → 컨텍스트 절약</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><span class="tag" style="background:var(--teal-tint);color:var(--teal-deep)">수동 입력</span><div class="pt">슬래시 커맨드</div><div class="pd">사용자가 직접 입력. Skill은 입력 없이 Claude가 자동 인식</div></div>
+    </div>
+    <div class="note"><span class="lbl">핵심 원칙</span><p>같은 내용을 Claude에게 <strong>반복해서 설명하고 있다면, 그것이 바로 작성해야 할 Skill</strong>이다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>첫 Skill 만들기</h3><span class="unit-en">Creating your first skill</span></div>
+    <div class="obj"><span class="lbl">학습 목표</span>
+      <ul><li>올바른 frontmatter 구조로 Skill 생성·테스트·검증</li><li>Claude가 요청을 Skill에 매칭하는 방식 설명</li><li>우선순위 계층(Enterprise·Personal·Project·Plugins) 이해</li></ul>
+    </div>
+
+    <h4>만드는 과정 (예: PR 설명 작성 Skill)</h4>
+    <div class="code"><span class="c"># ① 디렉터리 생성 (디렉터리명 = Skill명)</span>
+mkdir -p ~/.claude/skills/pr-description
+
+<span class="c"># ② SKILL.md 작성</span>
+<span class="c">---</span>
+<span class="k">name</span>: pr-description
+<span class="k">description</span>: Writes pull request descriptions. Use when creating a PR
+             or summarizing changes for a pull request.
+<span class="c">---</span>
+1. Run `git diff main...HEAD` to see all changes
+2. Write a description: ## What / ## Why / ## Changes</div>
+    <ul>
+      <li><code>name</code>: Skill 식별자 · <code>description</code>: 언제 쓸지(매칭 기준) · 두 번째 <code>---</code> 아래: 활성화 시 따르는 실제 지침.</li>
+    </ul>
+
+    <h4>매칭 동작 방식</h4>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">시작 시</div><div class="ft">4곳 스캔<br>(이름·설명만)</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">요청 시</div><div class="ft">설명과 비교<br>(시맨틱 매칭)</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">매칭</div><div class="ft">확인 프롬프트<br>표시</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">확인 후</div><div class="ft">SKILL.md 전체<br>읽고 적용</div></div>
+    </div>
+    <p class="cap">예: "explain what this function does" → "explain code with visual diagrams" 설명과 의도가 겹쳐 매칭.</p>
+
+    <h4>우선순위 (이름 충돌 시, 위가 승리)</h4>
+    <div class="scope">
+      <div class="lv" style="border-color:var(--blue);background:var(--blue-tint)"><div class="lvt" style="color:#274d6e">1 · Enterprise</div><div class="lvd">관리형 설정 · 최고 우선순위</div></div>
+      <div class="lv" style="border-color:var(--accent);background:var(--accent-tint);margin-top:10px"><div class="lvt" style="color:var(--accent-deep)">2 · Personal</div><div class="lvd">홈 디렉터리 <code>~/.claude/skills</code></div></div>
+      <div class="lv" style="border-color:var(--teal);background:var(--teal-tint);margin-top:10px"><div class="lvt" style="color:var(--teal-deep)">3 · Project</div><div class="lvd">저장소의 <code>.claude/skills</code></div></div>
+      <div class="lv" style="border-color:var(--line);background:var(--paper);margin-top:10px"><div class="lvt" style="color:var(--soft)">4 · Plugins</div><div class="lvd">설치된 플러그인 · 최저 우선순위</div></div>
+    </div>
+    <div class="note tip"><span class="lbl">팁</span><p>충돌을 피하려면 <code>review</code>보다 <code>frontend-review</code>처럼 <strong>구체적인 이름</strong>을 쓴다. 업데이트는 <code>SKILL.md</code> 편집, 삭제는 디렉터리 삭제 — 변경 후 <strong>항상 Claude Code 재시작</strong>.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>설정과 멀티 파일 Skill</h3><span class="unit-en">Configuration &amp; multi-file skills</span></div>
+    <div class="obj"><span class="lbl">학습 목표</span>
+      <ul><li><code>allowed-tools</code>, <code>model</code> 등 고급 메타데이터 설정</li><li>안정적으로 트리거되는 효과적인 설명 작성</li><li>progressive disclosure와 멀티 파일 구조로 복잡한 Skill 구성</li></ul>
+    </div>
+
+    <h4>메타데이터 필드</h4>
+    <table class="t">
+      <thead><tr><th style="width:24%">필드</th><th style="width:16%">필수</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code></td><td>필수</td><td>소문자·숫자·하이픈만, 최대 64자, 디렉터리명과 일치</td></tr>
+        <tr><td><code>description</code></td><td>필수</td><td>언제 사용할지 명시, 최대 1,024자 · <strong>매칭의 핵심</strong></td></tr>
+        <tr><td><code>allowed-tools</code></td><td>선택</td><td>Skill 활성 시 사용 가능한 도구 제한</td></tr>
+        <tr><td><code>model</code></td><td>선택</td><td>해당 Skill에 사용할 Claude 모델 지정</td></tr>
+      </tbody>
+    </table>
+
+    <h4>효과적인 설명 작성법</h4>
+    <ul>
+      <li>지침은 <strong>명시적으로</strong>. 좋은 설명은 두 가지에 답한다 — <strong>① 이 Skill이 무엇을 하는가? ② 언제 사용해야 하는가?</strong></li>
+      <li>트리거가 안 되면, 사용자가 실제로 요청을 표현하는 방식의 <strong>키워드를 추가</strong>한다.</li>
+    </ul>
+
+    <h4>allowed-tools로 도구 제한</h4>
+    <div class="code"><span class="c">---</span>
+<span class="k">name</span>: codebase-onboarding
+<span class="k">description</span>: Helps new developers understand how the system works.
+<span class="k">allowed-tools</span>: Read, Grep, Glob, Bash
+<span class="k">model</span>: sonnet
+<span class="c">---</span></div>
+    <p class="cap">활성 시 허용된 도구만 사용(편집·쓰기 불가) — 읽기 전용·보안 민감 워크플로우의 가드레일. 생략 시 제한 없음.</p>
+
+    <h4>Progressive Disclosure (점진적 공개)</h4>
+    <p>Skill은 컨텍스트 윈도우를 대화와 공유한다. 모든 걸 한 파일에 욱여넣으면 컨텍스트 낭비 + 유지보수 곤란. <strong>핵심만 SKILL.md에 두고 상세 자료는 별도 파일로 분리해 필요할 때만 읽게</strong> 한다.</p>
+    <div class="tri">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt"><code>scripts/</code></div><div class="pd">실행 가능한 코드</div></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt"><code>references/</code></div><div class="pd">추가 문서</div></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt"><code>assets/</code></div><div class="pd">이미지·템플릿·데이터</div></div>
+    </div>
+    <ul>
+      <li>SKILL.md에서 <strong>로드 시점을 명시</strong> (예: "시스템 설계 질문 시에만 <code>architecture-guide.md</code>를 읽어라") — 전체 문서가 아니라 목차만 두는 셈.</li>
+      <li><strong>권장 규칙: SKILL.md는 500줄 이하</strong>. 초과 시 reference 파일로 분리.</li>
+      <li><strong>스크립트는 내용을 컨텍스트에 로드하지 않고 실행</strong> → 출력만 토큰 소비. SKILL.md에 "읽지 말고 실행하라"고 지시. 환경 검증·데이터 변환 등에 유용.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>Skill vs. 다른 기능</h3><span class="unit-en">Skills vs. other Claude Code features</span></div>
+    <div class="obj"><span class="lbl">학습 목표</span>
+      <ul><li>Skill을 CLAUDE.md · 서브에이전트 · 훅 · MCP 서버와 비교</li><li>사용 사례에 맞는 커스터마이징 기능 선택 + 상호 보완적 조합 설계</li></ul>
+    </div>
+
+    <h4>한눈에 비교</h4>
+    <ul>
+      <li><strong>CLAUDE.md vs. Skill</strong> — 전자는 항상 로드(프로젝트 전역 표준·제약), 후자는 요청 매칭 시 온디맨드(작업별·가끔 필요한 전문 지식).</li>
+      <li><strong>Skill vs. 서브에이전트</strong> — Skill은 현재 대화에 지식을 더함, 서브에이전트는 <strong>격리된 컨텍스트</strong>에서 독립 수행 후 결과 반환.</li>
+      <li><strong>Skill vs. 훅</strong> — 훅은 <strong>이벤트 기반</strong>(파일 저장 시 린트 등), Skill은 <strong>요청 기반</strong>(무엇을 요청하느냐).</li>
+      <li><strong>MCP 서버</strong> — 외부 도구·통합 제공 → Skill과는 완전히 다른 범주.</li>
+    </ul>
+
+    <table class="t">
+      <caption>전형적인 구성 — 각 기능은 자기 전문 영역을 담당한다</caption>
+      <thead><tr><th style="width:32%">기능</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CLAUDE.md</strong></td><td>항상 적용되는 프로젝트 표준</td></tr>
+        <tr><td><strong>Skills</strong></td><td>온디맨드로 로드되는 작업별 전문성</td></tr>
+        <tr><td><strong>Hooks</strong></td><td>이벤트로 트리거되는 자동화 작업</td></tr>
+        <tr><td><strong>Subagents</strong></td><td>위임 작업을 위한 격리된 실행 컨텍스트</td></tr>
+        <tr><td><strong>MCP servers</strong></td><td>외부 도구·통합</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">핵심</span><p>다른 옵션이 더 맞는데 억지로 Skill에 욱여넣지 말고 <strong>여러 기능을 함께</strong> 사용하라. Skill은 관련 주제일 때 Claude가 자동 적용해야 할 지식이 있을 때 쓴다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>Skill 공유하기</h3><span class="unit-en">Sharing skills</span></div>
+    <div class="obj"><span class="lbl">학습 목표</span>
+      <ul><li>Git 커밋 · 플러그인/마켓플레이스 · enterprise 설정으로 Skill 배포</li><li>커스텀 서브에이전트가 특정 Skill을 사용하도록 구성</li></ul>
+    </div>
+
+    <h4>3가지 공유 방법</h4>
+    <ol class="proc">
+      <li><strong>저장소에 커밋 (가장 간단)</strong> — <code>.claude/skills</code>에 두면 clone하는 모두가 자동 획득. push → 다음 pull 시 업데이트. <code>.claude</code>엔 agents·hooks·skills·settings가 함께 버전 관리됨. <em>팀 표준·프로젝트 워크플로우에 적합.</em></li>
+      <li><strong>플러그인으로 배포</strong> — <code>skills</code> 디렉터리에 Skill별 <code>SKILL.md</code>. 마켓플레이스 배포로 발견·설치 가능. <em>프로젝트 특화도 낮고 두루 유용한 Skill에 적합.</em></li>
+      <li><strong>Enterprise 관리형 설정</strong> — 관리자가 조직 전체에 배포, <strong>최고 우선순위</strong>(동명 하위 Skill을 덮어씀). <em>의무 표준·보안·컴플라이언스 — 핵심 키워드는 "반드시(must)".</em></li>
+    </ol>
+    <div class="code"><span class="c">// 관리형 설정: 플러그인 설치 출처 제어</span>
+<span class="k">"strictKnownMarketplaces"</span>: [
+  { <span class="k">"source"</span>: "github", <span class="k">"repo"</span>: "acme-corp/approved-plugins" },
+  { <span class="k">"source"</span>: "npm", <span class="k">"package"</span>: "@acme-corp/compliance-plugins" }
+]</div>
+
+    <h4>Skill과 서브에이전트 — 중요한 함정</h4>
+    <ul>
+      <li><strong>서브에이전트는 Skill을 자동으로 보지 못한다.</strong> 위임 시 깨끗한 새 컨텍스트로 시작.</li>
+      <li><strong>내장 에이전트(Explorer·Plan·Verify)</strong>는 Skill에 전혀 접근 불가.</li>
+      <li><strong>커스텀 서브에이전트</strong>는 명시적으로 나열할 때만 사용 가능. Skill은 서브에이전트 <strong>시작 시 로드</strong>(온디맨드 X). frontmatter의 <code>skills</code> 필드에 나열한다.</li>
+    </ul>
+    <div class="code"><span class="c">---</span>
+<span class="k">name</span>: frontend-security-accessibility-reviewer
+<span class="k">tools</span>: Bash, Glob, Grep, Read, WebFetch, Skill...
+<span class="k">model</span>: sonnet
+<span class="k">skills</span>: accessibility-audit, performance-check
+<span class="c">---</span></div>
+    <p class="cap">절차: <code>.claude/skills</code>에 Skill 존재 확인 → 새 서브에이전트 생성(<code>/agents</code>) 또는 기존 에이전트에 <code>skills</code> 필드 추가.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>Skill 문제 해결</h3><span class="unit-en">Troubleshooting skills</span></div>
+    <div class="obj"><span class="lbl">학습 목표</span>
+      <ul><li>검증기(validator)로 구조적 문제 사전 포착</li><li>트리거·로딩·충돌·런타임 문제 진단·수정</li></ul>
+    </div>
+    <p>문제는 보통 <strong>트리거 안 됨 / 로드 안 됨 / 충돌 / 런타임 실패</strong> 중 하나다. 가장 먼저 <strong>agent skills validator</strong>를 실행한다(<code>uv</code>로 설치가 가장 쉬움).</p>
+
+    <h4>유형별 원인 &amp; 해결</h4>
+    <ul>
+      <li><strong>트리거 안 됨</strong> — 원인은 거의 항상 <code>description</code>. 사용자가 실제 말할 트리거 문구를 추가하고 변형("make this faster" 등)으로 테스트.</li>
+      <li><strong>로드 안 됨</strong> — <code>SKILL.md</code>는 <strong>이름 있는 디렉터리 안</strong>에, 파일명은 정확히 <code>SKILL.md</code>(대문자 SKILL). <code>claude --debug</code>로 로딩 오류 확인.</li>
+      <li><strong>잘못된 Skill 사용</strong> — 설명이 너무 비슷함 → <strong>더 구체적·구별되게</strong> 작성.</li>
+      <li><strong>우선순위 충돌</strong> — 동명의 상위(enterprise) Skill이 승리. 이름 변경 또는 관리자와 논의.</li>
+      <li><strong>런타임 오류</strong> — 의존성 누락(설명에 명시), 권한(<code>chmod +x</code>), 경로(Windows에서도 슬래시 <code>/</code> 사용).</li>
+    </ul>
+
+    <table class="t">
+      <caption>빠른 문제 해결 체크리스트</caption>
+      <thead><tr><th style="width:38%">증상</th><th>해결</th></tr></thead>
+      <tbody>
+        <tr><td>트리거 안 됨</td><td>설명 개선 + 트리거 문구 추가</td></tr>
+        <tr><td>로드 안 됨</td><td>경로·파일명·YAML 문법 확인</td></tr>
+        <tr><td>잘못된 Skill 사용</td><td>설명을 서로 더 구별되게</td></tr>
+        <tr><td>가려짐(shadowed)</td><td>우선순위 계층 확인 후 이름 변경</td></tr>
+        <tr><td>플러그인 Skill 누락</td><td>캐시 삭제 후 재설치</td></tr>
+        <tr><td>런타임 실패</td><td>의존성·권한·경로 확인</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note best" style="margin-top:34px"><span class="lbl">강의 총정리</span><p>Skill을 <strong>생성·설정·공유·문제 해결</strong>하는 법을 배웠다. <strong>가장 좋은 Skill은 실제 불편함(pain point)에서 나온다</strong> — 가장 자주 반복하는 지침부터 시작하자.</p></div>
+
+  <h2 class="sec" style="margin-top:50px">빠른 복습 — 치트시트</h2>
+  <div class="cheat">
+    <div class="cc">
+      <h4>저장 위치 &amp; 우선순위</h4>
+      <ul>
+        <li><span class="kk">개인</span><span class="vv"><code>~/.claude/skills</code></span></li>
+        <li><span class="kk">프로젝트</span><span class="vv">저장소 <code>.claude/skills</code></span></li>
+        <li><span class="kk">우선순위</span><span class="vv">Enterprise &gt; Personal &gt; Project &gt; Plugins</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>frontmatter 필드</h4>
+      <ul>
+        <li><span class="kk"><code>name</code></span><span class="vv">필수 · 소문자/숫자/-, 디렉터리명과 일치</span></li>
+        <li><span class="kk"><code>description</code></span><span class="vv">필수 · 매칭 핵심 · 최대 1024자</span></li>
+        <li><span class="kk"><code>allowed-tools</code></span><span class="vv">선택 · 도구 제한</span></li>
+        <li><span class="kk"><code>model</code></span><span class="vv">선택 · 모델 지정</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>커맨드</h4>
+      <ul>
+        <li><span class="kk">생성</span><span class="vv"><code>mkdir -p ~/.claude/skills/&lt;name&gt;</code></span></li>
+        <li><span class="kk">에이전트</span><span class="vv"><code>/agents</code> · frontmatter <code>skills:</code></span></li>
+        <li><span class="kk">디버그</span><span class="vv"><code>claude --debug</code></span></li>
+        <li><span class="kk">검증</span><span class="vv">agent skills validator (<code>uv</code>)</span></li>
+        <li><span class="kk">변경 후</span><span class="vv">항상 재시작</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>구조 규칙</h4>
+      <ul>
+        <li><span class="kk">파일명</span><span class="vv">정확히 <code>SKILL.md</code></span></li>
+        <li><span class="kk">길이</span><span class="vv">SKILL.md ≤ 500줄</span></li>
+        <li><span class="kk">분리</span><span class="vv">scripts / references / assets</span></li>
+        <li><span class="kk">스크립트</span><span class="vv">읽지 말고 실행 → 출력만 토큰</span></li>
+        <li><span class="kk">경로</span><span class="vv">Windows도 슬래시 <code>/</code></span></li>
+      </ul>
+    </div>
+  </div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

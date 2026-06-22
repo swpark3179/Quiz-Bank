@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ④ / 자습 정리</span></div>
+    <h1>프롬프트 엔지니어링 기법</h1>
+    <p class="sub">명확성 · 구체성 · XML 구조화 · 예시 제공</p>
+    <div class="secrow">
+      <span class="s">① 시작·개요</span><span class="s">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s on">④ 엔지니어링</span><span class="s">⑤ 도구 사용</span><span class="s">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s">⑧ MCP</span><span class="s">⑨ Anthropic 앱</span><span class="s">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede">더 신뢰할 수 있고 고품질의 출력을 얻기 위한 핵심 기법. 각 기법은 ③의 <em>eval 파이프라인으로 점수 향상을 측정</em>하며 진행된다. 식단 생성 프롬프트의 점수가 기법 적용에 따라 어떻게 오르는지 보자.</p>
+
+  <h4>기법 적용에 따른 점수 변화 (예시 프롬프트)</h4>
+  <div class="scoreline">
+    <div class="sb"><div class="sv">2.32</div><div class="sl">기본 프롬프트</div></div>
+    <div class="sa">→</div>
+    <div class="sb"><div class="sv">3.92</div><div class="sl">명확·직접</div></div>
+    <div class="sa">→</div>
+    <div class="sb"><div class="sv">7.86</div><div class="sl">+ 구체성</div></div>
+    <div class="sa">→</div>
+    <div class="sb"><div class="sv" style="color:var(--teal)">↑</div><div class="sl">+ XML·예시</div></div>
+  </div>
+  <p class="cap">특히 약한 모델일수록 기법의 효과가 크다. 점수는 eval 파이프라인으로 객관 측정한 값이다.</p>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>프롬프트 엔지니어링 개요</h3><span class="unit-en">Prompt engineering</span></div>
+    <p>언어 모델로부터 더 신뢰성 있고 고품질인 출력을 얻기 위해 프롬프트를 개선하는 것. <strong>모듈 구조</strong>: 나쁜 프롬프트로 시작 → 기법 단계별 적용 → 각 기법 후 개선 평가.</p>
+    <ul>
+      <li><strong>예시 목표:</strong> 키·몸무게·신체 목표·식이 제한 기반 운동선수용 하루 식단 생성.</li>
+      <li><strong>핵심 구성요소:</strong> <code>prompt_input_spec</code>(필요한 입력 정의), <code>extra_criteria</code>(모델 채점 추가 검증), <code>output.html</code>(점수 리포트). 동시성 지원(<code>max_concurrent_tasks</code>를 레이트 리밋에 맞춤).</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>명확하고 직접적으로</h3><span class="unit-en">Being clear and direct</span></div>
+    <p>프롬프트 <strong>첫 줄</strong>에 행동 동사(action verb)로 정확한 작업을 간결·직접적으로 명시한다. 첫 줄은 AI 응답의 토대를 놓는 가장 중요한 부분.</p>
+    <div class="note"><span class="lbl">구조</span><p>행동 동사 + 명확한 작업 설명 + 출력 명세. 예: <em>"Generate a one day meal plan for an athlete that meets their dietary restrictions"</em></p></div>
+    <p class="cap">결과: 점수 2.32 → 3.92.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>구체적으로</h3><span class="unit-en">Being specific</span></div>
+    <p><strong>구체성</strong> = 출력을 특정 방향으로 유도하는 가이드라인/단계 추가.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)">
+        <span class="badge" style="background:var(--accent-tint);color:var(--accent-deep)">Type A · 속성</span>
+        <div class="pt2">원하는 출력의 품질·속성</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">길이·구조·포맷 나열 → 출력 <strong>특성</strong> 제어. 거의 모든 프롬프트에 권장.</p>
+      </div>
+      <div class="pane" style="border-top:3px solid var(--blue)">
+        <span class="badge" style="background:var(--blue-tint);color:var(--blue-deep)">Type B · 단계</span>
+        <div class="pt2">모델이 따를 추론 단계</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">답에 <strong>도달하는 방식</strong> 제어. 넓은 관점이 필요한 복잡한 문제에.</p>
+      </div>
+    </div>
+    <p class="cap">두 기법은 전문 프롬프트에서 자주 결합된다. 효과: 점수 3.92 → 7.86으로 급등.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>XML 태그로 구조화</h3><span class="unit-en">Structure with XML tags</span></div>
+    <p><strong>XML 태그</strong> = 프롬프트 내 서로 다른 콘텐츠 섹션을 구분·조직해 AI 이해를 높이는 기법. 많은 콘텐츠를 보간할 때 정보 유형을 구별하게 돕는다.</p>
+    <div class="code"><span class="c">&lt;!-- 비구조 텍스트를 쏟아붓지 말고 서술적 태그로 감싼다 --&gt;</span>
+&lt;my_code&gt; ... 디버깅할 코드 ... &lt;/my_code&gt;
+&lt;docs&gt; ... 참고 문서 ... &lt;/docs&gt;
+&lt;athlete_information&gt; ... 외부 입력 ... &lt;/athlete_information&gt;</div>
+    <div class="note tip"><span class="lbl">명명 규칙</span><p>태그 이름은 <strong>구체적으로</strong> — <code>"data"</code>보다 <code>"sales_records"</code>가 콘텐츠 성격에 대한 맥락을 준다. 콘텐츠 경계 혼동을 줄여 작은 블록에서도 품질이 향상된다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>예시 제공하기</h3><span class="unit-en">Providing examples</span></div>
+    <p><strong>One-shot / Multi-shot 프롬프팅</strong> = 모델 행동을 유도하기 위해 예시를 제공(1개 / 여러 개). 예시를 XML 태그로 구조화해 샘플 입력과 이상적 출력을 담고 실제 프롬프트와 구분한다.</p>
+    <h4>주요 활용</h4>
+    <ul>
+      <li>코너 케이스 처리(빈정거림 감지, 엣지 시나리오)</li>
+      <li>복잡한 출력 포맷팅(JSON 구조, 특정 포맷)</li>
+      <li>기대 응답 품질·스타일 명확화</li>
+    </ul>
+    <div class="note best"><span class="lbl">모범 사례</span><p>코너 케이스엔 맥락 추가("빈정거림에 특히 주의") · 이상적인 <strong>이유(reasoning)</strong>를 포함 · <strong>eval 최고 점수 예시</strong>를 템플릿으로 · 예시는 주요 지침 <strong>뒤에</strong> 배치. "무엇이 이 예시를 이상적으로 만드는가"의 설명을 곁들이면 효과가 강화된다.</p></div>
+  </div>
+
+  <div class="note" style="margin-top:34px"><span class="lbl">다음 섹션</span><p><strong>⑤ 도구 사용(Tool use)</strong> — Claude가 외부 함수를 호출하게 하는 전 과정.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

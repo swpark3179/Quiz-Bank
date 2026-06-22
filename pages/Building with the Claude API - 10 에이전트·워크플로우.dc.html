@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ⑩ / 자습 정리</span></div>
+    <h1>에이전트와 워크플로우</h1>
+    <p class="sub">병렬화 · 체이닝 · 라우팅 패턴 · 에이전트 설계 · 워크플로우 vs 에이전트</p>
+    <div class="secrow">
+      <span class="s">① 시작·개요</span><span class="s">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s">④ 엔지니어링</span><span class="s">⑤ 도구 사용</span><span class="s">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s">⑧ MCP</span><span class="s">⑨ Anthropic 앱</span><span class="s on">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede">단일 요청으로 끝나지 않는 작업을 다루는 두 전략 — <strong>워크플로우(정해진 단계)</strong>와 <strong>에이전트(유연한 계획)</strong>. <em>판단 규칙: 단계 순서를 알면 워크플로우, 세부가 불분명하면 에이전트.</em></p>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>에이전트와 워크플로우</h3><span class="unit-en">Agents and workflows</span></div>
+    <p><strong>워크플로우</strong> = 단계가 미리 정해진 특정 문제에 대한 일련의 Claude 호출. 예 — 이미지 → 3D 모델 변환기:</p>
+    <div class="loop">
+      <div class="loop-row">
+        <div class="loop-node">이미지 기술</div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-node">CADQuery로<br>모델링</div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-node">렌더링 생성</div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-node">원본과 비교</div>
+      </div>
+      <div class="loop-back">↩ <b>부정확하면 피드백과 함께 모델링부터 반복</b> — Evaluator-Optimizer 패턴</div>
+    </div>
+    <div class="note"><span class="lbl">Evaluator-Optimizer</span><p>생산자(Producer)가 출력 생성 → 평가자(Evaluator)가 품질 평가 → 수용할 때까지 루프. 패턴 식별이 자동 구현은 아니며 <strong>실제 코드는 직접 작성</strong>해야 한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>병렬화 워크플로우</h3><span class="unit-en">Parallelization workflows</span></div>
+    <p>하나의 복잡한 작업을 여러 동시 서브태스크로 나눈 뒤 결과를 집계(aggregate).</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">입력</div><div class="ft">복잡한 결정</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">병렬</div><div class="ft">다수 서브태스크</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">집계</div><div class="ft">Aggregator</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">출력</div><div class="ft">종합 결과</div></div>
+    </div>
+    <p class="cap">예 — 부품 소재 선택: ❌ 모든 기준을 담은 하나의 큰 프롬프트 / ✅ 소재별 적합성을 평가하는 별도 병렬 요청 → 최종 집계 비교.</p>
+    <div class="note tip"><span class="lbl">이점</span><p>집중(각 서브태스크가 한 분석에 전념) · 모듈성(개별 프롬프트 개선/평가) · 확장성(서브태스크 추가) · 품질(복잡한 단일 프롬프트의 혼란 감소).</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>체이닝 워크플로우</h3><span class="unit-en">Chaining workflows</span></div>
+    <p>큰 작업을 하나의 복잡한 프롬프트가 아닌 <strong>일련의 순차적 단계</strong>로 분할. 각 호출이 하나의 서브태스크에 집중한다.</p>
+    <p class="cap">예: 주제 입력 → 트렌딩 검색 → 흥미로운 것 선택 → 리서치 → 스크립트 작성 → 영상 생성 → SNS 게시.</p>
+    <div class="note"><span class="lbl">주 사용처</span><p>제약이 많은 긴 프롬프트에서 Claude가 제약을 반복해도 무시할 때(예: "AI 언급 금지, 이모지 금지, 전문적 톤"). 해법: 1단계 초기 출력 수용 → 2단계 발견된 위반을 바탕으로 재작성 요청.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>라우팅 워크플로우</h3><span class="unit-en">Routing workflows</span></div>
+    <p>사용자 입력을 <strong>분류</strong>해 적절한 처리 파이프라인을 결정. 첫 요청에서 Claude가 입력을 카테고리로 분류 → 맞춤 프롬프트/도구를 가진 특화 파이프라인으로 라우팅.</p>
+    <ol class="proc">
+      <li>사용자 주제 입력(예: "Python functions")</li>
+      <li>Claude가 분류(예: "교육적")</li>
+      <li>교육 특화 프롬프트 템플릿 사용</li>
+      <li>교육적 톤/구조로 스크립트 생성</li>
+    </ol>
+    <p class="cap">구조: 하나의 라우팅 단계 → 다수의 특화 파이프라인. 출력이 주제 성격에 맞는다(프로그래밍=교육적, 엔터테인먼트=트렌디).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>에이전트와 도구</h3><span class="unit-en">Agents and tools</span></div>
+    <p><strong>에이전트</strong> = 제공된 도구로 작업 완료 계획을 스스로 세우는 AI 시스템. <strong>정확한 단계를 모를 때</strong> 효과적(워크플로우는 단계를 알 때 더 나음). 가용 도구로 <strong>동적 계획</strong>.</p>
+    <div class="note best"><span class="lbl">도구 추상화 원칙</span><p>초특화 도구보다 <strong>범용/추상 도구</strong>를 제공하라. 예: Claude Code는 <code>bash</code>·<code>web_fetch</code>·<code>file_write</code>(추상)를 쓰지 <code>refactor_tool</code>·<code>install_dependencies</code>(특화)를 쓰지 않는다. 에이전트는 <strong>소수의 유연한 도구</strong>와 가장 잘 작동하며, 도구를 예상 밖 방식으로 창의적으로 조합한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>환경 점검</h3><span class="unit-en">Environment inspection</span></div>
+    <p><strong>환경 점검</strong> = 에이전트가 <strong>환경과 행동 결과를 평가</strong>해 진행 상황을 이해하고 오류를 처리. 각 행동 후 도구 반환값을 넘어 새 환경 상태를 이해할 피드백이 필요하다.</p>
+    <ul>
+      <li><strong>컴퓨터 사용:</strong> 행동(타이핑·클릭)마다 스크린샷으로 변화 확인(결과를 예측 불가하므로).</li>
+      <li><strong>코드 편집:</strong> 파일 수정 전 현재 내용을 읽어 기존 상태 파악.</li>
+      <li><strong>SNS 영상 에이전트:</strong> Whisper CPP로 자막·대사 위치 검증, FFmpeg로 구간 스크린샷 점검 → 게시 전 검증.</li>
+    </ul>
+    <p class="cap">환경 점검으로 에이전트가 진행을 가늠하고 오류를 감지하며 예상 밖 결과에 적응 — 맹목적으로 작동하지 않는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>워크플로우 vs 에이전트</h3><span class="unit-en">Workflows vs agents</span></div>
+    <table class="t">
+      <thead><tr><th style="width:20%">항목</th><th>워크플로우</th><th>에이전트</th></tr></thead>
+      <tbody>
+        <tr><td><strong>정의</strong></td><td>단계가 알려진 사전 정의 호출 연쇄</td><td>도구를 조합해 미지의 작업을 푸는 유연한 접근</td></tr>
+        <tr><td><strong>작업 분할</strong></td><td>작고 특정한 서브태스크 → 집중·정확도↑</td><td>사전 단계 없이 창의적으로 처리</td></tr>
+        <tr><td><strong>테스트</strong></td><td>실행 순서가 알려져 <strong>테스트 쉬움</strong></td><td>실행 경로 예측 불가 → 어려움</td></tr>
+        <tr><td><strong>UX</strong></td><td>특정 입력 필요</td><td>입력을 스스로 생성, 필요 시 추가 요청</td></tr>
+        <tr><td><strong>성공률</strong></td><td>구조화로 <strong>완료율 높음</strong></td><td>위임된 복잡성으로 완료율 낮음</td></tr>
+      </tbody>
+    </table>
+    <div class="note best"><span class="lbl">권장</span><p><strong>신뢰성을 위해 워크플로우 우선.</strong> 유연성이 정말 필요할 때만 에이전트. 사용자는 화려한 에이전트보다 <strong>100% 작동하는 제품</strong>을 원한다. 핵심: 문제를 먼저 신뢰성 있게 풀고, 혁신은 그다음.</p></div>
+  </div>
+
+  <h2 class="sec" style="margin-top:50px">전체 강의 총정리</h2>
+  <p><strong>Building with the Claude API</strong>는 Anthropic API의 기초부터 에이전트 설계까지를 관통한다.</p>
+  <ol class="proc">
+    <li><strong>기초</strong> — 모델 선택(Opus/Sonnet/Haiku) → API 호출 → 멀티턴(API는 무상태) → 시스템 프롬프트·온도·스트리밍·출력 제어·구조화 데이터.</li>
+    <li><strong>품질</strong> — 프롬프트를 <strong>eval로 객관 측정</strong>하고 명확성·구체성·XML·예시로 개선.</li>
+    <li><strong>확장</strong> — 도구 사용(스키마·멀티턴·내장 도구), RAG(청킹·임베딩·BM25·멀티인덱스·리랭킹·컨텍스추얼).</li>
+    <li><strong>고급 기능</strong> — 확장 사고, 이미지/PDF, 인용, 프롬프트 캐싱, 코드 실행/Files API.</li>
+    <li><strong>생태계</strong> — MCP(도구·리소스·프롬프트), Anthropic 앱(Claude Code·Computer Use).</li>
+    <li><strong>설계</strong> — 워크플로우(병렬화·체이닝·라우팅)와 에이전트(추상 도구·환경 점검). <strong>신뢰성 우선, 혁신은 그다음.</strong></li>
+  </ol>
+  <div class="note"><span class="lbl">관통하는 원칙</span><p>측정(eval)하고, 컨텍스트를 정교하게 제어하며, 문제를 신뢰성 있게 푸는 <strong>가장 단순한 패턴(워크플로우)부터</strong> 선택하라.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

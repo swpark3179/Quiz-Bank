@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ⑤ / 자습 정리</span></div>
+    <h1>도구 사용 (Tool use)</h1>
+    <p class="sub">도구 함수·스키마 · 메시지 블록 · 도구 결과 · 멀티턴/멀티툴 · 내장 도구</p>
+    <div class="secrow">
+      <span class="s">① 시작·개요</span><span class="s">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s">④ 엔지니어링</span><span class="s on">⑤ 도구 사용</span><span class="s">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s">⑧ MCP</span><span class="s">⑨ Anthropic 앱</span><span class="s">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede"><strong>도구 사용</strong> = Claude가 <em>학습 데이터 너머의 외부 정보</em>에 접근하는 방법. Claude는 학습 데이터의 정보만 알고 현재/실시간 정보가 없으므로, 도구가 요청들 사이에서 외부 데이터 검색을 조율해 응답을 보강한다.</p>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>도구 사용 소개</h3><span class="unit-en">Introducing tool use</span></div>
+    <h4>도구 사용 흐름</h4>
+    <ol class="proc">
+      <li>Claude에 초기 요청 + 외부 데이터 접근 지침 전송</li>
+      <li>Claude가 외부 데이터 필요 여부를 판단하고 특정 정보 요청</li>
+      <li>서버가 코드를 실행해 외부 소스에서 데이터 가져옴</li>
+      <li>가져온 데이터와 함께 후속 요청</li>
+      <li>Claude가 원래 프롬프트 + 외부 데이터로 최종 응답 생성</li>
+    </ol>
+    <p class="cap">예(날씨): 사용자 질문 → Claude가 날씨 데이터 요청 → 서버가 날씨 API 호출 → Claude가 데이터 수신 → 정보 기반 응답.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>프로젝트 개요</h3><span class="unit-en">Project overview</span></div>
+    <p><strong>목표:</strong> 도구 구현으로 Claude가 <strong>시간 기반 리마인더</strong>를 설정하게 하기. "다음 주 목요일 병원 예약 리마인더" → Claude "그 시점에 알려드리겠습니다".</p>
+    <table class="t">
+      <thead><tr><th style="width:62%">문제</th><th>도구</th></tr></thead>
+      <tbody>
+        <tr><td>현재 <em>날짜</em>는 알지만 정확한 <em>시간</em>은 모름</td><td><strong>현재 datetime 도구</strong></td></tr>
+        <tr><td>시간 덧셈 계산 오류(예: 1973-01-13에서 379일 후)</td><td><strong>기간 더하기 도구</strong></td></tr>
+        <tr><td>리마인더 개념은 알지만 실제 설정 능력 없음</td><td><strong>리마인더 설정 도구</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="cap">한 번에 하나씩 만들어 멀티툴 조율로 발전시킨다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>도구 함수</h3><span class="unit-en">Tool functions</span></div>
+    <p><strong>도구 함수</strong> = Claude가 추가 정보를 필요로 할 때 자동 실행되는 평범한 Python 함수.</p>
+    <div class="code"><span class="k">def</span> get_current_datetime(date_format=<span class="s">"%Y%m%d %H:%M:%S"</span>):
+    <span class="k">if not</span> date_format:
+        <span class="k">raise</span> ValueError(<span class="s">"date format cannot be empty"</span>)
+    <span class="k">return</span> datetime.now().strftime(date_format)</div>
+    <div class="note tip"><span class="lbl">모범 사례</span><p><strong>서술적인 함수명·인자명</strong>을 쓰고, 입력을 검증해 <strong>의미 있는 에러 메시지</strong>와 함께 에러 발생 → 에러는 Claude에 보여서 수정된 파라미터로 재시도 가능하다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>도구 스키마</h3><span class="unit-en">Tool schemas</span></div>
+    <p><strong>도구 스키마</strong> = 도구 함수와 매개변수를 모델에 설명하는 <strong>JSON 스키마</strong> 명세.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">필드</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code></td><td>도구 식별자</td></tr>
+        <tr><td><code>description</code></td><td>도구가 <em>무엇을</em> 하는지·<em>언제</em> 쓰는지·<em>어떤</em> 데이터를 반환하는지 3~4문장</td></tr>
+        <tr><td><code>input_schema</code></td><td>인자의 타입·설명을 담은 실제 JSON 스키마</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">스키마 생성 트릭</span><p>도구 함수를 Claude.ai에 가져가 "이 함수의 유효한 도구 호출 JSON 스키마를 작성하라, 첨부 문서의 모범 사례를 따르라" + Anthropic tool use 문서 첨부 → 생성된 스키마 복사. 구현 시 <code>anthropic.types</code>의 <code>ToolParam</code>으로 감싸 타입 에러 방지.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>메시지 블록 처리</h3><span class="unit-en">Handling message blocks</span></div>
+    <p>도구를 포함한 요청은 <code>tools</code> 키워드 인자에 JSON 스키마를 담아 사용자 메시지와 함께 전송한다. 이제 메시지는 텍스트 블록만이 아니라 <strong>여러 블록</strong>을 포함한다.</p>
+    <ul>
+      <li><strong>Text block</strong> = 사용자용 설명 · <strong>Tool use block</strong> = 함수 이름 + 인자(도구 실행용).</li>
+      <li><strong>기록 관리:</strong> <code>response.content</code>(모든 블록)를 메시지 리스트에 추가(텍스트만 X). <code>add_user/assistant_message</code>가 여러 블록을 지원하도록 업데이트.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>도구 결과 전송</h3><span class="unit-en">Sending tool results</span></div>
+    <p><strong>도구 결과</strong> = 실행된 도구 함수의 결과를 후속 요청으로 Claude에 다시 전송.</p>
+    <table class="t">
+      <caption>도구 결과 블록 구조</caption>
+      <thead><tr><th style="width:26%">필드</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><code>tool_use_id</code></td><td>원본 tool use 블록 ID와 매칭(요청-결과 짝짓기)</td></tr>
+        <tr><td><code>content</code></td><td>도구 출력을 문자열로 변환(보통 JSON)</td></tr>
+        <tr><td><code>is_error</code></td><td>함수 실행 에러 여부 불리언(기본 false)</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">주의</span><p>후속 요청엔 완전한 기록 + <strong>원본 도구 스키마</strong>를 포함해야 한다(도구를 다시 안 써도). ⚠️ <strong>도구 결과 블록은 어시스턴트가 아니라 <em>사용자 메시지</em>에 들어간다.</strong></p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>도구를 이용한 멀티턴 대화</h3><span class="unit-en">Multi-turn conversations with tools</span></div>
+    <p><strong>도구 체이닝:</strong> 질문 → 첫 도구 요청 → 실행 → 결과 → 둘째 도구 요청 → 실행 → 결과 → 최종 답변. 예: "오늘부터 103일 후는 무슨 요일?" → <code>get_current_datetime</code> → <code>add_duration_to_datetime</code> → 답변.</p>
+    <div class="note tip"><span class="lbl">핵심</span><p>질의가 몇 개의 도구를 필요로 할지 예측 불가하므로, 시스템이 <strong>임의 길이의 도구 호출 체인</strong>을 <code>while</code> 루프로 자동 처리해야 한다(<code>run_conversation</code>).</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>멀티턴 구현하기</h3><span class="unit-en">Implementing multiple turns</span></div>
+    <p><strong><code>stop_reason</code> 필드</strong> = Claude가 멈춘 이유. <code>== "tool_use"</code>면 도구 호출을 원함(가장 흔히 확인).</p>
+    <div class="loop">
+      <div class="loop-row">
+        <div class="loop-node" style="border-bottom-color:var(--accent)">Claude 호출<br>(메시지+도구)</div>
+        <div class="loop-arrow" style="color:var(--accent)">→</div>
+        <div class="loop-node" style="border-bottom-color:var(--accent)">stop_reason<br>확인</div>
+        <div class="loop-arrow" style="color:var(--accent)">→</div>
+        <div class="loop-node" style="border-bottom-color:var(--accent)">run_tools<br>(도구 실행)</div>
+        <div class="loop-arrow" style="color:var(--accent)">→</div>
+        <div class="loop-node" style="border-bottom-color:var(--accent)">결과를 사용자<br>메시지로 추가</div>
+      </div>
+      <div class="loop-back" style="background:var(--accent)">↩ <b>tool_use가 아닐 때(텍스트만)까지 반복</b> — run_conversation 메인 루프</div>
+    </div>
+    <ul>
+      <li><strong><code>run_tools</code></strong> — <code>type="tool_use"</code> 블록 필터 → 각 도구 실행 → <code>tool_result</code> 블록 생성(<code>tool_use_id</code>·JSON 출력·<code>is_error</code>) → 결과 리스트 반환.</li>
+      <li><strong><code>run_tool</code>(디스패처)</strong> — <code>tool_name</code>·<code>tool_input</code>을 if문으로 함수 매칭·실행. try/except로 에러 처리(성공 <code>is_error=false</code>, 실패 <code>true</code>+메시지).</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">09</span><h3>여러 도구 사용하기</h3><span class="unit-en">Using multiple tools</span></div>
+    <p>초기 프레임워크 후 도구 추가 = <strong>스키마 + 라우팅 + 구현</strong>의 단순 반복 패턴.</p>
+    <ol class="proc">
+      <li><code>run_conversation</code>의 tools 리스트에 도구 스키마 추가</li>
+      <li><code>run_tool</code>에 새 도구 이름 처리 분기 추가</li>
+      <li>실제 도구 함수 구현</li>
+    </ol>
+    <p class="cap">예: <code>AddDurationToDateTime</code>(날짜 계산) + <code>SetReminder</code>(목 구현). Claude는 한 대화에서 여러 도구를 순차 사용 가능(날짜 계산 후 그 결과로 리마인더 설정).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">10</span><h3>세밀한 도구 호출</h3><span class="unit-en">Fine grained tool calling</span></div>
+    <p>도구 스트리밍은 <code>input_json_delta</code> 이벤트를 추가한다 — <code>partial_json</code>(청크) + <code>snapshot</code>(누적 합).</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">모드</th><th>동작</th><th style="width:26%">트레이드오프</th></tr></thead>
+      <tbody>
+        <tr><td><strong>기본</strong></td><td>청크 버퍼링 → 완전한 키-값 쌍까지 대기 → 스키마 검증 후 전송</td><td>느리지만 <strong>검증된 JSON</strong></td></tr>
+        <tr><td><strong>Fine-grained</strong><br><code>fine_grained: true</code></td><td>API측 JSON 검증 비활성화, 생성 즉시 청크 전송</td><td>빠르지만 <strong>유효하지 않은 JSON 가능</strong> · 클라이언트 에러 처리 필요</td></tr>
+      </tbody>
+    </table>
+    <p class="cap">fine-grained는 즉각적 UI 업데이트·도구 인자 조기 처리에 유용. 검증 지연이 허용되면 기본 모드로 충분.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">11</span><h3>텍스트 편집 도구</h3><span class="unit-en">The text edit tool</span></div>
+    <p><strong>Text Editor Tool</strong> = 파일/텍스트 작업(읽기·쓰기·생성·치환·실행취소)을 위한 Claude <strong>내장 도구</strong>. JSON 스키마만 내장돼 있고 <strong>실제 구현은 직접 코딩</strong>한다.</p>
+    <ol class="proc">
+      <li>최소 스키마 스텁(name + 버전별 날짜 type)을 전송</li>
+      <li>Claude가 내부에서 전체 스키마로 확장</li>
+      <li>Claude가 도구 사용 요청 전송</li>
+      <li>커스텀 구현이 실제 파일 작업 실행(보기·문자열 치환·생성)</li>
+      <li>결과를 Claude에 반환</li>
+    </ol>
+    <div class="note"><span class="lbl">주의 · 용도</span><p>스키마 type 문자열은 <strong>Claude 모델 버전마다 다름</strong>(3.5 vs 3.7). 용도: AI 코드 에디터 기능 재현, 자동 코드 생성/리팩터링, 멀티파일 조작.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">12</span><h3>웹 검색 도구</h3><span class="unit-en">The web search tool</span></div>
+    <p><strong>Web Search Tool</strong> = 최신/전문 정보를 웹에서 검색하는 내장 도구. <strong>커스텀 코드 불필요</strong> — Claude가 검색을 자동 처리.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)">
+        <div class="pt2">스키마 요구사항</div>
+        <ul style="margin:6px 0 0;font-size:13px"><li><code>type: "web_search_20250305"</code></li><li><code>name: "web_search"</code></li><li><code>max_uses</code>: 검색 횟수 제한(기본 5)</li><li><code>allowed_domains</code>: 도메인 제한(선택)</li></ul>
+      </div>
+      <div class="pane" style="border-top:3px solid var(--teal)">
+        <div class="pt2">응답 구조</div>
+        <ul style="margin:6px 0 0;font-size:13px"><li><strong>Text</strong> = Claude 설명</li><li><strong>Tool use</strong> = 검색 쿼리</li><li><strong>Web search result</strong> = 찾은 페이지(제목·URL)</li><li><strong>Citation</strong> = 진술을 뒷받침하는 텍스트</li></ul>
+      </div>
+    </div>
+    <p class="cap">예: 의료/운동 조언을 NIH.gov로 제한하면 일반 웹 대신 과학적 근거 기반 정보를 확보한다.</p>
+  </div>
+
+  <div class="note" style="margin-top:34px"><span class="lbl">다음 섹션</span><p><strong>⑥ RAG와 에이전틱 검색</strong> — 대용량 문서를 다루는 청킹·임베딩·하이브리드 검색.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

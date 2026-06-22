@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ⑧ / 자습 정리</span></div>
+    <h1>Model Context Protocol (MCP)</h1>
+    <p class="sub">MCP 서버/클라이언트 구축 · 도구 · 리소스 · 프롬프트</p>
+    <div class="secrow">
+      <span class="s">① 시작·개요</span><span class="s">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s">④ 엔지니어링</span><span class="s">⑤ 도구 사용</span><span class="s">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s on">⑧ MCP</span><span class="s">⑨ Anthropic 앱</span><span class="s">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede"><strong>MCP</strong> = Claude에 컨텍스트와 도구를 제공하는 <em>통신 계층</em>. 서비스마다 도구 스키마/함수를 직접 작성하던 부담을 전용 MCP 서버로 이전한다. 핵심은 <strong>도구·리소스·프롬프트</strong> 3대 프리미티브.</p>
+
+  <div class="note tip"><span class="lbl">참고</span><p>이 섹션은 별도 강의 <strong>"Introduction to Model Context Protocol"</strong>과 동일한 커리큘럼입니다. 더 자세한 도식과 코드 예제는 별도의 <strong>MCP 자습 가이드</strong> 문서를 참고하세요.</p></div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>MCP 소개 &amp; 클라이언트</h3><span class="unit-en">Introducing MCP · clients</span></div>
+    <h4>아키텍처</h4>
+    <div class="arch">
+      <div class="box"><div class="bt">MCP 클라이언트</div><div class="bd">통신 중개</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="box server"><div class="bt">MCP 서버</div><div class="chips"><span class="chip c-tool">도구</span><span class="chip c-res">리소스</span><span class="chip c-prm">프롬프트</span></div></div>
+      <div class="arch-arrow">→</div>
+      <div class="box ext"><div class="bt">외부 서비스</div><div class="bd">예: GitHub API</div></div>
+    </div>
+    <ul>
+      <li><strong>해결 문제:</strong> 서비스 통합마다 도구 스키마/함수를 직접 작성·유지하는 부담 제거. 누가 만드나? → 흔히 서비스 제공자가 공식 구현.</li>
+      <li><strong>클라이언트</strong> = 사양에 정의된 통신 담당자. 도구를 직접 실행하지 않고 중개. 메시지: <code>list tools</code>, <code>call tool</code>.</li>
+      <li><strong>흐름:</strong> 질의 → 도구 목록 요청 → Claude에 질의+도구 전달 → Claude가 도구 실행 요청 → call tool → 서버 실행 → 결과가 체인을 거슬러 최종 응답.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>프로젝트 설정 &amp; 도구 정의</h3><span class="unit-en">Project setup · defining tools</span></div>
+    <ul>
+      <li>학습용 CLI 챗봇으로 <strong>클라이언트·서버 둘 다</strong> 구현(실무에선 보통 한쪽만). 설정: 다운로드 → <code>.env</code> 키 → 의존성 → <code>uv run main.py</code>.</li>
+      <li><strong>Python SDK</strong>는 수동 JSON 스키마 대비 도구 생성을 단순화 — JSON 스키마 <strong>자동 생성</strong>.</li>
+    </ul>
+    <div class="code"><span class="k">@mcp.tool</span>   <span class="c"># 데코레이터 + 타입 지정 매개변수 + Field 설명</span>
+<span class="k">def</span> read_doc_contents(doc_id: str):  <span class="c"># 없으면 ValueError</span>
+    ...
+<span class="k">def</span> edit_document(doc_id, old_string, new_string):  <span class="c"># find/replace</span>
+    ...</div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>서버 인스펙터</h3><span class="unit-en">The server inspector</span></div>
+    <p><strong>MCP Inspector</strong> = 실제 앱 연결 없이 서버를 테스트하는 브라우저 내 디버거.</p>
+    <div class="code">mcp dev [server_file.py]   <span class="c"># → localhost 주소 방문</span></div>
+    <p class="cap">Connect 버튼, Resources/Prompts/Tools 섹션. 도구 클릭 → 우측 패널에서 매개변수 입력 후 Run Tool.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>클라이언트 구현하기</h3><span class="unit-en">Implementing a client</span></div>
+    <p>클라이언트 세션을 감싸 연결·리소스 정리를 관리하는 래퍼 클래스(<code>connect</code>/<code>cleanup</code>/<code>async enter</code>/<code>async exit</code>).</p>
+    <div class="code"><span class="k">async def</span> list_tools():  <span class="k">return</span> (<span class="k">await</span> self.session.list_tools()).tools
+<span class="k">async def</span> call_tool(name, inp):  <span class="k">return await</span> self.session.call_tool(name, inp)</div>
+    <p class="cap">권장: 세션을 더 큰 클래스로 감싸 리소스 관리를 개선한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>리소스 정의·접근</h3><span class="unit-en">Defining &amp; accessing resources</span></div>
+    <ul>
+      <li><strong>리소스</strong> = 클라이언트의 <strong>읽기</strong> 작업을 위해 서버가 데이터를 노출. 타입: 직접/정적(<code>docs://documents</code>), 템플릿형(<code>docs://documents/{doc_id}</code>).</li>
+      <li><strong>흐름:</strong> read resource 요청(URI) → 서버가 URI를 함수에 매칭 → 실행 → 결과 반환. <code>@mcp.resource</code>(URI + MIME 타입).</li>
+      <li><strong>접근:</strong> <code>read_resource(uri)</code> → <code>result.contents[0]</code> → <code>mime_type</code>이 json이면 <code>json.loads</code>, 아니면 <code>resource.text</code>.</li>
+    </ul>
+    <div class="note"><span class="lbl">리소스 vs 도구</span><p>리소스는 데이터를 <strong>선제적으로</strong> 제공(@ 멘션 시 문서 내용 가져오기), 도구는 <strong>반응적으로</strong> 행동 수행(Claude가 호출 결정 시).</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>프롬프트 정의·클라이언트</h3><span class="unit-en">Defining prompts · in the client</span></div>
+    <p><strong>프롬프트</strong> = 서버가 노출하는 미리 작성·검증된 지침. 슬래시 커맨드(<code>/format</code>)로 접근. <code>@prompt</code>(name·description) + 인자 수용 + 메시지 리스트 반환.</p>
+    <div class="code"><span class="k">async def</span> list_prompts():  <span class="k">return</span> (<span class="k">await</span> self.session.list_prompts()).prompts
+<span class="k">async def</span> get_prompt(name, args):  <span class="k">return</span> (<span class="k">await</span> self.session.get_prompt(name, args)).messages</div>
+    <p class="cap">인자가 키워드 인자로 전달 → 프롬프트 텍스트에 보간 → 메시지 배열 반환(LLM에 직접 투입). 프롬프트 = 클라이언트가 인자로 호출하는 <strong>서버 정의 템플릿</strong>.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>MCP 복습 — 3대 프리미티브</h3><span class="unit-en">MCP review</span></div>
+    <div class="prim">
+      <div class="p tool"><div class="ph">도구 Tools</div><span class="tag">모델 제어</span><div class="pb"><b>Claude가 언제 실행할지 결정.</b> 능력 추가(예: 코드 실행).</div></div>
+      <div class="p res"><div class="ph">리소스 Resources</div><span class="tag">앱 제어</span><div class="pb"><b>앱이 언제 가져올지 결정.</b> 데이터 주입(예: 자동완성, Drive 목록).</div></div>
+      <div class="p prm"><div class="ph">프롬프트 Prompts</div><span class="tag">사용자 제어</span><div class="pb"><b>사용자 행동으로 트리거.</b> 사전 정의 워크플로우(예: 채팅 시작 버튼).</div></div>
+    </div>
+    <div class="note best"><span class="lbl">판단 기준</span><p>Claude 능력 필요 → <strong>도구</strong> / 앱 데이터 필요 → <strong>리소스</strong> / 사용자 워크플로우 필요 → <strong>프롬프트</strong>.</p></div>
+  </div>
+
+  <div class="note" style="margin-top:34px"><span class="lbl">다음 섹션</span><p><strong>⑨ Anthropic 앱</strong> — Claude Code와 컴퓨터 사용(Computer Use)을 에이전트 아키텍처의 실례로 본다.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

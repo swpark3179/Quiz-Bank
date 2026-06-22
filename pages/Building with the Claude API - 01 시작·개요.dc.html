@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ① / 자습 정리</span></div>
+    <h1>시작 및 개요 — Claude 모델 패밀리</h1>
+    <p class="sub">강의 전체 지도 + Opus·Sonnet·Haiku 선택 프레임워크</p>
+    <div class="secrow">
+      <span class="s on">① 시작·개요</span><span class="s">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s">④ 엔지니어링</span><span class="s">⑤ 도구 사용</span><span class="s">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s">⑧ MCP</span><span class="s">⑨ Anthropic 앱</span><span class="s">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede"><strong>Building with the Claude API</strong>는 Anthropic API로 Claude를 활용하는 전 과정을 다루는 종합 강의다. <em>모델 선택 → API 호출 → 프롬프트 평가/엔지니어링 → 도구 사용 → RAG → 고급 기능 → MCP → Anthropic 앱 → 에이전트/워크플로우</em>로 이어진다. 이 문서는 그 첫 섹션 — 강의 지도와 모델 패밀리 — 을 정리한다.</p>
+
+  <div class="note tip"><span class="lbl">이 시리즈 학습법</span><p>섹션 ①~⑩을 순서대로 정독하세요. 각 문서는 같은 타이포·색·인쇄 레이아웃을 공유하며, 핵심 개념은 <strong>도식</strong>으로, 커맨드·규칙은 <strong>치트시트</strong>로 정리되어 있습니다.</p></div>
+
+  <h2 class="sec">강의 전체 구성</h2>
+  <table class="t">
+    <thead><tr><th style="width:10%">#</th><th style="width:36%">섹션</th><th>핵심 주제</th></tr></thead>
+    <tbody>
+      <tr><td>1·2</td><td><strong>Introduction / Overview</strong></td><td>강의 안내 · Claude 모델 패밀리</td></tr>
+      <tr><td>3</td><td><strong>Accessing Claude with the API</strong></td><td>API 호출, 메시지, 시스템 프롬프트, 온도, 스트리밍, 구조화 출력</td></tr>
+      <tr><td>4</td><td><strong>Prompt evaluation</strong></td><td>eval 워크플로우, 테스트셋 생성, 채점</td></tr>
+      <tr><td>5</td><td><strong>Prompt engineering</strong></td><td>명확성·구체성·XML·예시</td></tr>
+      <tr><td>6</td><td><strong>Tool use with Claude</strong></td><td>도구 스키마/호출/멀티턴, 텍스트 편집·웹 검색</td></tr>
+      <tr><td>7</td><td><strong>RAG and Agentic Search</strong></td><td>청킹·임베딩·BM25·멀티인덱스·리랭킹·컨텍스추얼</td></tr>
+      <tr><td>8</td><td><strong>Features of Claude</strong></td><td>확장 사고, 이미지/PDF, 인용, 프롬프트 캐싱, 코드 실행</td></tr>
+      <tr><td>9</td><td><strong>Model Context Protocol</strong></td><td>MCP 서버/클라이언트, 도구·리소스·프롬프트</td></tr>
+      <tr><td>10</td><td><strong>Anthropic apps</strong></td><td>Claude Code, 컴퓨터 사용(Computer Use)</td></tr>
+      <tr><td>11·12</td><td><strong>Agents and workflows / Wrap-up</strong></td><td>병렬화·체이닝·라우팅 워크플로우, 에이전트</td></tr>
+    </tbody>
+  </table>
+
+  <div class="part"><div class="pn">2</div><div><div class="pt">Anthropic overview</div><div class="ps">Claude 모델 패밀리</div></div></div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>Claude 모델 개요</h3><span class="unit-en">Overview of Claude models</span></div>
+    <p>Claude는 서로 다른 우선순위에 최적화된 <strong>세 가지 모델 패밀리</strong>를 제공한다. 모든 모델은 핵심 능력(텍스트 생성·코딩·이미지 분석)을 공유하며, <strong>차이는 최적화 초점</strong>에 있다.</p>
+    <div class="prim">
+      <div class="p tool">
+        <div class="ph">Opus</div><span class="tag">최고 지능</span>
+        <div class="pb">깊은 추론·계획이 필요한 <b>복잡한 다단계 작업</b>에 적합. 비용·지연(latency)이 높음.</div>
+      </div>
+      <div class="p res">
+        <div class="ph">Sonnet</div><span class="tag">균형</span>
+        <div class="pb">지능·속도·비용의 균형. 강력한 코딩과 정밀한 코드 편집. <b>대부분의 실무 사례에 최적</b>.</div>
+      </div>
+      <div class="p prm">
+        <div class="ph">Haiku</div><span class="tag">속도·비용</span>
+        <div class="pb">가장 빠르고 저렴. Opus/Sonnet 같은 추론 능력은 없음. <b>실시간 상호작용·대량 처리</b>에 적합.</div>
+      </div>
+    </div>
+
+    <h4>모델 선택 프레임워크</h4>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">지능 우선</div><div class="ft">Opus</div></div>
+      <div class="flow-arrow">·</div>
+      <div class="flow-step"><div class="fn">균형 필요</div><div class="ft">Sonnet</div></div>
+      <div class="flow-arrow">·</div>
+      <div class="flow-step"><div class="fn">속도 우선</div><div class="ft">Haiku</div></div>
+    </div>
+
+    <div class="note"><span class="lbl">핵심 포인트</span><p>단일 모델만 고르지 말고, <strong>같은 애플리케이션 안에서 작업 요구사항별로 여러 모델을 혼용</strong>하라 — 빠른 생성은 Haiku, 복잡한 판단은 Opus처럼.</p></div>
+  </div>
+
+  <div class="note best" style="margin-top:34px"><span class="lbl">다음 섹션</span><p><strong>② API로 Claude 접근하기</strong> — API 키 발급부터 메시지·시스템 프롬프트·온도·스트리밍·구조화 출력까지 API 사용의 기본기를 다룬다.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

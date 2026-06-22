@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2A241D; --soft:#6E6358; --faint:#938A7E;
+    --accent:#BC5A38; --accent-deep:#8E3E22; --accent-tint:#F7EDE6;
+    --teal:#356C61; --teal-deep:#274E46; --teal-tint:#E9F0EE;
+    --blue:#3C6388; --blue-tint:#E9EFF4;
+    --line:#E7DED3; --paper:#FBF7F2; --card:#FFFFFF;
+  }
+  body{ margin:0; background:#fff; color:var(--ink);
+    font-family:'Pretendard','Pretendard Variable',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased; }
+  .doc{ box-sizing:border-box; max-width:8.5in; margin:0 auto; background:inherit;
+    padding:64px clamp(24px,5vw,0.85in) 96px; font-size:15.5px; line-height:1.72; }
+  .doc-frame{ width:100%; border-collapse:collapse; }
+  .doc-frame td{ padding:0; }
+  .running-hdr,.running-ftr,.hdr-space,.ftr-space{ display:none; }
+  h1,h2,h3{ text-wrap:balance; }
+  p,li{ text-wrap:pretty; }
+  p{ margin:10px 0; }
+  a{ color:var(--accent-deep); text-decoration:none; border-bottom:1px solid rgba(142,62,34,.3); }
+  strong{ font-weight:700; color:#211C16; }
+
+  /* masthead */
+  .mast{ border-bottom:3px solid var(--accent); padding-bottom:30px; margin-bottom:14px; }
+  .mast .eyebrow{ font-size:12.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--accent); font-weight:700; margin-bottom:14px; }
+  .mast h1{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:46px;
+    line-height:1.12; margin:0 0 12px; letter-spacing:-.01em; }
+  .mast .sub{ font-size:18px; color:var(--soft); font-weight:500; margin:0; }
+  .mast .meta{ margin-top:18px; font-size:13.5px; color:var(--faint); }
+  .mast .meta a{ color:var(--faint); border-bottom-color:rgba(0,0,0,.12); }
+
+  /* generic */
+  .lede{ font-size:16.5px; color:#3a342c; background:var(--paper); border:1px solid var(--line);
+    border-radius:10px; padding:18px 22px; margin:22px 0; }
+  .lede em{ font-style:normal; color:var(--accent-deep); font-weight:600; }
+
+  h2.sec{ font-family:'Noto Serif KR',serif; font-size:26px; font-weight:700;
+    margin:8px 0 4px; letter-spacing:-.01em; }
+  .unit{ margin-top:40px; }
+  .unit-h{ display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--line);
+    padding-bottom:9px; margin-bottom:10px; flex-wrap:wrap; }
+  .unit-n{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:18px; color:var(--accent);
+    flex:none; }
+  .unit-h h3{ font-size:21px; font-weight:700; margin:0; flex:1 1 auto; min-width:0; }
+  .unit-en{ font-size:13.5px; color:var(--faint); font-weight:500; flex:none; }
+  .unit h4{ font-size:15.5px; font-weight:700; color:var(--accent-deep); margin:20px 0 4px;
+    padding-left:12px; border-left:3px solid var(--accent); }
+  ul,ol{ margin:8px 0; padding-left:22px; }
+  li{ margin:5px 0; }
+  code{ font-family:'JetBrains Mono',monospace; font-size:.86em; background:var(--accent-tint);
+    color:var(--accent-deep); padding:1.5px 6px; border-radius:5px; }
+
+  /* part divider */
+  .part{ display:flex; align-items:center; gap:22px; background:var(--accent-tint);
+    border-left:6px solid var(--accent); border-radius:0 12px 12px 0;
+    padding:22px 26px; margin:58px 0 26px; break-inside:avoid; }
+  .part .pn{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:40px;
+    color:var(--accent); line-height:1; flex:none; }
+  .part .pt{ font-size:23px; font-weight:700; color:#3a2419; }
+  .part .ps{ font-size:13.5px; color:var(--accent-deep); margin-top:3px; }
+
+  /* course map */
+  .map{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:18px 0; }
+  .map .pc{ border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px;
+    padding:16px 18px; background:var(--card); break-inside:avoid; }
+  .map .pc .pck{ font-family:'Noto Serif KR',serif; color:var(--accent); font-weight:700;
+    font-size:14px; }
+  .map .pc h4{ all:unset; display:block; font-size:16px; font-weight:700; margin:2px 0 10px;
+    color:#2A241D; }
+  .map .pc ul{ margin:0; padding-left:18px; font-size:13.5px; color:var(--soft); line-height:1.55; }
+
+  /* callouts */
+  .note{ border-left:4px solid var(--accent); background:var(--accent-tint);
+    padding:13px 18px; border-radius:0 8px 8px 0; margin:18px 0; break-inside:avoid; }
+  .note .lbl{ display:block; font-weight:700; font-size:11.5px; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--accent-deep); margin-bottom:3px; }
+  .note p{ margin:0; }
+  .note.tip{ border-color:var(--teal); background:var(--teal-tint); }
+  .note.tip .lbl{ color:var(--teal-deep); }
+  .note.best{ border-color:var(--blue); background:var(--blue-tint); }
+  .note.best .lbl{ color:#274d6e; }
+
+  /* tables */
+  .t{ width:100%; border-collapse:collapse; margin:18px 0; font-size:14px; break-inside:avoid; }
+  .t caption{ text-align:left; font-size:13px; color:var(--soft); margin-bottom:7px; font-weight:600; }
+  .t th{ text-align:left; background:var(--accent-tint); color:var(--accent-deep);
+    font-weight:700; padding:9px 13px; border-bottom:2px solid var(--accent); font-size:13px; }
+  .t td{ padding:9px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .t tr:nth-child(even) td{ background:var(--paper); }
+  .t td strong{ color:var(--accent-deep); }
+
+  /* code block */
+  .code{ background:#2B2620; color:#EFE6DB; border-radius:9px; padding:15px 18px; margin:14px 0;
+    font-family:'JetBrains Mono',monospace; font-size:12.8px; line-height:1.65;
+    white-space:pre; overflow-x:auto; break-inside:avoid; }
+  .code .c{ color:#8E8475; }
+  .code .k{ color:#E89B6C; }
+  .cap{ font-size:12.5px; color:var(--soft); margin:-6px 0 18px; }
+
+  /* process steps (numbered) */
+  .proc{ list-style:none; counter-reset:step; margin:16px 0; padding:0; }
+  .proc li{ counter-increment:step; position:relative; padding:0 0 16px 48px; min-height:32px; }
+  .proc li::before{ content:counter(step); position:absolute; left:0; top:-2px; width:32px; height:32px;
+    border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center;
+    font-weight:700; font-size:14px; }
+  .proc li::after{ content:''; position:absolute; left:15px; top:34px; bottom:2px; width:2px;
+    background:var(--line); }
+  .proc li:last-child::after{ display:none; }
+  .proc.teal li::before{ background:var(--teal); }
+
+  /* horizontal flow */
+  .flow{ display:flex; align-items:stretch; margin:20px 0; break-inside:avoid; }
+  .flow-step{ flex:1 1 0; min-width:0; background:var(--paper); border:1px solid var(--line);
+    border-top:3px solid var(--accent); border-radius:8px; padding:13px 11px; text-align:center; }
+  .flow-step .fn{ font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.04em; }
+  .flow-step .ft{ font-size:14px; font-weight:600; margin-top:3px; }
+  .flow-arrow{ display:flex; align-items:center; justify-content:center; padding:0 7px;
+    color:var(--accent); font-size:20px; font-weight:700; flex:none; }
+
+  /* scope nesting (CLAUDE.md levels) */
+  .scope{ margin:18px 0; break-inside:avoid; }
+  .scope .lv{ border:1.5px solid; border-radius:10px; padding:14px 16px; }
+  .scope .machine{ border-color:var(--blue); background:var(--blue-tint); }
+  .scope .project{ border-color:var(--accent); background:var(--accent-tint); margin-top:12px; }
+  .scope .local{ border-color:var(--teal); background:var(--teal-tint); margin-top:12px; }
+  .scope .lvt{ font-weight:700; font-size:14.5px; }
+  .scope .lvd{ font-size:13px; color:var(--soft); }
+  .scope .machine .lvt{ color:#274d6e; }
+  .scope .project .lvt{ color:var(--accent-deep); }
+  .scope .local .lvt{ color:var(--teal-deep); }
+
+  /* two-panel compare */
+  .duo{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; break-inside:avoid; }
+  .duo .pane{ border:1px solid var(--line); border-radius:10px; padding:16px 18px; background:var(--card); }
+  .duo .breadth{ border-top:3px solid var(--accent); }
+  .duo .depth{ border-top:3px solid var(--blue); }
+  .duo .pt2{ font-weight:700; font-size:15.5px; }
+  .duo .badge{ display:inline-block; font-size:11px; font-weight:700; letter-spacing:.05em;
+    padding:2px 9px; border-radius:20px; margin-bottom:8px; }
+  .duo .breadth .badge{ background:var(--accent-tint); color:var(--accent-deep); }
+  .duo .depth .badge{ background:var(--blue-tint); color:#274d6e; }
+  .bars{ display:flex; gap:5px; align-items:flex-end; height:46px; margin:10px 0 4px; }
+  .bars span{ background:var(--accent); border-radius:3px; flex:1; }
+  .bars.b span{ height:34%; opacity:.9; }
+  .bars.d{ align-items:flex-end; }
+  .bars.d span{ background:var(--blue); flex:none; width:14px; }
+
+  /* hook timeline */
+  .timeline{ display:flex; align-items:stretch; gap:0; margin:20px 0 6px; break-inside:avoid; }
+  .tl-node{ flex:1 1 0; border-radius:8px; padding:13px 12px; text-align:center; }
+  .tl-pre{ background:var(--accent-tint); border:1.5px solid var(--accent); }
+  .tl-tool{ background:var(--ink); color:#F4EDE4; }
+  .tl-post{ background:var(--teal-tint); border:1.5px solid var(--teal); }
+  .tl-node .tlt{ font-weight:700; font-size:14px; }
+  .tl-node .tld{ font-size:12px; margin-top:4px; line-height:1.45; }
+  .tl-pre .tlt{ color:var(--accent-deep); } .tl-post .tlt{ color:var(--teal-deep); }
+  .tl-arrow{ display:flex; align-items:center; padding:0 8px; color:var(--soft); font-size:18px; font-weight:700; }
+
+  /* feedback loop */
+  .loop{ margin:20px 0; break-inside:avoid; }
+  .loop-row{ display:flex; align-items:stretch; }
+  .loop-node{ flex:1 1 0; min-width:0; background:var(--card); border:1px solid var(--line);
+    border-bottom:3px solid var(--teal); border-radius:8px; padding:12px 10px; text-align:center;
+    font-size:13px; font-weight:600; }
+  .loop-arrow{ display:flex; align-items:center; padding:0 6px; color:var(--teal); font-size:18px; font-weight:700; }
+  .loop-back{ margin-top:10px; background:var(--teal); color:#fff; border-radius:8px;
+    padding:9px 14px; font-size:13px; font-weight:600; text-align:center; }
+  .loop-back b{ font-weight:800; }
+
+  /* cheatsheet */
+  .cheat{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+  .cheat .cc{ break-inside:avoid; border:1px solid var(--line); border-radius:10px;
+    padding:15px 17px; background:var(--paper); }
+  .cheat .cc h4{ all:unset; display:block; font-size:14px; font-weight:700; color:var(--accent-deep);
+    margin-bottom:9px; padding-bottom:7px; border-bottom:1px solid var(--line); }
+  .cheat .cc ul{ margin:0; padding:0; list-style:none; font-size:13px; }
+  .cheat .cc li{ display:flex; gap:10px; align-items:baseline; margin:6px 0; }
+  .cheat .cc li .kk{ flex:none; }
+  .cheat .cc li .vv{ color:var(--soft); }
+  kbd{ font-family:'JetBrains Mono',monospace; background:#fff; border:1px solid var(--line);
+    border-bottom-width:2px; border-radius:5px; padding:1.5px 7px; font-size:11.5px; color:#2A241D;
+    white-space:nowrap; }
+
+  @page{ size:letter; margin:0; }
+  @media print{
+    html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    html,body{ margin:0; padding:0; }
+    .doc{ max-width:none !important; margin:0 !important; padding:0 0.75in !important;
+      box-shadow:none !important; border:none !important; }
+    #dc-root,.sc-host{ height:auto !important; }
+    .hdr-space,.ftr-space{ display:table-cell; height:0.6in !important; }
+    .screen-only{ display:none !important; }
+    .part,.note,.t,.code,.flow,.scope,.duo,.timeline,.loop,.map .pc,.cheat .cc{ break-inside:avoid; }
+    h1,h2,h3,h4{ break-after:avoid; }
+    p,li{ orphans:3; widows:3; }
+  }
+</style>
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Anthropic Academy · 자습 학습 정리</div>
+    <h1>Claude Code in Action</h1>
+    <p class="sub">단원별 학습 정리 + 핵심 개념 도식 + 빠른 복습 치트시트</p>
+    <p class="meta">강의 홈 · <a href="https://anthropic.skilljar.com/claude-code-in-action">anthropic.skilljar.com/claude-code-in-action</a> &nbsp;|&nbsp; 음성 인식 표기 오류는 올바른 용어로 교정함 ("Clod"→Claude Code, <code>.clod/</code>→<code>.claude/</code>, Claude.md→<code>CLAUDE.md</code>)</p>
+  </header>
+
+  <p class="lede"><strong>Claude Code란?</strong> 언어 모델에 <em>도구 사용(tool use)</em> 능력을 더해 실제 코딩 작업을 수행하는 AI 어시스턴트. 이 강의는 컨텍스트 관리 · 커스텀 커맨드 · MCP · 훅(Hooks) · SDK까지 실전 활용법을 단계별로 다룬다.</p>
+
+  <div class="note tip">
+    <span class="lbl">이렇게 학습하세요</span>
+    <p>① 부(Part)별로 순서대로 정독하고 ② 단원마다 등장하는 <strong>도식</strong>으로 핵심 개념의 흐름을 머릿속에 그린 뒤 ③ 마지막 <strong>치트시트</strong>로 커맨드·단축키·규칙을 빠르게 복습하세요.</p>
+  </div>
+
+  <h2 class="sec">강의 개요</h2>
+
+  <h4>이 강의에서 배우는 것</h4>
+  <ul>
+    <li><strong>Claude Code의 정체와 동작 원리</strong> — 코딩 어시스턴트로서 도구 사용 메커니즘을 이해한다.</li>
+    <li><strong>설치·설정</strong> — 로컬에 Claude Code를 설치하고 실제 프로젝트에 적용한다.</li>
+    <li><strong>컨텍스트 관리</strong> — CLAUDE.md, <code>@</code>/<code>#</code>, Plan/Thinking 모드, Escape·compact·clear로 성능을 끌어올린다.</li>
+    <li><strong>확장</strong> — 커스텀 커맨드, MCP 서버, GitHub 통합으로 능력을 넓힌다.</li>
+    <li><strong>제어·통합</strong> — 훅(Hooks)으로 도구 호출 전/후를 제어하고, SDK로 파이프라인에 통합한다.</li>
+  </ul>
+
+  <h4>강의 구성 (4부 · 학습 콘텐츠 18단원)</h4>
+  <div class="map">
+    <div class="pc">
+      <div class="pck">1부</div>
+      <h4>What is Claude Code?</h4>
+      <ul><li>소개</li><li>코딩 어시스턴트란?</li><li>Claude Code 실전</li></ul>
+    </div>
+    <div class="pc">
+      <div class="pck">2부</div>
+      <h4>Getting hands on</h4>
+      <ul><li>설치 · 프로젝트 설정</li><li>컨텍스트 추가 · 변경 적용</li><li>컨텍스트 제어 · 커스텀 커맨드</li><li>MCP 서버 · GitHub 통합</li></ul>
+    </div>
+    <div class="pc">
+      <div class="pck">3부</div>
+      <h4>Hooks and the SDK</h4>
+      <ul><li>훅 소개 · 정의 · 구현</li><li>훅의 함정 · 유용한 훅 2가지</li><li>Claude Code SDK</li></ul>
+    </div>
+    <div class="pc">
+      <div class="pck">4부</div>
+      <h4>Wrapping up</h4>
+      <ul><li>정리 및 다음 단계</li><li>강의 총정리</li></ul>
+    </div>
+  </div>
+
+  <!-- ============ PART 1 ============ -->
+  <div class="part">
+    <div class="pn">1</div>
+    <div><div class="pt">What is Claude Code?</div><div class="ps">Claude Code가 무엇이며 어떻게 동작하는가</div></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>소개</h3><span class="unit-en">Introduction</span></div>
+    <p>강의 전체를 소개하는 짧은 도입. 이후 단원은 <strong>Claude Code의 개념 → 실습 → 훅/SDK</strong> 순서로 진행된다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>코딩 어시스턴트란?</h3><span class="unit-en">What is a coding assistant?</span></div>
+    <h4>핵심 개념</h4>
+    <p><strong>코딩 어시스턴트</strong> = 언어 모델을 사용해 코드를 작성하고 개발 작업을 완료하는 도구.</p>
+
+    <h4>동작 과정 — 작업을 받으면</h4>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">STEP 1</div><div class="ft">작업 받음</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">STEP 2</div><div class="ft">컨텍스트 수집</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">STEP 3</div><div class="ft">계획 수립</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">STEP 4</div><div class="ft">행동 실행</div></div>
+    </div>
+    <p class="cap">예: 에러 메시지로 버그 수정 → 파일을 읽어 코드베이스 이해 → 해결 계획 → 파일 수정·테스트 실행.</p>
+
+    <h4>핵심 한계와 해법 — 도구 사용(Tool Use)</h4>
+    <p><strong>한계:</strong> 언어 모델은 텍스트 입출력만 처리한다. 직접 파일을 읽거나, 명령을 실행하거나, 외부 시스템과 상호작용할 수 없다. <strong>Tool Use 시스템</strong>이 이 행동을 대신 수행해 준다.</p>
+    <ol class="proc">
+      <li>어시스턴트가 사용자 요청에 <strong>지침을 덧붙인다.</strong></li>
+      <li>지침은 행동을 위한 <strong>형식화된 응답 형태</strong>를 명시한다 (예: "read file: filename").</li>
+      <li>언어 모델이 <strong>형식화된 행동 요청</strong>으로 응답한다.</li>
+      <li>어시스턴트가 <strong>실제 행동을 실행</strong>한다 (파일 읽기, 명령 실행).</li>
+      <li><strong>결과를 언어 모델에 다시 전달</strong>해 최종 응답을 생성한다.</li>
+    </ol>
+
+    <h4>Claude 모델의 강점</h4>
+    <ul>
+      <li><strong>우수한 도구 사용 능력</strong> — 도구 기능을 이해하고 복잡한 작업을 위해 여러 도구를 조합하는 데 뛰어나다.</li>
+      <li><strong>확장 가능</strong> — 새 도구를 쉽게 추가할 수 있다.</li>
+      <li><strong>보안 우위</strong> — 코드베이스를 외부 서버로 보내 인덱싱하지 않고 <strong>직접 코드를 검색</strong>한다.</li>
+    </ul>
+    <div class="note"><span class="lbl">핵심</span><p>모든 언어 모델은 텍스트 생성 외 작업에 도구 사용이 필요하며, <strong>도구 사용의 품질이 코딩 어시스턴트의 효과를 좌우한다.</strong></p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>Claude Code 실전</h3><span class="unit-en">Claude Code in action</span></div>
+    <h4>핵심 개념</h4>
+    <ul>
+      <li><strong>Claude Code</strong> = 코드 작업을 위한 도구 기반 AI 어시스턴트.</li>
+      <li><strong>기본 도구</strong> = 파일 읽기/쓰기, 명령 실행, 기본 개발 작업.</li>
+    </ul>
+    <table class="t">
+      <caption>데모로 보는 활용 사례</caption>
+      <thead><tr><th style="width:18%">데모</th><th style="width:52%">내용</th><th style="width:30%">결과</th></tr></thead>
+      <tbody>
+        <tr><td><strong>성능 최적화</strong></td><td>Chalk JS 라이브러리(주간 4.29억 다운로드) 분석 — 벤치마크·프로파일링·todo 리스트로 병목 식별·수정</td><td>처리량 <strong>3.9배</strong> 향상</td></tr>
+        <tr><td><strong>데이터 분석</strong></td><td>비디오 스트리밍 CSV 이탈(churn) 분석을 Jupyter 노트북으로 수행, 셀을 반복 실행하며 커스터마이즈</td><td>발견 기반 점진적 분석</td></tr>
+        <tr><td><strong>도구 확장성</strong></td><td>Playwright MCP 서버로 브라우저 자동화 — 브라우저 열고 스크린샷, UI 스타일 수정·반복 개선</td><td>새 도구셋 추가 시연</td></tr>
+        <tr><td><strong>GitHub 통합</strong></td><td>GitHub Actions에서 실행, PR/이슈로 트리거, GitHub 전용 도구(코멘트·커밋·PR 생성)</td><td>CI 내 자동화</td></tr>
+        <tr><td><strong>인프라 리뷰</strong></td><td>Terraform AWS 인프라(DynamoDB·외부 파트너 공유 S3). Lambda 출력에 사용자 이메일 추가 시도</td><td><strong>PII 노출 위험 자동 탐지</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">핵심 원칙</span><p>Claude Code는 고정된 기능이 아니라 <strong>도구 확장을 통해 팀의 필요와 함께 성장</strong>하는 유연한 어시스턴트다.</p></div>
+  </div>
+
+  <!-- ============ PART 2 ============ -->
+  <div class="part">
+    <div class="pn">2</div>
+    <div><div class="pt">Getting hands on</div><div class="ps">설치부터 컨텍스트 제어·확장까지 실습</div></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>Claude Code 설치</h3><span class="unit-en">Claude Code setup</span></div>
+    <p>로컬에 Claude Code를 설치한다. 전체 안내: <a href="https://code.claude.com/docs/en/quickstart">code.claude.com/docs/en/quickstart</a></p>
+    <h4>설치 명령</h4>
+    <div class="code"><span class="c"># macOS, Linux, WSL</span>
+curl -fsSL https://claude.ai/install.sh | bash
+
+<span class="c"># Windows PowerShell</span>
+irm https://claude.ai/install.ps1 | iex
+
+<span class="c"># Windows Command Prompt (cmd.exe)</span>
+curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd
+
+<span class="c"># macOS (Homebrew)</span>
+brew install --cask claude-code</div>
+    <p class="cap">운영체제에 맞는 한 줄을 실행한다.</p>
+    <h4>실행 &amp; 인증</h4>
+    <ul>
+      <li>설치 후 터미널에서 <code>claude</code> 실행.</li>
+      <li>최초 실행 시 <strong>터미널 색상 테마 선택</strong> + <strong>claude.ai 계정 인증</strong> 프롬프트가 나타난다.</li>
+      <li><code>claude</code>를 못 찾거나 네트워크/권한 오류 시 문서의 <em>Troubleshoot installation issues</em> 참고.</li>
+      <li><strong>Amazon Bedrock / Google Cloud Vertex AI / Microsoft Foundry</strong> 사용 시 third-party provider 설정 추가 필요.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>프로젝트 설정</h3><span class="unit-en">Project setup</span></div>
+    <p>실습용 예제 프로젝트를 내려받는다.</p>
+    <ul><li><strong>다운로드:</strong> <code>uigen.zip</code> (강의 페이지 제공) — 이후 단원들의 실습 대상이 되는 프로젝트.</li></ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>컨텍스트 추가하기</h3><span class="unit-en">Adding context</span></div>
+    <h4>핵심 개념</h4>
+    <p><strong>컨텍스트 관리는 Claude Code 효과의 핵심이다.</strong> 관련 없는 정보가 너무 많으면 오히려 성능이 떨어진다.</p>
+
+    <h4>CLAUDE.md</h4>
+    <p><strong><code>/init</code> 커맨드</strong> = 최초 실행 시 전체 코드베이스를 분석해 <strong>프로젝트 요약·아키텍처·주요 파일</strong>이 담긴 <code>CLAUDE.md</code>를 생성한다. 이 파일 내용은 <strong>모든 요청에 자동 포함</strong>된다.</p>
+    <p class="cap">CLAUDE.md의 세 가지 레벨 (바깥 → 안쪽으로 적용 범위가 좁아짐):</p>
+    <div class="scope">
+      <div class="lv machine"><div class="lvt">머신(Machine)</div><div class="lvd">모든 프로젝트에 공통으로 적용되는 전역 지침</div></div>
+      <div class="lv project"><div class="lvt">프로젝트(Project)</div><div class="lvd">팀과 공유 · 소스 컨트롤에 <strong>커밋함</strong></div></div>
+      <div class="lv local"><div class="lvt">로컬(Local)</div><div class="lvd">개인 지침 · 소스 컨트롤에 <strong>커밋 안 함</strong></div></div>
+    </div>
+
+    <h4>컨텍스트 주입 도구</h4>
+    <ul>
+      <li><strong>메모리 모드 (<code>#</code> 기호)</strong> — 자연어 요청으로 CLAUDE.md 파일을 똑똑하게 편집한다.</li>
+      <li><strong><code>@</code> 기호</strong> — 특정 파일을 멘션해 요청에 포함 → Claude가 검색하게 두지 않고 <strong>타겟 컨텍스트</strong>를 직접 제공한다.</li>
+    </ul>
+    <div class="note best"><span class="lbl">모범 사례</span><p>DB 스키마 같은 핵심 파일을 CLAUDE.md에서 참조해 <strong>항상 컨텍스트로 제공</strong>한다. 목표는 작업 완수에 <em>딱 필요한 만큼</em>의 관련 정보를 주는 것.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>변경 적용하기</h3><span class="unit-en">Making changes</span></div>
+    <h4>스크린샷 통합</h4>
+    <p><strong>Control-V</strong>(macOS에서도 Command-V 아님)로 스크린샷을 붙여넣어, 수정할 UI 요소를 Claude가 이해하도록 돕는다.</p>
+
+    <h4>성능 강화 모드 — 넓이 vs 깊이</h4>
+    <div class="duo">
+      <div class="pane breadth">
+        <span class="badge">넓이 · BREADTH</span>
+        <div class="bars b"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="pt2">Plan Mode (계획)</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)"><strong>Shift + Tab 두 번.</strong> 실행 전 더 많은 파일을 조사해 상세 구현 계획을 작성. 다단계·넓은 코드베이스 이해 작업에 유용.</p>
+      </div>
+      <div class="pane depth">
+        <span class="badge">깊이 · DEPTH</span>
+        <div class="bars d"><span style="height:46px"></span></div>
+        <div class="pt2">Thinking Mode (사고)</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">"Ultra think" 같은 문구로 발동. 복잡한 로직에 확장된 추론 예산 부여. 까다로운 로직·디버깅에 유용.</p>
+      </div>
+    </div>
+    <p>두 모드는 <strong>조합 가능</strong>하며, 둘 다 추가 토큰을 소비하므로 비용을 고려한다.</p>
+
+    <h4>Git 통합</h4>
+    <p>Claude Code가 변경을 <strong>스테이징/커밋</strong>하고 <strong>설명적 커밋 메시지</strong>를 작성할 수 있다.</p>
+    <div class="note"><span class="lbl">핵심 워크플로우</span><p>문제 영역 스크린샷 → Control-V로 붙여넣기 → 원하는 변경 설명 → (복잡하면) Plan/Thinking 모드 활성화 → 구현 검토 및 수락.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>만족도 설문</h3><span class="unit-en">Course satisfaction survey</span></div>
+    <p style="color:var(--faint)">강의 중간 만족도 설문 단원 (학습 콘텐츠 아님).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">09</span><h3>컨텍스트 제어하기</h3><span class="unit-en">Controlling context</span></div>
+    <table class="t">
+      <caption>컨텍스트 제어 기법</caption>
+      <thead><tr><th style="width:22%">기법</th><th style="width:48%">동작</th><th style="width:30%">사용 시점</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Escape</strong></td><td>응답 도중 Claude를 멈춰 대화 흐름을 재조정. 한 번 누르면 현재 출력 중단.</td><td>방향을 바꾸고 싶을 때</td></tr>
+        <tr><td><strong>Escape + 메모리(<code>#</code>)</strong></td><td>멈춘 뒤 반복되는 실수에 대한 메모리를 <code>#</code>로 추가 → 미래의 오류 예방</td><td>같은 실수가 반복될 때</td></tr>
+        <tr><td><strong>Double Escape</strong></td><td>대화 되감기 — 이전 메시지 전체를 보여 주고, 관련 컨텍스트는 유지하며 무관한 왕복은 건너뛰고 과거 시점으로 점프</td><td>잘못된 경로로 빠졌을 때</td></tr>
+        <tr><td><strong>Compact</strong></td><td>대화 기록 전체를 요약하되, 현재 작업에 대한 Claude의 학습 지식은 보존</td><td>전문성은 쌓였지만 대화가 지저분할 때</td></tr>
+        <tr><td><strong>Clear</strong></td><td>대화 기록 전체 삭제, 새로 시작</td><td>완전히 무관한 작업으로 전환할 때</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">핵심 이점</span><p>집중 유지, 산만한 컨텍스트 감소, 관련 지식 보존, 반복 오류 방지. <strong>긴 대화와 작업 전환 시</strong> 특히 효과적이다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">10</span><h3>커스텀 커맨드</h3><span class="unit-en">Custom commands</span></div>
+    <h4>핵심 개념</h4>
+    <p><strong>커스텀 커맨드</strong> = 슬래시(<code>/</code>)로 접근하는 사용자 정의 자동화 커맨드.</p>
+    <h4>만드는 법</h4>
+    <ul>
+      <li><strong>위치:</strong> 프로젝트 디렉터리의 <code>.claude/commands/</code> 폴더.</li>
+      <li><strong>명명:</strong> 파일명이 커맨드명이 됨 (<code>audit.md</code> → <code>/audit</code>).</li>
+      <li><strong>활성화:</strong> 커맨드 파일 생성 후 Claude Code <strong>재시작</strong>.</li>
+      <li><strong>구조:</strong> Claude가 실행할 지침이 담긴 마크다운 파일.</li>
+      <li><strong>인자:</strong> 커맨드 텍스트에 <code>$ARGUMENTS</code> 플레이스홀더를 써서 런타임 매개변수(파일 경로, 설명 텍스트 등 임의 문자열)를 받음.</li>
+    </ul>
+    <h4>활용</h4>
+    <p>의존성 감사, 테스트 생성, 취약점 수정 같은 <strong>반복 작업을 자동화</strong>. 실행: <code>/commandname [인자 문자열]</code>.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">11</span><h3>MCP 서버로 확장하기</h3><span class="unit-en">MCP servers with Claude Code</span></div>
+    <h4>핵심 개념</h4>
+    <ul>
+      <li><strong>MCP 서버</strong> = Claude Code 능력을 확장하는 외부 도구. 로컬 또는 원격으로 실행.</li>
+      <li><strong>Playwright MCP 서버</strong> = Claude가 브라우저를 제어해 웹 자동화를 하게 해 주는 인기 서버.</li>
+    </ul>
+    <h4>설치 &amp; 권한</h4>
+    <div class="code">claude mcp add <span class="k">[name]</span> <span class="k">[start-command]</span></div>
+    <p><strong>권한 관리:</strong> 최초 도구 사용 시 승인 필요. <code>settings.local.json</code>의 allow 배열에 <code>mcp__[servername]</code>을 추가하면 자동 승인된다.</p>
+    <h4>실전 예시</h4>
+    <p>Claude가 Playwright로 <code>localhost:3000</code> 탐색 → UI 컴포넌트 생성 → 스타일 품질 분석 → <strong>시각적 피드백을 바탕으로 생성 프롬프트를 자동 개선</strong>. 결과적으로 훨씬 나은 컴포넌트 스타일링을 얻는다.</p>
+    <div class="note"><span class="lbl">핵심 이점</span><p>MCP 서버는 코드 편집을 넘어 <strong>외부 시스템이 얽힌 복잡한 다단계 작업</strong>(완전한 개발 자동화)을 가능하게 한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">12</span><h3>GitHub 통합</h3><span class="unit-en">Github integration</span></div>
+    <h4>핵심 개념</h4>
+    <p><strong>Claude Code GitHub 통합</strong> = Claude를 <strong>GitHub Actions 안에서</strong> 실행하게 해 주는 공식 통합.</p>
+    <h4>설정 과정</h4>
+    <ol class="proc">
+      <li><code>/install-github-app</code> 커맨드 실행</li>
+      <li>GitHub에 Claude Code 앱 설치</li>
+      <li>API 키 추가</li>
+      <li>자동 생성된 PR이 두 개의 GitHub Actions를 추가</li>
+    </ol>
+    <h4>기본 액션</h4>
+    <ul>
+      <li><strong>멘션 지원</strong> — 이슈/PR에서 <code>@claude</code>로 작업 할당.</li>
+      <li><strong>PR 리뷰</strong> — 새 PR에 자동 코드 리뷰.</li>
+    </ul>
+    <h4>커스터마이징 &amp; 권한</h4>
+    <ul>
+      <li><code>.github/workflows</code> 디렉터리의 설정 파일로 액션 커스터마이즈.</li>
+      <li><strong>커스텀 지침</strong>으로 Claude에 컨텍스트/지시 전달, <strong>MCP 서버 통합</strong>으로 외부 도구(예: Playwright) 접근.</li>
+      <li><strong>권한:</strong> Actions에서 Claude Code의 <strong>모든 권한을 명시적으로 나열</strong>해야 한다. MCP 서버 도구도 개별 권한 명시 필요(축약 불가).</li>
+    </ul>
+  </div>
+
+  <!-- ============ PART 3 ============ -->
+  <div class="part">
+    <div class="pn">3</div>
+    <div><div class="pt">Hooks and the SDK</div><div class="ps">도구 호출 제어와 프로그램적 통합</div></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">13</span><h3>훅 소개</h3><span class="unit-en">Introducing hooks</span></div>
+    <h4>핵심 개념</h4>
+    <p><strong>훅(Hooks)</strong> = Claude가 도구를 실행하기 <strong>전/후에 실행되는 명령</strong>.</p>
+    <div class="timeline">
+      <div class="tl-node tl-pre"><div class="tlt">Pre-tool use</div><div class="tld">도구 실행 <strong>전</strong> · 검사·<strong>차단</strong> 가능 · 에러 메시지 전송</div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-node tl-tool"><div class="tlt">도구 실행</div><div class="tld">read · grep · edit · 명령 실행 …</div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-node tl-post"><div class="tlt">Post-tool use</div><div class="tld">도구 실행 <strong>후</strong> · 후속 작업 · Claude에 피드백 제공</div></div>
+    </div>
+    <h4>설정 &amp; 구조</h4>
+    <ul>
+      <li><strong>설정:</strong> Claude 설정 파일(global/project/personal)을 수동 편집하거나 <code>/hooks</code> 커맨드로 추가.</li>
+      <li><strong>구조:</strong> 두 섹션(pre/post), 각각 <strong>matcher</strong>(대상 도구 지정) + 실행할 <strong>명령</strong>.</li>
+      <li><strong>예시 용도:</strong> 파일 생성 후 자동 포맷, 편집 후 테스트 실행, 파일 접근 차단, 코드 품질 검사, 타입 체크.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">14</span><h3>훅 정의하기</h3><span class="unit-en">Defining hooks</span></div>
+    <h4>훅 구현 절차</h4>
+    <ol class="proc">
+      <li>훅 종류 선택 (pre vs post)</li>
+      <li>감시할 대상 <strong>도구 이름</strong> 식별</li>
+      <li><strong>stdin으로 JSON</strong> 형태의 도구 호출 데이터를 받는 명령 작성</li>
+      <li><code>tool_name</code>과 입력 매개변수가 담긴 JSON 파싱</li>
+      <li>의도를 알리는 <strong>종료 코드(exit code)</strong>로 종료</li>
+    </ol>
+    <table class="t">
+      <caption>종료 코드 (Exit codes)</caption>
+      <thead><tr><th style="width:28%">코드</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Exit 0</strong></td><td>도구 호출 허용 (진행)</td></tr>
+        <tr><td><strong>Exit 2</strong></td><td>도구 호출 <strong>차단</strong> (pre-tool use에서만 가능)</td></tr>
+        <tr><td><strong>stderr 출력</strong></td><td>차단 시 Claude에 전달되는 피드백 메시지</td></tr>
+      </tbody>
+    </table>
+    <p><strong>도구 호출 데이터:</strong> JSON 객체 — <code>tool_name</code>(예: <code>read</code>, <code>grep</code>) + 입력 매개변수(예: <code>file_path</code>).</p>
+    <div class="note tip"><span class="lbl">팁</span><p>도구 이름을 외우지 말고 <strong>Claude에게 직접 "사용 가능한 도구 목록"을 물어보라.</strong></p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">15</span><h3>훅 구현하기</h3><span class="unit-en">Implementing a hook</span></div>
+    <h4>목표</h4>
+    <p>Claude가 <strong><code>.env</code> 파일 내용을 읽지 못하게</strong> 차단하는 훅 구현.</p>
+    <h4>설정 (<code>settings.local.json</code>)</h4>
+    <ul>
+      <li><strong>훅 종류:</strong> pre-tool use (실행 전 차단)</li>
+      <li><strong>matcher:</strong> <code>"read|grep"</code> (파이프 <code>|</code>로 도구 이름 구분)</li>
+      <li><strong>command:</strong> <code>"node ./hooks/read_hook.js"</code></li>
+    </ul>
+    <h4>구현 디테일</h4>
+    <ul>
+      <li>훅은 stdin으로 JSON 객체 수신: <strong>세션 ID, 도구 이름, 도구 입력, 파일 경로</strong> 포함.</li>
+      <li>로직: 파일 경로에 <code>.env</code>가 포함되면 → <code>console.error()</code>로 에러 로그 + <code>process.exit(2)</code>로 차단.</li>
+      <li><code>console.error()</code> 출력은 <strong>stderr</strong>로 가서 Claude 피드백이 된다.</li>
+      <li><code>tool_input.path</code>로 경로를 확인하되 폴백(fallback) 처리.</li>
+    </ul>
+    <div class="note"><span class="lbl">핵심 요구사항 &amp; 결과</span><p>훅 변경 후에는 <strong>Claude Code 재시작</strong> 필수. <code>read</code>·<code>grep</code> 양쪽에서 동작하며, <code>.env</code> 접근을 성공적으로 차단하고 그 사실을 사용자/Claude에게 피드백한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">16</span><h3>훅의 함정들</h3><span class="unit-en">Gotchas around hooks</span></div>
+    <ul>
+      <li><strong>변경 후 재시작 필수</strong> — 훅을 추가·수정하면 Claude Code를 재시작해야 적용된다.</li>
+      <li><strong>차단은 pre-hook만</strong> — <code>exit 2</code>로 차단 가능한 것은 pre-tool use 훅뿐. post-tool use는 차단 불가.</li>
+      <li><strong>피드백 경로</strong> — Claude에 메시지를 보내려면 <strong>stderr</strong>(<code>console.error()</code>)로 출력. stdout 아님.</li>
+      <li><strong>도구 입력 경로 처리</strong> — <code>tool_input.path</code>가 항상 존재한다고 가정하지 말고 <strong>폴백 처리</strong>.</li>
+      <li><strong>matcher 정확성</strong> — 여러 도구를 노릴 땐 <code>"read|grep"</code>처럼 파이프로 구분, 도구 이름을 정확히 지정.</li>
+      <li><strong>비용/오버헤드</strong> — 무거운 훅(예: 별도 Claude 인스턴스를 띄우는 훅)은 시간·비용을 늘리므로 <strong>핵심 디렉터리에만</strong> 적용.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">17</span><h3>유용한 훅 ① 타입 체커</h3><span class="unit-en">Useful hooks!</span></div>
+    <p><strong>배경 문제:</strong> Claude Code는 특히 큰 프로젝트에서 <strong>타입 에러를 놓치거나 중복 코드를 만드는</strong> 경향이 있다.</p>
+    <h4>TypeScript 타입 체커 훅</h4>
+    <ul>
+      <li><strong>목적:</strong> 파일 편집 직후 타입 에러를 즉시 포착.</li>
+      <li><strong>구현:</strong> TypeScript 파일 변경 후 <strong>post-tool-use 훅</strong>으로 <code>tsc --no-emit</code> 실행.</li>
+      <li><strong>이점:</strong> 함수 시그니처가 바뀔 때 깨지는 호출(call site)을 예방.</li>
+      <li><strong>적용 범위:</strong> 타입 체커가 있는 모든 타입 언어. 타입 없는 언어는 <strong>테스트로 대체</strong>.</li>
+    </ul>
+    <div class="loop">
+      <div class="loop-row">
+        <div class="loop-node">Claude가<br>파일 편집</div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-node">훅이 검사<br>(tsc --no-emit)</div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-node">타입 에러<br>감지</div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-node">에러를 Claude에<br>다시 전달</div>
+      </div>
+      <div class="loop-back">↩ <b>Claude가 호출 지점(call site)을 자동으로 수정</b> — 자기 교정 피드백 루프</div>
+    </div>
+    <div class="note tip"><span class="lbl">핵심</span><p>훅 = Claude Code의 흔한 약점(타입 에러, 코드 중복)을 추가 검사로 잡아 <strong>결과를 다시 Claude에 먹여 스스로 교정</strong>하게 하는 자동 피드백 루프.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">18</span><h3>유용한 훅 ② 중복 코드 방지</h3><span class="unit-en">Another useful hook</span></div>
+    <p><strong>문제:</strong> Claude가 기존 쿼리/함수를 재사용하지 않고 새로 만든다 — 특히 복잡하게 감싼(wrapped) 작업에서 집중을 잃을 때.</p>
+    <p><strong>해법:</strong> 훅이 쿼리 디렉터리 변경을 감시 → <strong>별도의 Claude 인스턴스를 TypeScript SDK로 기동</strong> → 기존 코드와 비교.</p>
+    <ol class="proc teal">
+      <li>감시 대상 디렉터리(예: <code>queries/</code>)의 편집 감지</li>
+      <li>SDK로 새 Claude 인스턴스 실행</li>
+      <li>새 코드를 기존 코드와 비교</li>
+      <li>중복 발견 시 <code>exit 2</code> + 피드백</li>
+      <li>원래 Claude가 피드백을 받아 <strong>기존 코드를 재사용</strong></li>
+    </ol>
+    <p><strong>트레이드오프:</strong> 추가 시간·비용 ↔ 더 깨끗한 코드베이스. <strong>권장:</strong> 오버헤드 최소화를 위해 핵심 디렉터리만 감시. 두 훅 모두 <strong>post-tool-use 패턴</strong>으로 Claude의 편집에 즉각적인 피드백·코스 교정을 제공한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">19</span><h3>Claude Code SDK</h3><span class="unit-en">The Claude Code SDK</span></div>
+    <h4>핵심 개념</h4>
+    <p><strong>Claude Code SDK</strong> = Claude Code를 프로그램적으로 사용하는 인터페이스. <strong>CLI · TypeScript · Python</strong> 라이브러리 제공. 터미널 버전과 <strong>동일한 도구</strong>를 포함한다.</p>
+    <h4>주요 특징</h4>
+    <ul>
+      <li><strong>주 용도:</strong> 더 큰 <strong>파이프라인/워크플로우에 통합</strong>해 기존 프로세스에 지능을 더함.</li>
+      <li><strong>기본 권한 = 읽기 전용</strong>(파일·디렉터리·grep). 쓰기 권한은 <strong>수동 설정</strong> 필요 — 쿼리 옵션의 <code>allowedTools</code> 배열에 <code>edit</code> 같은 도구를 지정하거나 <code>.claude</code> 디렉터리 설정으로.</li>
+      <li><strong>출력:</strong> 로컬 Claude Code와 언어 모델 간의 <strong>원시 대화</strong>(메시지 단위 교환)를 보여 주며, 마지막 메시지가 최종 응답.</li>
+    </ul>
+    <div class="note"><span class="lbl">적합한 용도</span><p>단독 사용보다는 기존 프로젝트 내의 <strong>헬퍼 커맨드 · 스크립트 · 훅</strong>에 가장 적합하다.</p></div>
+  </div>
+
+  <!-- ============ PART 4 ============ -->
+  <div class="part">
+    <div class="pn">4</div>
+    <div><div class="pt">Wrapping up</div><div class="ps">정리와 핵심 원칙</div></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">20</span><h3>정리 및 다음 단계</h3><span class="unit-en">Summary and next steps</span></div>
+    <p>강의를 마무리하는 단원. (앞에 "Quiz on Claude Code" 퀴즈 단원이 있다.) 핵심을 5가지로 압축하면:</p>
+    <ol class="proc">
+      <li><strong>원리</strong> — Claude Code는 언어 모델 + <strong>도구 사용(tool use)</strong>으로 동작하며, 도구 사용의 품질이 어시스턴트의 능력을 좌우한다.</li>
+      <li><strong>컨텍스트가 전부</strong> — <code>CLAUDE.md</code>(<code>/init</code>), <code>@</code>(파일 멘션), <code>#</code>(메모리), Plan/Thinking 모드, Escape·compact·clear로 <strong>딱 필요한 컨텍스트</strong>만 유지한다.</li>
+      <li><strong>확장</strong> — 커스텀 커맨드(<code>.claude/commands/</code>), MCP 서버(<code>claude mcp add</code>), GitHub Actions 통합으로 능력을 넓힌다.</li>
+      <li><strong>제어와 자동화</strong> — 훅(Hooks)으로 도구 호출 전/후를 가로채(차단은 pre-hook + <code>exit 2</code>, 피드백은 stderr) <strong>자기 교정 피드백 루프</strong>를 만든다.</li>
+      <li><strong>통합</strong> — Claude Code SDK(CLI/TS/Python)로 파이프라인·스크립트·훅에 Claude Code를 내장한다.</li>
+    </ol>
+    <div class="note"><span class="lbl">최종 핵심 원칙</span><p>Claude Code의 성능은 <strong>컨텍스트를 얼마나 잘 관리하고, 도구·훅으로 워크플로우를 얼마나 잘 확장하느냐</strong>에 달려 있다.</p></div>
+  </div>
+
+  <!-- ============ CHEATSHEET ============ -->
+  <h2 class="sec" style="margin-top:54px">빠른 복습 — 치트시트</h2>
+  <p class="cap">시험 전·실습 전에 이 한 장만 훑어도 핵심 커맨드와 규칙이 정리된다.</p>
+  <div class="cheat">
+    <div class="cc">
+      <h4>설치</h4>
+      <ul>
+        <li><span class="kk">macOS/Linux/WSL</span><span class="vv">curl … install.sh | bash</span></li>
+        <li><span class="kk">Windows PS</span><span class="vv">irm … install.ps1 | iex</span></li>
+        <li><span class="kk">Homebrew</span><span class="vv">brew install --cask claude-code</span></li>
+        <li><span class="kk">실행</span><span class="vv">터미널에서 <code>claude</code></span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>컨텍스트 관리</h4>
+      <ul>
+        <li><span class="kk"><code>/init</code></span><span class="vv">CLAUDE.md 생성</span></li>
+        <li><span class="kk"><code>@</code> 파일</span><span class="vv">타겟 파일 멘션</span></li>
+        <li><span class="kk"><code>#</code> 텍스트</span><span class="vv">메모리(CLAUDE.md) 편집</span></li>
+        <li><span class="kk">레벨</span><span class="vv">Machine · Project(커밋) · Local(비커밋)</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>모드 &amp; 단축키</h4>
+      <ul>
+        <li><span class="kk"><kbd>Shift</kbd>+<kbd>Tab</kbd> ×2</span><span class="vv">Plan 모드 (넓이)</span></li>
+        <li><span class="kk">"ultra think"</span><span class="vv">Thinking 모드 (깊이)</span></li>
+        <li><span class="kk"><kbd>Ctrl</kbd>+<kbd>V</kbd></span><span class="vv">스크린샷 붙여넣기</span></li>
+        <li><span class="kk"><kbd>Esc</kbd> / <kbd>Esc</kbd> <kbd>Esc</kbd></span><span class="vv">중단 / 대화 되감기</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>컨텍스트 정리</h4>
+      <ul>
+        <li><span class="kk">compact</span><span class="vv">요약(학습 지식 보존)</span></li>
+        <li><span class="kk">clear</span><span class="vv">기록 전체 삭제</span></li>
+        <li><span class="kk">Esc + <code>#</code></span><span class="vv">반복 실수 메모리화</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>확장</h4>
+      <ul>
+        <li><span class="kk">커스텀 커맨드</span><span class="vv"><code>.claude/commands/</code> · <code>$ARGUMENTS</code></span></li>
+        <li><span class="kk">MCP 추가</span><span class="vv"><code>claude mcp add [name] [cmd]</code></span></li>
+        <li><span class="kk">MCP 권한</span><span class="vv"><code>mcp__[server]</code> allow에 추가</span></li>
+        <li><span class="kk">GitHub</span><span class="vv"><code>/install-github-app</code> · <code>@claude</code></span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>훅 (Hooks)</h4>
+      <ul>
+        <li><span class="kk">추가</span><span class="vv"><code>/hooks</code> 또는 설정 파일</span></li>
+        <li><span class="kk">pre / post</span><span class="vv">실행 전 / 후</span></li>
+        <li><span class="kk">exit 0 / 2</span><span class="vv">허용 / 차단(pre만)</span></li>
+        <li><span class="kk">피드백</span><span class="vv">stderr (console.error)</span></li>
+        <li><span class="kk">matcher</span><span class="vv"><code>"read|grep"</code> · 변경 후 재시작</span></li>
+      </ul>
+    </div>
+  </div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

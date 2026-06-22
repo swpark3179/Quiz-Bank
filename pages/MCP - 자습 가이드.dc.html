@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2A241D; --soft:#6E6358; --faint:#938A7E;
+    --accent:#BC5A38; --accent-deep:#8E3E22; --accent-tint:#F7EDE6;
+    --teal:#356C61; --teal-deep:#274E46; --teal-tint:#E9F0EE;
+    --blue:#3C6388; --blue-deep:#274d6e; --blue-tint:#E9EFF4;
+    --line:#E7DED3; --paper:#FBF7F2; --card:#FFFFFF;
+  }
+  body{ margin:0; background:#fff; color:var(--ink);
+    font-family:'Pretendard','Pretendard Variable',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased; }
+  .doc{ box-sizing:border-box; max-width:8.5in; margin:0 auto; background:inherit;
+    padding:64px clamp(24px,5vw,0.85in) 96px; font-size:15.5px; line-height:1.72; }
+  .doc-frame{ width:100%; border-collapse:collapse; }
+  .doc-frame td{ padding:0; }
+  .running-hdr,.running-ftr,.hdr-space,.ftr-space{ display:none; }
+  h1,h2,h3{ text-wrap:balance; }
+  p,li{ text-wrap:pretty; }
+  p{ margin:10px 0; }
+  a{ color:var(--accent-deep); text-decoration:none; border-bottom:1px solid rgba(142,62,34,.3); }
+  strong{ font-weight:700; color:#211C16; }
+
+  .mast{ border-bottom:3px solid var(--accent); padding-bottom:30px; margin-bottom:14px; }
+  .mast .eyebrow{ font-size:12.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--accent); font-weight:700; margin-bottom:14px; }
+  .mast h1{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:42px;
+    line-height:1.14; margin:0 0 12px; letter-spacing:-.01em; }
+  .mast .sub{ font-size:18px; color:var(--soft); font-weight:500; margin:0; }
+  .mast .meta{ margin-top:18px; font-size:13.5px; color:var(--faint); }
+  .mast .meta a{ color:var(--faint); border-bottom-color:rgba(0,0,0,.12); }
+
+  .lede{ font-size:16.5px; color:#3a342c; background:var(--paper); border:1px solid var(--line);
+    border-radius:10px; padding:18px 22px; margin:22px 0; }
+  .lede em{ font-style:normal; color:var(--accent-deep); font-weight:600; }
+
+  h2.sec{ font-family:'Noto Serif KR',serif; font-size:26px; font-weight:700;
+    margin:8px 0 4px; letter-spacing:-.01em; }
+  .unit{ margin-top:40px; }
+  .unit-h{ display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--line);
+    padding-bottom:9px; margin-bottom:10px; flex-wrap:wrap; }
+  .unit-n{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:18px; color:var(--accent);
+    flex:none; }
+  .unit-h h3{ font-size:21px; font-weight:700; margin:0; flex:1 1 auto; min-width:0; }
+  .unit-en{ font-size:13.5px; color:var(--faint); font-weight:500; flex:none; }
+  .unit h4{ font-size:15.5px; font-weight:700; color:var(--accent-deep); margin:20px 0 4px;
+    padding-left:12px; border-left:3px solid var(--accent); }
+  ul,ol{ margin:8px 0; padding-left:22px; }
+  li{ margin:5px 0; }
+  code{ font-family:'JetBrains Mono',monospace; font-size:.86em; background:var(--accent-tint);
+    color:var(--accent-deep); padding:1.5px 6px; border-radius:5px; }
+
+  .part{ display:flex; align-items:center; gap:22px; background:var(--accent-tint);
+    border-left:6px solid var(--accent); border-radius:0 12px 12px 0;
+    padding:22px 26px; margin:58px 0 26px; break-inside:avoid; }
+  .part .pn{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:40px;
+    color:var(--accent); line-height:1; flex:none; }
+  .part .pt{ font-size:23px; font-weight:700; color:#3a2419; }
+  .part .ps{ font-size:13.5px; color:var(--accent-deep); margin-top:3px; }
+
+  .map{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:18px 0; }
+  .map .pc{ border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px;
+    padding:16px 18px; background:var(--card); break-inside:avoid; }
+  .map .pc .pck{ font-family:'Noto Serif KR',serif; color:var(--accent); font-weight:700; font-size:14px; }
+  .map .pc h4{ all:unset; display:block; font-size:16px; font-weight:700; margin:2px 0 10px; color:#2A241D; }
+  .map .pc ul{ margin:0; padding-left:18px; font-size:13.5px; color:var(--soft); line-height:1.55; }
+
+  .note{ border-left:4px solid var(--accent); background:var(--accent-tint);
+    padding:13px 18px; border-radius:0 8px 8px 0; margin:18px 0; break-inside:avoid; }
+  .note .lbl{ display:block; font-weight:700; font-size:11.5px; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--accent-deep); margin-bottom:3px; }
+  .note p{ margin:0; }
+  .note.tip{ border-color:var(--teal); background:var(--teal-tint); }
+  .note.tip .lbl{ color:var(--teal-deep); }
+  .note.best{ border-color:var(--blue); background:var(--blue-tint); }
+  .note.best .lbl{ color:var(--blue-deep); }
+
+  .t{ width:100%; border-collapse:collapse; margin:18px 0; font-size:14px; break-inside:avoid; }
+  .t caption{ text-align:left; font-size:13px; color:var(--soft); margin-bottom:7px; font-weight:600; }
+  .t th{ text-align:left; background:var(--accent-tint); color:var(--accent-deep);
+    font-weight:700; padding:9px 13px; border-bottom:2px solid var(--accent); font-size:13px; }
+  .t td{ padding:9px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .t tr:nth-child(even) td{ background:var(--paper); }
+  .t td strong{ color:var(--accent-deep); }
+
+  .code{ background:#2B2620; color:#EFE6DB; border-radius:9px; padding:15px 18px; margin:14px 0;
+    font-family:'JetBrains Mono',monospace; font-size:12.6px; line-height:1.65;
+    white-space:pre; overflow-x:auto; break-inside:avoid; }
+  .code .c{ color:#8E8475; }
+  .code .k{ color:#E89B6C; }
+  .code .s{ color:#9DBE8E; }
+  .cap{ font-size:12.5px; color:var(--soft); margin:-6px 0 18px; }
+
+  .proc{ list-style:none; counter-reset:step; margin:16px 0; padding:0; }
+  .proc li{ counter-increment:step; position:relative; padding:0 0 14px 48px; min-height:32px; }
+  .proc li::before{ content:counter(step); position:absolute; left:0; top:-2px; width:32px; height:32px;
+    border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center;
+    font-weight:700; font-size:14px; }
+  .proc li::after{ content:''; position:absolute; left:15px; top:34px; bottom:2px; width:2px;
+    background:var(--line); }
+  .proc li:last-child::after{ display:none; }
+  .proc.teal li::before{ background:var(--teal); }
+
+  /* architecture diagram */
+  .arch{ display:flex; align-items:center; gap:0; margin:20px 0; break-inside:avoid; }
+  .arch .box{ border:1.5px solid var(--accent); background:var(--accent-tint); border-radius:10px;
+    padding:14px 14px; text-align:center; flex:none; }
+  .arch .box .bt{ font-weight:700; font-size:14px; color:var(--accent-deep); }
+  .arch .box .bd{ font-size:11.5px; color:var(--soft); }
+  .arch .server{ flex:1 1 auto; }
+  .arch .server .chips{ display:flex; gap:7px; justify-content:center; margin-top:9px; flex-wrap:wrap; }
+  .arch .chip{ font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:7px; }
+  .arch .c-tool{ background:#fff; border:1.5px solid var(--accent); color:var(--accent-deep); }
+  .arch .c-res{ background:#fff; border:1.5px solid var(--teal); color:var(--teal-deep); }
+  .arch .c-prm{ background:#fff; border:1.5px solid var(--blue); color:var(--blue-deep); }
+  .arch .ext{ border-color:var(--soft); background:var(--paper); }
+  .arch .ext .bt{ color:var(--ink); }
+  .arch-arrow{ display:flex; align-items:center; padding:0 10px; color:var(--accent); font-size:22px; font-weight:700; flex:none; }
+
+  /* 3 primitives */
+  .prim{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:18px 0; break-inside:avoid; }
+  .prim .p{ border:1px solid var(--line); border-radius:11px; padding:16px 16px; background:var(--card); }
+  .prim .p.tool{ border-top:4px solid var(--accent); }
+  .prim .p.res{ border-top:4px solid var(--teal); }
+  .prim .p.prm{ border-top:4px solid var(--blue); }
+  .prim .p .ph{ font-weight:700; font-size:16px; }
+  .prim .p .tag{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.04em;
+    padding:2px 9px; border-radius:20px; margin:7px 0 8px; }
+  .prim .p.tool .tag{ background:var(--accent-tint); color:var(--accent-deep); }
+  .prim .p.res .tag{ background:var(--teal-tint); color:var(--teal-deep); }
+  .prim .p.prm .tag{ background:var(--blue-tint); color:var(--blue-deep); }
+  .prim .p .pb{ font-size:13px; color:var(--soft); }
+  .prim .p .pb b{ color:var(--ink); }
+
+  .cheat{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+  .cheat .cc{ break-inside:avoid; border:1px solid var(--line); border-radius:10px;
+    padding:15px 17px; background:var(--paper); }
+  .cheat .cc h4{ all:unset; display:block; font-size:14px; font-weight:700; color:var(--accent-deep);
+    margin-bottom:9px; padding-bottom:7px; border-bottom:1px solid var(--line); }
+  .cheat .cc ul{ margin:0; padding:0; list-style:none; font-size:13px; }
+  .cheat .cc li{ display:flex; gap:10px; align-items:baseline; margin:6px 0; }
+  .cheat .cc li .kk{ flex:none; }
+  .cheat .cc li .vv{ color:var(--soft); }
+  kbd{ font-family:'JetBrains Mono',monospace; background:#fff; border:1px solid var(--line);
+    border-bottom-width:2px; border-radius:5px; padding:1.5px 7px; font-size:11.5px; color:#2A241D; white-space:nowrap; }
+
+  @page{ size:letter; margin:0; }
+  @media print{
+    html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    html,body{ margin:0; padding:0; }
+    .doc{ max-width:none !important; margin:0 !important; padding:0 0.75in !important;
+      box-shadow:none !important; border:none !important; }
+    #dc-root,.sc-host{ height:auto !important; }
+    .hdr-space,.ftr-space{ display:table-cell; height:0.6in !important; }
+    .screen-only{ display:none !important; }
+    .part,.note,.t,.code,.arch,.prim,.map .pc,.cheat .cc{ break-inside:avoid; }
+    h1,h2,h3,h4{ break-after:avoid; }
+    p,li{ orphans:3; widows:3; }
+  }
+</style>
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Anthropic Academy · 자습 학습 정리</div>
+    <h1>Introduction to Model Context Protocol</h1>
+    <p class="sub">MCP 서버·클라이언트 구축 + 3대 프리미티브 도식 + 빠른 복습 치트시트</p>
+    <p class="meta">강의 홈 · <a href="https://anthropic.skilljar.com/introduction-to-model-context-protocol">anthropic.skilljar.com/introduction-to-model-context-protocol</a> &nbsp;|&nbsp; 선수 지식: Python · JSON/HTTP 기초</p>
+  </header>
+
+  <p class="lede"><strong>MCP란?</strong> <em>Model Context Protocol</em> — Claude에게 컨텍스트와 도구를 제공하는 통신 계층. 서비스마다 도구 스키마/함수를 직접 작성하던 부담을 <em>전용 MCP 서버로 이전</em>한다. 핵심은 <strong>도구·리소스·프롬프트</strong> 3대 프리미티브다.</p>
+
+  <div class="note tip">
+    <span class="lbl">이렇게 학습하세요</span>
+    <p>① 부(Part)별로 정독하고 ② <strong>아키텍처 · 요청–응답 흐름 · 3대 프리미티브</strong> 도식으로 구조를 잡은 뒤 ③ 마지막 <strong>치트시트</strong>로 데코레이터·커맨드·제어 주체를 빠르게 복습하세요.</p>
+  </div>
+
+  <h2 class="sec">강의 개요</h2>
+  <h4>이 강의에서 배우는 것</h4>
+  <ul>
+    <li>Python으로 <strong>MCP 서버와 클라이언트를 처음부터</strong> 구축.</li>
+    <li><strong>3대 프리미티브</strong> — 도구(tools)·리소스(resources)·프롬프트(prompts) — 로 Claude를 외부 서비스와 연결.</li>
+    <li>전송 방식 독립적(transport-agnostic) 통신과 클라이언트–서버 <strong>메시지 타입</strong>.</li>
+    <li>Python SDK <strong>데코레이터</strong>로 (수동 JSON 스키마 없이) 서버 작성, 브라우저 <strong>인스펙터</strong>로 테스트.</li>
+    <li>각 프리미티브를 <strong>언제 쓰는지</strong> 구분: 도구(모델 제어)·리소스(앱 제어)·프롬프트(사용자 제어).</li>
+  </ul>
+  <h4>강의 구성 (4부)</h4>
+  <div class="map">
+    <div class="pc"><div class="pck">1부</div><h4>Introduction</h4><ul><li>강의 시작 안내</li><li>MCP 소개</li><li>MCP 클라이언트</li></ul></div>
+    <div class="pc"><div class="pck">2부</div><h4>Hands-on with servers</h4><ul><li>프로젝트 설정</li><li>도구 정의</li><li>서버 인스펙터</li></ul></div>
+    <div class="pc"><div class="pck">3부</div><h4>Connecting with clients</h4><ul><li>클라이언트 구현</li><li>리소스 정의·접근</li><li>프롬프트 정의·클라이언트</li></ul></div>
+    <div class="pc"><div class="pck">4부</div><h4>Assessment &amp; wrap-up</h4><ul><li>최종 평가(퀴즈)</li><li>MCP 복습</li></ul></div>
+  </div>
+
+  <!-- PART 1 -->
+  <div class="part"><div class="pn">1</div><div><div class="pt">Introduction</div><div class="ps">MCP 개념과 클라이언트 기초</div></div></div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>강의 시작 안내</h3><span class="unit-en">Welcome to the course</span></div>
+    <p>강의 환경 안내 영상. 두 개의 참고 링크를 제공한다.</p>
+    <ul>
+      <li><strong>UV 설치 가이드</strong> — <a href="https://docs.astral.sh/uv/">docs.astral.sh/uv</a> (Python 패키지/환경 관리 도구)</li>
+      <li><strong>MCP 공식 소개</strong> — <a href="https://modelcontextprotocol.io/introduction">modelcontextprotocol.io/introduction</a></li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>MCP 소개</h3><span class="unit-en">Introducing MCP</span></div>
+    <h4>기본 아키텍처</h4>
+    <div class="arch">
+      <div class="box"><div class="bt">MCP 클라이언트</div><div class="bd">통신 중개</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="box server"><div class="bt">MCP 서버</div><div class="chips"><span class="chip c-tool">도구</span><span class="chip c-res">리소스</span><span class="chip c-prm">프롬프트</span></div></div>
+      <div class="arch-arrow">→</div>
+      <div class="box ext"><div class="bt">외부 서비스</div><div class="bd">예: GitHub API</div></div>
+    </div>
+    <p class="cap">MCP 클라이언트가 MCP 서버에 연결하고, 서버는 외부 서비스로 향하는 인터페이스 역할을 한다.</p>
+
+    <h4>어떤 문제를 해결하나</h4>
+    <ul>
+      <li><strong>전통적 방식:</strong> 서비스를 통합할 때마다 개발자가 <strong>도구 스키마와 함수를 직접 작성</strong> → 복잡한 서비스일수록 유지보수 부담 증가.</li>
+      <li><strong>MCP의 해법:</strong> 도구 정의·실행을 <strong>전용 MCP 서버로 이전</strong>. 서버가 기능을 미리 만들어 둔 도구(pre-built tools)로 감싼다.</li>
+      <li><strong>핵심 가치:</strong> 개발자가 직접 작성/유지보수할 필요가 없다. <strong>주로 서비스 제공자</strong>가 도구를 작성해 MCP 서버로 패키징한다.</li>
+    </ul>
+
+    <table class="t">
+      <caption>자주 나오는 질문</caption>
+      <thead><tr><th style="width:36%">질문</th><th>답</th></tr></thead>
+      <tbody>
+        <tr><td>MCP 서버는 누가 만드나?</td><td>누구나 가능하지만, 흔히 <strong>서비스 제공자가 공식 구현</strong>을 만든다.</td></tr>
+        <tr><td>직접 API 호출과 뭐가 다른가?</td><td>스키마/함수를 수동 작성하는 대신 <strong>미리 만들어진 것</strong> 제공 → 개발 시간 절약.</td></tr>
+        <tr><td>기존 "도구 사용"과의 관계는?</td><td>MCP와 tool use는 <strong>상호 보완적</strong>. MCP의 초점은 <em>"도구를 누가 만드느냐"</em>에 있다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>MCP 클라이언트</h3><span class="unit-en">MCP clients</span></div>
+    <h4>핵심 개념</h4>
+    <p><strong>MCP 클라이언트</strong>는 사양(spec)에 정의된 <strong>통신 담당자</strong>다. 도구를 직접 실행하지 않고, 내 서버와 실제 실행 주체인 MCP 서버 사이의 <strong>통신을 중개</strong>한다.</p>
+    <h4>주요 메시지 타입</h4>
+    <ul>
+      <li><strong>list tools 요청/결과</strong> — 사용 가능한 도구 목록 요청 → 서버가 목록으로 응답.</li>
+      <li><strong>call tool 요청/결과</strong> — 인자와 함께 도구 실행 요청 → 서버가 결과 반환.</li>
+    </ul>
+    <h4>전형적인 요청–응답 흐름</h4>
+    <ol class="proc">
+      <li>사용자 질의(User query) 발생</li>
+      <li>서버가 MCP 클라이언트에 도구 목록을 요청</li>
+      <li>클라이언트가 MCP 서버에 <strong>list tools 요청</strong> 전송</li>
+      <li>서버가 도구 목록 확보</li>
+      <li>서버가 <strong>질의 + 도구</strong>를 Claude에 전달</li>
+      <li>Claude가 도구 실행을 요청</li>
+      <li>서버가 클라이언트에 도구 실행을 요청</li>
+      <li>클라이언트가 MCP 서버에 <strong>call tool 요청</strong> 전송</li>
+      <li>MCP 서버가 도구 실행 (예: GitHub API 호출)</li>
+      <li>결과가 체인을 거슬러 돌아감 → Claude가 최종 응답 생성 → 사용자에게 전달</li>
+    </ol>
+    <div class="note"><span class="lbl">핵심</span><p>MCP 클라이언트는 <strong>중개자</strong>다. 도구를 직접 실행하지 않고, 내 서버와 실제 실행 주체인 MCP 서버 간 통신을 매개한다.</p></div>
+  </div>
+
+  <!-- PART 2 -->
+  <div class="part"><div class="pn">2</div><div><div class="pt">Hands-on with MCP servers</div><div class="ps">프로젝트 설정 → 도구 정의 → 인스펙터</div></div></div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>프로젝트 설정</h3><span class="unit-en">Project setup</span></div>
+    <p><strong>MCP 학습 프로젝트</strong> = 학습 목적으로 <strong>클라이언트와 서버 컴포넌트를 모두</strong> 구현하는 CLI 챗봇. (실무에선 보통 둘 중 하나만 만든다.)</p>
+    <ol class="proc">
+      <li><code>CLI_project.zip</code> 다운로드 후 압축 해제</li>
+      <li><code>.env</code> 파일에 <strong>API 키</strong> 설정</li>
+      <li>의존성 설치</li>
+    </ol>
+    <div class="code"><span class="c"># 실행</span>
+uv run main.py      <span class="c"># UV 사용 시</span>
+python main.py      <span class="c"># UV 미사용 시</span></div>
+    <p class="cap">검증: 채팅 프롬프트가 나타나고 <code>"what's one plus one"</code> 같은 기본 질의에 응답하면 정상.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>MCP로 도구 정의하기</h3><span class="unit-en">Defining tools with MCP</span></div>
+    <h4>핵심 개념</h4>
+    <ul>
+      <li><strong>Python SDK</strong>는 수동 JSON 스키마 작성 대비 도구 생성을 크게 단순화 — JSON 스키마를 <strong>자동 생성</strong>.</li>
+      <li><strong>문법:</strong> <code>@mcp.tool</code> 데코레이터 + 타입 지정 매개변수 + <code>Field</code> 설명.</li>
+      <li><strong>문서 저장소:</strong> <code>doc_id</code>를 키로 하는 인메모리 딕셔너리.</li>
+    </ul>
+    <table class="t">
+      <caption>예제 도구</caption>
+      <thead><tr><th style="width:28%">도구</th><th style="width:30%">매개변수</th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td><code>read_doc_contents</code></td><td><code>doc_id</code></td><td>딕셔너리에서 문서 내용 반환. 없으면 <code>ValueError</code>.</td></tr>
+        <tr><td><code>edit_document</code></td><td><code>doc_id</code>, <code>old_string</code>, <code>new_string</code></td><td>find/replace 수행. 존재 여부 검증 포함.</td></tr>
+      </tbody>
+    </table>
+    <div class="code"><span class="c"># 구현 패턴</span>
+데코레이터 → 함수 정의 → 매개변수 타입 지정 → 검증 → 핵심 로직</div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>서버 인스펙터</h3><span class="unit-en">The server inspector</span></div>
+    <p><strong>MCP Inspector</strong> = 실제 애플리케이션에 연결하지 않고도 MCP 서버를 테스트하는 <strong>브라우저 내 디버거</strong>.</p>
+    <div class="code">mcp dev [server_file.py]</div>
+    <p class="cap">활성 Python 환경 터미널에서 실행 → 서버가 특정 포트에서 열림 → 제공된 localhost 주소 방문.</p>
+    <h4>인터페이스 &amp; 테스트</h4>
+    <ul>
+      <li>좌측 사이드바 <strong>Connect</strong> 버튼, 상단 <strong>Resources / Prompts / Tools</strong> 섹션.</li>
+      <li>Tools에서 도구 선택 → 매개변수 입력(예: 문서 ID) → <strong>Run Tool</strong> → 출력/성공 메시지 확인.</li>
+    </ul>
+    <div class="note"><span class="lbl">위치</span><p>Inspector는 <strong>활발히 개발 중</strong>이라 UI는 변할 수 있으나 핵심 기능은 유사하다. 프로덕션 배포 전 서버 개발·디버깅에 필수.</p></div>
+  </div>
+
+  <!-- PART 3 -->
+  <div class="part"><div class="pn">3</div><div><div class="pt">Connecting with MCP clients</div><div class="ps">클라이언트 구현 → 리소스 → 프롬프트</div></div></div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>클라이언트 구현하기</h3><span class="unit-en">Implementing a client</span></div>
+    <h4>핵심 개념</h4>
+    <ul>
+      <li><strong>MCP 클라이언트:</strong> 클라이언트 세션을 감싸 서버 연결 및 <strong>리소스 정리(cleanup)</strong>를 관리하는 래퍼 클래스.</li>
+      <li><strong>클라이언트 세션:</strong> SDK가 제공하는 실제 연결. 종료 시 <code>connect</code>/<code>cleanup</code>/<code>async enter</code>/<code>async exit</code>로 정리.</li>
+      <li><strong>목적:</strong> 서버 기능을 코드베이스 전반에 노출, 앱 코드와 서버 사이의 인터페이스 제공.</li>
+    </ul>
+    <div class="code"><span class="k">async def</span> list_tools():
+    result = <span class="k">await</span> self.session.list_tools()
+    <span class="k">return</span> result.tools
+
+<span class="k">async def</span> call_tool(tool_name, tool_input):
+    <span class="k">return</span> <span class="k">await</span> self.session.call_tool(tool_name, tool_input)</div>
+    <h4>구현 흐름</h4>
+    <ol class="proc">
+      <li>앱이 Claude를 위해 도구 목록을 요청</li>
+      <li>클라이언트가 <code>list_tools()</code>로 서버의 도구 확보</li>
+      <li>Claude가 도구를 선택하고 매개변수 제공</li>
+      <li>클라이언트가 <code>call_tool()</code>로 서버에서 실행</li>
+      <li>결과를 Claude에 반환</li>
+    </ol>
+    <div class="note tip"><span class="lbl">권장 관행</span><p>클라이언트 세션을 직접 쓰기보다 <strong>더 큰 클래스로 감싸</strong> 리소스 관리를 개선한다. <code>client.py</code>를 테스트 하네스로 직접 실행해 연결·도구 목록을 검증.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>리소스 정의하기</h3><span class="unit-en">Defining resources</span></div>
+    <p><strong>리소스(Resources)</strong> = 클라이언트가 <strong>읽기(read)</strong> 작업으로 데이터를 가져오도록 MCP 서버가 노출하는 기능.</p>
+    <table class="t">
+      <caption>리소스 타입</caption>
+      <thead><tr><th style="width:30%">타입</th><th style="width:34%">URI 형태</th><th>예</th></tr></thead>
+      <tbody>
+        <tr><td><strong>직접/정적</strong></td><td>정적 URI</td><td><code>docs://documents</code></td></tr>
+        <tr><td><strong>템플릿형</strong></td><td>와일드카드 매개변수 URI</td><td><code>documents/{doc_id}</code></td></tr>
+      </tbody>
+    </table>
+    <h4>흐름 &amp; 구현</h4>
+    <ul>
+      <li>클라이언트가 URI와 함께 <strong>read resource 요청</strong> → 서버가 URI를 함수에 매칭·실행 → <strong>read resource 결과</strong>로 데이터 수신.</li>
+      <li><code>@mcp.resource</code> 데코레이터 + URI 정의(라우트 같은 주소) + <strong>MIME 타입</strong>(<code>application/json</code>, <code>text/plain</code>) 설정.</li>
+      <li>템플릿형은 URI 매개변수가 함수의 키워드 인자가 됨. SDK가 반환값을 문자열로 <strong>자동 직렬화</strong>.</li>
+    </ul>
+    <div class="note"><span class="lbl">패턴</span><p>구분되는 읽기 작업마다 리소스 하나(목록 조회 vs 단일 항목 조회). MIME 타입은 데이터 형식을 클라이언트에 알려 올바른 역직렬화를 돕는 힌트다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">09</span><h3>리소스 접근하기</h3><span class="unit-en">Accessing resources</span></div>
+    <p>클라이언트가 서버 리소스에서 데이터를 가져오는 방법.</p>
+    <div class="code"><span class="k">from</span> pydantic <span class="k">import</span> AnyUrl
+<span class="k">import</span> json
+
+<span class="k">async def</span> read_resource(uri):
+    result = <span class="k">await</span> self.session.read_resource(AnyUrl(uri))
+    resource = result.contents[0]          <span class="c"># 첫 리소스</span>
+    <span class="k">if</span> resource.mime_type == <span class="s">"application/json"</span>:
+        <span class="k">return</span> json.loads(resource.text)   <span class="c"># JSON이면 파싱</span>
+    <span class="k">return</span> resource.text                   <span class="c"># 그 외 평문</span></div>
+    <h4>리소스 통합</h4>
+    <ul>
+      <li>CLI에서 <strong>방향키 + 스페이스</strong>로 문서 선택.</li>
+      <li>선택한 리소스 내용이 <strong>LLM 프롬프트에 자동 포함</strong> → 문서를 읽기 위한 별도 도구가 불필요.</li>
+      <li>주요 의존성: <code>json</code> 모듈, 타입 처리용 <code>pydantic.AnyUrl</code>.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">10</span><h3>프롬프트 정의하기</h3><span class="unit-en">Defining prompts</span></div>
+    <p><strong>프롬프트(Prompts)</strong> = MCP 서버가 클라이언트에 노출하는 <strong>미리 작성·검증된 지침</strong>. 클라이언트는 <strong>슬래시 커맨드</strong>(예: <code>/format</code>)로 접근한다.</p>
+    <h4>구현 패턴</h4>
+    <ul>
+      <li><code>@prompt</code> 데코레이터에 <code>name</code>·<code>description</code> 지정, 함수가 인자(예: 문서 ID)를 받음.</li>
+      <li><strong>메시지 리스트(user/assistant 형식)</strong> 반환 → Claude에 직접 전달.</li>
+    </ul>
+    <div class="code"><span class="k">@prompt</span>(name=<span class="s">"format"</span>, description=<span class="s">"rewrites document in markdown"</span>)
+<span class="k">def</span> format_document(doc_id: str) -> list[messages]:
+    <span class="k">return</span> [base.user_message(prompt_text)]</div>
+    <p class="cap">워크플로우: <code>/format</code> → 문서 선택 → 서버가 특화 프롬프트 반환 → 클라이언트가 Claude에 전송 → Claude가 도구로 읽고/재포맷/저장.</p>
+    <div class="note best"><span class="lbl">핵심 이점</span><p>프롬프트 품질을 최종 사용자에게 맡기지 않고, <strong>서버 작성자가 최적화·검증한 프롬프트</strong>로 도메인 전문성을 캡슐화한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">11</span><h3>클라이언트의 프롬프트</h3><span class="unit-en">Prompts in the client</span></div>
+    <div class="code"><span class="k">async def</span> list_prompts():
+    result = <span class="k">await</span> self.session.list_prompts()
+    <span class="k">return</span> result.prompts
+
+<span class="k">async def</span> get_prompt(prompt_name, arguments):
+    result = <span class="k">await</span> self.session.get_prompt(prompt_name, arguments)
+    <span class="k">return</span> result.messages</div>
+    <h4>인자 흐름 (Arguments flow)</h4>
+    <ul>
+      <li>클라이언트 인자 → 프롬프트 함수의 키워드 인자 → 프롬프트 텍스트에 <strong>보간(interpolate)</strong> → 형식화된 메시지 반환.</li>
+      <li>반환 형식: AI 모델의 대화 입력을 구성하는 <strong>메시지 배열</strong>.</li>
+      <li>CLI: <code>/format</code> → 문서 선택 → 문서 ID 포함 프롬프트가 Claude로 전송 → 형식화된 결과 반환.</li>
+    </ul>
+    <div class="note"><span class="lbl">핵심 개념</span><p>프롬프트는 클라이언트가 매개변수와 함께 호출하는 <strong>서버 정의 템플릿</strong>으로, 동적 콘텐츠 삽입이 가능한 재사용 AI 지침을 제공한다.</p></div>
+  </div>
+
+  <!-- PART 4 -->
+  <div class="part"><div class="pn">4</div><div><div class="pt">Assessment and wrap-up</div><div class="ps">최종 평가와 핵심 복습</div></div></div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">12</span><h3>최종 평가</h3><span class="unit-en">Final assessment on MCP</span></div>
+    <p style="color:var(--faint)">강의 전체를 점검하는 퀴즈 단원(별도 노트 없음). 도구·리소스·프롬프트의 개념과 <strong>제어 주체</strong>, 통신 흐름을 묻는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">13</span><h3>MCP 복습 — 3대 프리미티브</h3><span class="unit-en">MCP review</span></div>
+    <p>강의의 핵심. 세 프리미티브는 <strong>"누가 제어하느냐"</strong>로 구분된다.</p>
+    <div class="prim">
+      <div class="p tool">
+        <div class="ph">도구 Tools</div>
+        <span class="tag">모델 제어</span>
+        <div class="pb"><b>Claude가 언제 실행할지 결정.</b> 모델에 능력을 추가. 예: 계산용 JavaScript 실행.</div>
+      </div>
+      <div class="p res">
+        <div class="ph">리소스 Resources</div>
+        <span class="tag">앱 제어</span>
+        <div class="pb"><b>앱 코드가 언제 가져올지 결정.</b> UI 표시·프롬프트 보강용 데이터 주입. 예: 자동완성, Drive 문서 목록.</div>
+      </div>
+      <div class="p prm">
+        <div class="ph">프롬프트 Prompts</div>
+        <span class="tag">사용자 제어</span>
+        <div class="pb"><b>사용자 행동(버튼·슬래시 커맨드)으로 트리거.</b> 사전 정의된 워크플로우. 예: 채팅 시작 버튼.</div>
+      </div>
+    </div>
+    <h4>제어 패턴으로 용도 판단</h4>
+    <ul>
+      <li><strong>Claude의 능력</strong>이 필요하다 → <strong>도구(tools)</strong></li>
+      <li><strong>앱의 데이터</strong>가 필요하다 → <strong>리소스(resources)</strong></li>
+      <li><strong>사용자 워크플로우</strong>가 필요하다 → <strong>프롬프트(prompts)</strong></li>
+    </ul>
+  </div>
+
+  <div class="note best" style="margin-top:34px"><span class="lbl">강의 총정리 · 핵심 원칙</span><p>"이 기능이 <strong>누구의 통제</strong>를 받아야 하는가?"를 물어보라 — 모델이면 <strong>도구</strong>, 앱이면 <strong>리소스</strong>, 사용자면 <strong>프롬프트</strong>다. 통신은 클라이언트가 <code>list tools</code>/<code>call tool</code>로 중개하고, 세 프리미티브는 데코레이터(<code>@mcp.tool</code>·<code>@mcp.resource</code>·<code>@prompt</code>)로 정의한다.</p></div>
+
+  <h2 class="sec" style="margin-top:50px">빠른 복습 — 치트시트</h2>
+  <div class="cheat">
+    <div class="cc">
+      <h4>3대 프리미티브 · 제어 주체</h4>
+      <ul>
+        <li><span class="kk">도구 Tools</span><span class="vv">모델 제어 → Claude 능력 추가</span></li>
+        <li><span class="kk">리소스 Resources</span><span class="vv">앱 제어 → 데이터 주입</span></li>
+        <li><span class="kk">프롬프트 Prompts</span><span class="vv">사용자 제어 → 워크플로우</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>데코레이터 (서버)</h4>
+      <ul>
+        <li><span class="kk"><code>@mcp.tool</code></span><span class="vv">도구 + Field 설명</span></li>
+        <li><span class="kk"><code>@mcp.resource</code></span><span class="vv">URI + MIME 타입</span></li>
+        <li><span class="kk"><code>@prompt</code></span><span class="vv">name·description + 메시지 리스트</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>클라이언트 메서드</h4>
+      <ul>
+        <li><span class="kk"><code>list_tools()</code></span><span class="vv">도구 목록</span></li>
+        <li><span class="kk"><code>call_tool()</code></span><span class="vv">도구 실행</span></li>
+        <li><span class="kk"><code>read_resource()</code></span><span class="vv">리소스 읽기 (AnyUrl)</span></li>
+        <li><span class="kk"><code>list/get_prompt()</code></span><span class="vv">프롬프트 목록·취득</span></li>
+      </ul>
+    </div>
+    <div class="cc">
+      <h4>커맨드 &amp; 실행</h4>
+      <ul>
+        <li><span class="kk">실행</span><span class="vv"><code>uv run main.py</code></span></li>
+        <li><span class="kk">인스펙터</span><span class="vv"><code>mcp dev server.py</code></span></li>
+        <li><span class="kk">프롬프트 호출</span><span class="vv"><code>/format</code> 슬래시 커맨드</span></li>
+        <li><span class="kk">환경</span><span class="vv"><code>.env</code>에 API 키</span></li>
+      </ul>
+    </div>
+  </div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>
