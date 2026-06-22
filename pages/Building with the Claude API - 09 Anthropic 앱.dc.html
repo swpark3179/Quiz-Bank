@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ⑨ / 자습 정리</span></div>
+    <h1>Anthropic 앱 — Claude Code와 컴퓨터 사용</h1>
+    <p class="sub">터미널 코딩 어시스턴트 · 병렬화 · 자동 디버깅 · Computer Use</p>
+    <div class="secrow">
+      <span class="s">① 시작·개요</span><span class="s">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s">④ 엔지니어링</span><span class="s">⑤ 도구 사용</span><span class="s">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s">⑧ MCP</span><span class="s on">⑨ Anthropic 앱</span><span class="s">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede">Anthropic이 배포한 두 앱 — <strong>Claude Code</strong>(터미널 코딩 어시스턴트)와 <strong>Computer Use</strong>(컴퓨터 제어) — 를 <em>에이전트 아키텍처의 실례</em>로 다룬다. 두 앱은 에이전트 개념을 시연하는 실용적 예시다.</p>
+
+  <div class="note tip"><span class="lbl">참고</span><p>Claude Code 심화는 별도 <strong>"Claude Code in Action" 자습 가이드</strong>를 참고하세요.</p></div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01·02</span><h3>Anthropic 앱 &amp; Claude Code 설치</h3><span class="unit-en">Apps &amp; setup</span></div>
+    <p><strong>Claude Code</strong> = 코드 작업을 돕는 터미널 코딩 어시스턴트. 파일 검색/읽기/편집 + 고급 도구(웹 페칭·터미널) + <strong>MCP 클라이언트 지원</strong>.</p>
+    <ol class="proc">
+      <li>Node.js 설치(<code>npm help</code>로 확인)</li>
+      <li><code>npm install</code>로 Claude Code 설치</li>
+      <li>터미널에서 <code>claude</code> 실행 → Anthropic 계정 로그인</li>
+    </ol>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>Claude Code 실전</h3><span class="unit-en">Claude Code in action</span></div>
+    <p>단순 코드 생성기가 아니라 프로젝트의 <strong>협업 엔지니어</strong>처럼 동작(설계·작성·테스트·배포·오류 수정). <code>init</code> 커맨드로 코드베이스를 스캔해 <code>CLAUDE.md</code> 생성, <code>#</code>로 메모리 추가.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)">
+        <div class="pt2">방법 1 — 3단계 워크플로우</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">① 관련 파일 식별·분석 → ② 해결책 <strong>계획</strong>만 요청(코드 X) → ③ 계획 구현.</p>
+      </div>
+      <div class="pane" style="border-top:3px solid var(--teal)">
+        <div class="pt2">방법 2 — TDD</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">① 컨텍스트 제공 → ② 테스트 제안 요청 → ③ 테스트 구현 → ④ 통과까지 코드 작성.</p>
+      </div>
+    </div>
+    <div class="note best"><span class="lbl">핵심 원칙</span><p>Claude Code = <strong>노력 증폭기(effort multiplier)</strong>. 상세한 지시 = 훨씬 나은 결과. 코드 생성기가 아니라 협업 엔지니어로 대하라.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>MCP 서버로 기능 강화</h3><span class="unit-en">Enhancements with MCP servers</span></div>
+    <p>Claude Code에는 <strong>MCP 클라이언트가 내장</strong>되어 코어 수정 없이 실시간으로 기능을 확장한다.</p>
+    <div class="code">claude mcp add [server-name] [startup-command]</div>
+    <ul>
+      <li><strong>예시:</strong> "Document Path to Markdown" 도구를 노출하는 서버 → Claude Code가 <code>uv run main.py</code>로 PDF/Word 읽기.</li>
+      <li><strong>흔한 사용처:</strong> 프로덕션 모니터링(Sentry), 프로젝트 관리(Jira), 커뮤니케이션(Slack).</li>
+      <li><strong>셋업:</strong> 서버 생성 → 이름·시작 명령으로 추가 → Claude Code 재시작.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>Claude Code 병렬화</h3><span class="unit-en">Parallelizing Claude Code</span></div>
+    <p><strong>병렬화</strong> = 여러 Claude 인스턴스를 동시에 돌려 다른 작업을 병렬 수행. <strong>핵심 문제:</strong> 여러 인스턴스가 같은 파일을 동시 수정하면 충돌 발생.</p>
+    <div class="note"><span class="lbl">해법 — Git Work Trees</span><p>서로 다른 Git 브랜치에 대응하는 별도 디렉터리에 프로젝트 복사본을 만들어 <strong>인스턴스마다 격리된 작업 공간</strong> 제공. 워크플로우: work tree 생성 → 작업 할당 → 격리 작업 → 커밋 → main 머지. 커스텀 커맨드(<code>.claude/commands/</code>·<code>$ARGUMENTS</code>)로 자동화.</p></div>
+    <p class="cap">이점: 개발자 한 명이 가상 엔지니어 팀을 지휘 — 머지 충돌·정리도 Claude가 처리.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>자동 디버깅</h3><span class="unit-en">Automated Debugging</span></div>
+    <p>AI로 프로덕션 오류를 수동 개입 없이 자동 탐지·분석·수정.</p>
+    <ol class="proc">
+      <li>GitHub Action이 매일 프로덕션 점검</li>
+      <li>최근 24시간 CloudWatch 로그 가져오기</li>
+      <li>Claude가 오류 식별·중복 제거</li>
+      <li>각 오류 분석 후 수정 생성</li>
+      <li>제안 해결책으로 PR 생성</li>
+    </ol>
+    <p class="cap">구성: GitHub Actions(스케줄) + AWS CLI(로그) + Claude Code(분석·수정) + CloudWatch(모니터링). 흔한 사례: 환경 간 설정 오류(로컬은 되지만 프로덕션 실패).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07·08</span><h3>컴퓨터 사용 &amp; 원리</h3><span class="unit-en">Computer Use &amp; how it works</span></div>
+    <p><strong>Computer Use</strong> = Claude가 <strong>시각적 관찰 + 제어 동작</strong>으로 컴퓨터 인터페이스와 상호작용. 스크린샷 촬영·클릭·입력·탐색으로 QA 테스트·자동화를 수행.</p>
+    <div class="arch">
+      <div class="box"><div class="bt">사용자 지시</div><div class="bd">테스트 요구사항</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="box server" style="border-color:var(--blue);background:var(--blue-tint)"><div class="bt" style="color:var(--blue-deep)">도구 시스템 ↔ Claude</div><div class="bd">스크린샷 관찰 · action(클릭·타이핑) 요청</div></div>
+      <div class="arch-arrow" style="color:var(--blue)">→</div>
+      <div class="box ext"><div class="bt">Docker 컨테이너</div><div class="bd">실제 키/마우스 실행</div></div>
+    </div>
+    <div class="note"><span class="lbl">핵심 원리</span><p>Claude는 컴퓨터를 직접 조작하지 않는다. Computer Use = <strong>도구 시스템 + 개발자가 제공하는 컴퓨팅 환경</strong>. 작은 스키마가 내부에서 mouse move·click·screenshot 등 action으로 확장된다. Anthropic이 참조 구현(Docker 컨테이너)을 제공한다.</p></div>
+  </div>
+
+  <div class="note" style="margin-top:34px"><span class="lbl">다음 섹션</span><p><strong>⑩ 에이전트와 워크플로우</strong> — 병렬화·체이닝·라우팅 패턴과 에이전트 설계, 그리고 둘의 비교.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

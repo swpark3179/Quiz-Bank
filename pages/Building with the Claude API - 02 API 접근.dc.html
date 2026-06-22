@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">Building with the Claude API <span class="cat">· 섹션 ② / 자습 정리</span></div>
+    <h1>API로 Claude 접근하기</h1>
+    <p class="sub">요청 구조 · 멀티턴 · 시스템 프롬프트 · 온도 · 스트리밍 · 출력 제어 · 구조화 데이터</p>
+    <div class="secrow">
+      <span class="s">① 시작·개요</span><span class="s on">② API 접근</span><span class="s">③ 프롬프트 평가</span><span class="s">④ 엔지니어링</span><span class="s">⑤ 도구 사용</span><span class="s">⑥ RAG·검색</span><span class="s">⑦ Claude 기능</span><span class="s">⑧ MCP</span><span class="s">⑨ Anthropic 앱</span><span class="s">⑩ 에이전트</span>
+    </div>
+  </header>
+
+  <p class="lede">API 키 발급부터 요청 보내기, 멀티턴 대화, 시스템 프롬프트, 온도, 스트리밍, 출력 제어, 구조화 데이터까지 — <em>API 사용의 기본기</em>를 다룬다.</p>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>API 접근하기</h3><span class="unit-en">Accessing the API</span></div>
+    <h4>API 접근 흐름 (5단계)</h4>
+    <ol class="proc">
+      <li><strong>클라이언트 → 개발자 서버</strong> — 사용자 텍스트를 서버로 전송. ⚠️ <strong>클라이언트 앱에서 Anthropic API를 직접 호출 금지</strong>(API 키 보호).</li>
+      <li><strong>서버 → Anthropic API</strong> — SDK(Python·TS·JS·Go·Ruby) 또는 HTTP. 필수 = API 키 + 모델 + 메시지 리스트 + <code>max_tokens</code>.</li>
+      <li><strong>텍스트 생성</strong> — 토큰화 → 임베딩 → 문맥화 → 생성 (아래 도식).</li>
+      <li><strong>정지 조건</strong> — <code>max_tokens</code> 도달 또는 end_of_sequence 토큰 생성 시 중지.</li>
+      <li><strong>응답 반환</strong> — 생성 텍스트 + 사용량(usage) + <code>stop_reason</code>을 서버 경유로 클라이언트에 표시.</li>
+    </ol>
+    <h4>텍스트 생성 4단계</h4>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">1</div><div class="ft">토큰화</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2</div><div class="ft">임베딩</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">3</div><div class="ft">문맥화</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">4</div><div class="ft">생성</div></div>
+    </div>
+    <p class="cap">토큰화(텍스트 분해) → 임베딩(의미의 수치화) → 문맥화(이웃 토큰으로 의미 정교화) → 생성(다음 단어 확률+무작위성으로 선택·반복).</p>
+    <table class="t">
+      <caption>핵심 용어</caption>
+      <thead><tr><th style="width:32%">용어</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Token</strong></td><td>텍스트 조각(단어/부분/기호)</td></tr>
+        <tr><td><strong>Embedding</strong></td><td>단어 의미의 수치 표현</td></tr>
+        <tr><td><strong>Contextualization</strong></td><td>이웃 단어로 의미를 정교화</td></tr>
+        <tr><td><strong>Max_tokens</strong></td><td>생성 길이 제한(안전 상한)</td></tr>
+        <tr><td><strong>Stop_reason</strong></td><td>모델이 멈춘 이유</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">API 키</span><p>Anthropic Console에서 키를 생성하고 <code>.env</code> 등에 저장. <strong>절대 클라이언트/버전관리에 노출하지 않는다.</strong></p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>요청 보내기</h3><span class="unit-en">Making a request</span></div>
+    <h4>설정 4단계</h4>
+    <ol class="proc">
+      <li>패키지 설치 — <code>pip install anthropic python-dotenv</code></li>
+      <li>API 키 저장 — <code>.env</code>에 <code>ANTHROPIC_API_KEY="your_key"</code> (버전관리 제외)</li>
+      <li>환경변수 로드 — <code>python-dotenv</code>로 안전하게 로드</li>
+      <li>클라이언트 생성 — <code>anthropic</code> 클라이언트 초기화 + 모델 변수 정의</li>
+    </ol>
+    <div class="code">client.messages.create(
+    model=model,
+    max_tokens=1000,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"What is quantum computing?"</span>}]
+)</div>
+    <ul>
+      <li><strong>필수 인자:</strong> <code>model</code>, <code>max_tokens</code>, <code>messages</code>. <code>max_tokens</code>는 생성 길이의 <strong>안전 상한</strong>(목표 길이 아님).</li>
+      <li><strong>메시지 타입:</strong> User(<code>{"role":"user","content":...}</code>) · Assistant(모델 생성 응답).</li>
+      <li><strong>응답 접근:</strong> 텍스트만 → <code>message.content[0].text</code>.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>멀티턴 대화</h3><span class="unit-en">Multi-turn conversations</span></div>
+    <p>⚠️ <strong>핵심 한계:</strong> Anthropic API는 <strong>어떤 메시지도 저장하지 않는다.</strong> 각 요청은 독립적이며 이전 교환의 기억이 없다.</p>
+    <div class="note"><span class="lbl">해법</span><p>① 코드에서 <strong>메시지 리스트를 직접 관리</strong> → ② 후속 요청마다 <strong>전체 대화 기록을 함께 전송</strong>. 그래야 Claude가 맥락을 유지한다.</p></div>
+    <h4>흐름 &amp; 헬퍼 함수</h4>
+    <p>사용자 메시지 전송 → 응답 수신 → 응답을 기록에 추가 → 새 메시지 추가 → 전체 기록 전송.</p>
+    <ul>
+      <li><code>add_user_message(messages, text)</code> — 사용자 메시지 추가</li>
+      <li><code>add_assistant_message(messages, text)</code> — 어시스턴트 응답 추가</li>
+      <li><code>chat(messages)</code> — 기록을 API로 보내고 응답 반환</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>시스템 프롬프트</h3><span class="unit-en">System prompts</span></div>
+    <p><strong>시스템 프롬프트</strong> = Claude에 역할·행동 패턴을 부여해 <strong>응답 스타일·톤을 커스터마이즈</strong>. <em>무엇</em>을 답하는지가 아니라 <em>어떻게</em> 답하는지를 제어한다.</p>
+    <ul>
+      <li><strong>구현:</strong> <code>create</code>에 <code>system</code> 키워드 인자로 문자열 전달.</li>
+      <li><strong>구조:</strong> 첫 줄에 역할 지정("You are a patient math tutor") + 이후 구체적 행동 지침.</li>
+      <li><strong>기술 구현:</strong> <code>params</code> 딕셔너리에 프롬프트가 있으면 <code>system</code> 키 조건부 추가, <code>**</code> 언패킹. <code>None</code>이면 <code>system</code> 제외.</li>
+    </ul>
+    <div class="note tip"><span class="lbl">핵심 원칙</span><p>시스템 프롬프트는 응답의 <strong>접근 방식</strong>을 안내한다. 같은 질문도 부여된 역할에 따라 다르게 처리된다(예: 수학 튜터 → 정답 대신 힌트).</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>온도</h3><span class="unit-en">Temperature</span></div>
+    <p><strong>Temperature</strong>(0~1) = 토큰 선택 확률에 영향을 주어 <strong>생성의 무작위성을 제어</strong>. 다음 토큰 선택의 확률 분포를 직접 조작한다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--blue)">
+        <span class="badge" style="background:var(--blue-tint);color:var(--blue-deep)">≈ 0 · 결정적</span>
+        <div class="pt2">낮은 온도</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">항상 최고 확률 토큰 선택. <strong>데이터 추출·일관성이 필요한 사실 작업</strong>에.</p>
+      </div>
+      <div class="pane" style="border-top:3px solid var(--accent)">
+        <span class="badge" style="background:var(--accent-tint);color:var(--accent-deep)">≈ 1 · 창의적</span>
+        <div class="pt2">높은 온도</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">낮은 확률 토큰 가능성 ↑. <strong>브레인스토밍·글쓰기·마케팅</strong> 등에.</p>
+      </div>
+    </div>
+    <p class="cap">높은 값이 항상 다른 출력을 보장하진 않고 <strong>변동 확률을 높일 뿐</strong>이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>응답 스트리밍</h3><span class="unit-en">Response streaming</span></div>
+    <p><strong>스트리밍</strong> = 전체 응답을 기다리지 않고 <strong>생성되는 대로 청크 단위 표시</strong>. AI 응답은 10~30초 걸릴 수 있어 즉각적 피드백을 준다.</p>
+    <table class="t">
+      <caption>이벤트 타입</caption>
+      <thead><tr><th style="width:42%">이벤트</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><code>message_start</code></td><td>초기 확인</td></tr>
+        <tr><td><code>content_block_start</code></td><td>텍스트 생성 시작</td></tr>
+        <tr><td><code>content_block_delta</code></td><td><strong>실제 텍스트 청크 (가장 중요)</strong></td></tr>
+        <tr><td><code>content_block_stop</code> / <code>message_stop</code></td><td>생성 완료</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li>기본: <code>client.messages.create(stream=True)</code> → 이벤트 이터레이터.</li>
+      <li>간소화: <code>client.messages.stream()</code> + <code>text_stream</code>으로 텍스트만 추출.</li>
+      <li>최종 메시지: <code>stream.get_final_message()</code>로 모든 청크 조립(저장용).</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>모델 출력 제어</h3><span class="unit-en">Controlling model output</span></div>
+    <p>프롬프트 수정 외에 출력을 제어하는 두 기법.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)">
+        <div class="pt2">① 프리필링 (Pre-filling)</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">대화 끝에 <strong>어시스턴트 메시지를 수동 추가</strong>해 응답 방향 유도. Claude는 그 끝에서 <strong>이어서</strong> 생성. 예: <code>"Coffee is better because"</code> → 커피 옹호로 이어감.</p>
+      </div>
+      <div class="pane" style="border-top:3px solid var(--teal)">
+        <div class="pt2">② 정지 시퀀스 (Stop Sequences)</div>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--soft)">특정 문자열이 나타나면 <strong>즉시 생성 중지</strong>. 정지 시퀀스 텍스트는 출력에 <strong>미포함</strong>. 예: 정지 시퀀스 <code>", five"</code> → "one, two, three, four".</p>
+      </div>
+    </div>
+    <p class="cap">두 기법 모두 핵심 프롬프트를 바꾸지 않고 응답 방향·길이를 정밀 제어한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>구조화된 데이터</h3><span class="unit-en">Structured data</span></div>
+    <p><strong>문제:</strong> Claude는 JSON/코드 생성 시 마크다운·헤더·코멘트를 자동으로 덧붙인다. 사용자는 복붙용 <strong>원시 데이터</strong>만 원할 때가 많다.</p>
+    <h4>해법 패턴 — 프리필 + 정지 시퀀스</h4>
+    <ol class="proc">
+      <li><strong>User 메시지</strong> = 구조화 데이터 요청</li>
+      <li><strong>Assistant 프리필</strong> = 여는 구분자 (예: <code>```json</code>)</li>
+      <li><strong>정지 시퀀스</strong> = 닫는 구분자 (예: <code>```</code>)</li>
+    </ol>
+    <div class="note best"><span class="lbl">결과</span><p>Claude는 프리필을 보고 요청 내용만 생성하고 구분자에서 멈춘다 → <strong>추가 포맷·코멘트 없는 원시 구조화 데이터</strong>. JSON·Python 등 모든 구조화 타입에 적용.</p></div>
+  </div>
+
+  <div class="note" style="margin-top:34px"><span class="lbl">다음 섹션</span><p><strong>③ 프롬프트 평가</strong> — 프롬프트를 객관적 지표로 자동 테스트(eval)하는 워크플로우.</p></div>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>
