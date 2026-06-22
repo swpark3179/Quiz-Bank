@@ -11,156 +11,101 @@
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{ --ink:#2A241D; --soft:#6E6358; --faint:#938A7E; --accent:#BC5A38; --accent-deep:#8E3E22;
-    --accent-tint:#F7EDE6; --line:#E7DED3; --paper:#FBF7F2; }
+    --accent-tint:#F7EDE6; --teal:#356C61; --line:#E7DED3; --paper:#FBF7F2; }
   *{ box-sizing:border-box; }
-  html,body{ height:100%; margin:0; }
+  html,body{ margin:0; }
   body{ font-family:'Pretendard','Pretendard Variable',system-ui,sans-serif; color:var(--ink);
-    -webkit-font-smoothing:antialiased; }
-  .shell{ display:flex; height:100vh; overflow:hidden; }
+    background:var(--paper); -webkit-font-smoothing:antialiased; min-height:100vh; overflow-x:hidden; }
+  .wrap{ max-width:880px; margin:0 auto; padding:72px 24px 96px; }
 
-  .side{ width:316px; flex:none; display:flex; flex-direction:column; background:var(--paper);
-    border-right:1px solid var(--line); }
-  .brand{ padding:22px 22px 16px; border-bottom:1px solid var(--line); }
-  .brand .ey{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:700; }
-  .brand .bt{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:19px; color:var(--ink); line-height:1.3; margin-top:8px; }
-  .brand .bs{ font-size:12px; color:var(--faint); margin-top:6px; }
-  nav{ flex:1; overflow-y:auto; padding:14px 12px 36px; }
-  nav::-webkit-scrollbar{ width:8px; } nav::-webkit-scrollbar-thumb{ background:#ddd2c4; border-radius:8px; }
+  .hero{ border-bottom:3px solid var(--accent); padding-bottom:30px; margin-bottom:38px; }
+  .hero .ey{ font-size:12.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .hero h1{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:44px; line-height:1.16;
+    letter-spacing:-.01em; margin:14px 0 12px; }
+  .hero p{ font-size:17px; color:var(--soft); margin:0; max-width:60ch; text-wrap:pretty; }
 
-  .navrow{ display:block; text-decoration:none; color:#3a342c; padding:9px 12px; border-radius:8px;
-    font-size:14px; font-weight:600; border-left:3px solid transparent; margin:2px 0; transition:background .12s; }
-  .navrow:hover{ background:#F1E8DE; }
-  .navrow.active{ background:var(--accent-tint); color:var(--accent-deep); border-left-color:var(--accent); }
-  .navrow .en{ display:block; font-size:11px; color:var(--faint); font-weight:500; margin-top:2px; }
-  .navrow.active .en{ color:var(--accent); }
-  .navgroup{ margin-top:16px; }
-  .navgrouphd{ font-family:'Noto Serif KR',serif; font-size:12px; letter-spacing:.03em; color:var(--accent);
-    font-weight:700; padding:8px 12px 6px; }
-  .navgrouphd .gs{ display:block; font-size:10.5px; color:var(--faint); font-weight:500; letter-spacing:0; text-transform:none; margin-top:1px; }
-  .navrow.sub{ font-weight:500; font-size:13px; padding:7px 12px 7px 16px; color:#5a5249; }
-  .navrow.sub.active{ font-weight:700; }
-  .navrow.sub .num{ color:var(--accent); font-weight:700; margin-right:7px; }
+  .seclabel{ font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--faint);
+    font-weight:700; margin:0 0 16px; }
 
-  .content{ flex:1; display:flex; flex-direction:column; min-width:0; background:#fff; }
-  .topbar{ flex:none; display:flex; align-items:center; gap:8px; padding:12px 22px; border-bottom:1px solid var(--line); }
-  .crumb{ font-size:13px; color:var(--faint); min-width:0; }
-  .crumb .mut{ color:var(--faint); }
-  .crumb .sep{ margin:0 7px; color:#cdc3b6; }
-  .crumb b{ color:var(--ink); font-size:15px; font-weight:700; }
-  .spacer{ flex:1; }
-  .openbtn{ flex:none; font-size:12.5px; color:var(--accent-deep); text-decoration:none; border:1px solid var(--line);
-    padding:6px 13px; border-radius:7px; font-weight:600; white-space:nowrap; }
-  .openbtn:hover{ background:var(--accent-tint); }
-  .frameWrap{ flex:1; min-height:0; position:relative; background:#faf7f2; }
-  iframe{ width:100%; height:100%; border:0; display:block; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 
-  @media (max-width:760px){
-    .shell{ flex-direction:column; height:auto; min-height:100vh; overflow:visible; }
-    .side{ width:auto; }
-    nav{ max-height:48vh; }
-    .content{ min-height:88vh; }
+  .topic{ display:flex; flex-direction:column; text-decoration:none; color:inherit; background:#fff;
+    border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:14px;
+    padding:26px 26px 22px; transition:transform .14s, box-shadow .14s; }
+  .topic:hover{ transform:translateY(-3px); box-shadow:0 12px 30px rgba(80,50,30,.12); }
+  .topic .tag{ display:inline-block; align-self:flex-start; font-size:11px; font-weight:700; letter-spacing:.05em;
+    background:var(--accent-tint); color:var(--accent-deep); padding:4px 11px; border-radius:20px; margin-bottom:14px; }
+  .topic h2{ font-family:'Noto Serif KR',serif; font-size:23px; font-weight:700; margin:0 0 4px; line-height:1.25; }
+  .topic .full{ font-size:13px; color:var(--faint); margin:0 0 14px; }
+  .topic .desc{ font-size:14.5px; color:var(--soft); line-height:1.6; margin:0 0 18px; }
+  .topic .courses{ list-style:none; margin:0 0 20px; padding:0; display:flex; flex-direction:column; gap:7px; }
+  .topic .courses li{ font-size:13.5px; color:#4a443c; display:flex; gap:9px; align-items:baseline; }
+  .topic .courses li::before{ content:''; flex:none; width:6px; height:6px; border-radius:50%;
+    background:var(--accent); transform:translateY(-1px); }
+  .topic .foot{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    border-top:1px solid var(--line); padding-top:15px; }
+  .topic .stat{ font-size:12.5px; color:var(--faint); }
+  .topic .go{ font-size:14px; font-weight:700; color:var(--accent-deep); white-space:nowrap; }
+
+  .topic.soon{ border-top-color:#cfc5b7; background:#fcfaf6; cursor:default; }
+  .topic.soon:hover{ transform:none; box-shadow:none; }
+  .topic.soon .tag{ background:#efe9e0; color:var(--faint); }
+  .topic.soon h2{ color:var(--faint); }
+  .topic.soon .desc{ color:var(--faint); }
+  .topic.soon .placeholder{ flex:1; display:flex; align-items:center; justify-content:center;
+    border:1.5px dashed var(--line); border-radius:10px; color:var(--faint); font-size:13px; padding:24px; margin-top:6px; }
+
+  .footnote{ margin-top:40px; font-size:12.5px; color:var(--faint); text-align:center; }
+
+  @media (max-width:680px){
+    .wrap{ padding:48px 18px 72px; }
+    .hero h1{ font-size:32px; }
+    .hero p{ font-size:15.5px; }
+    .grid{ grid-template-columns:1fr; gap:16px; }
+    .topic{ padding:22px 20px 18px; }
   }
 </style>
 </helmet>
 
-<div class="shell">
-  <aside class="side">
-    <div class="brand">
-      <div class="ey">Anthropic Academy</div>
-      <div class="bt">자습 학습 가이드</div>
-      <div class="bs">4개 강의 · 13개 문서 · 한국어 정리</div>
-    </div>
-    <nav id="guideNav">
-      <a class="navrow" href="#claude-code" data-slug="claude-code" data-sec="" data-title="Claude Code in Action" data-file="Claude Code in Action - 자습 가이드.dc.html">
-        Claude Code in Action<span class="en">코딩 어시스턴트 실전 · 컨텍스트 · 훅 · SDK</span>
-      </a>
-      <a class="navrow" href="#agent-skills" data-slug="agent-skills" data-sec="" data-title="Introduction to Agent Skills" data-file="Agent Skills - 자습 가이드.dc.html">
-        Introduction to Agent Skills<span class="en">재사용 가능한 Skill 지침</span>
-      </a>
-      <a class="navrow" href="#mcp" data-slug="mcp" data-sec="" data-title="Introduction to Model Context Protocol" data-file="MCP - 자습 가이드.dc.html">
-        Model Context Protocol<span class="en">도구 · 리소스 · 프롬프트</span>
-      </a>
+<div class="wrap">
+  <header class="hero">
+    <div class="ey">Anthropic Academy · 한국어 자습 자료</div>
+    <h1>자습 학습 자료</h1>
+    <p>학습할 주제를 선택하세요. 각 주제는 강의별 단원 정리와 핵심 개념 도식, 빠른 복습 치트시트로 구성된 인쇄 친화적 가이드를 제공합니다.</p>
+  </header>
 
-      <div class="navgroup">
-        <div class="navgrouphd">Building with the Claude API<span class="gs">Anthropic API 종합 · 10개 섹션</span></div>
-        <a class="navrow sub" href="#api-01" data-slug="api-01" data-sec="Building with the Claude API" data-title="시작 및 개요" data-file="Building with the Claude API - 01 시작·개요.dc.html"><span class="num">①</span>시작·개요</a>
-        <a class="navrow sub" href="#api-02" data-slug="api-02" data-sec="Building with the Claude API" data-title="API로 Claude 접근하기" data-file="Building with the Claude API - 02 API 접근.dc.html"><span class="num">②</span>API 접근</a>
-        <a class="navrow sub" href="#api-03" data-slug="api-03" data-sec="Building with the Claude API" data-title="프롬프트 평가" data-file="Building with the Claude API - 03 프롬프트 평가.dc.html"><span class="num">③</span>프롬프트 평가</a>
-        <a class="navrow sub" href="#api-04" data-slug="api-04" data-sec="Building with the Claude API" data-title="프롬프트 엔지니어링 기법" data-file="Building with the Claude API - 04 프롬프트 엔지니어링.dc.html"><span class="num">④</span>프롬프트 엔지니어링</a>
-        <a class="navrow sub" href="#api-05" data-slug="api-05" data-sec="Building with the Claude API" data-title="도구 사용 (Tool use)" data-file="Building with the Claude API - 05 도구 사용.dc.html"><span class="num">⑤</span>도구 사용</a>
-        <a class="navrow sub" href="#api-06" data-slug="api-06" data-sec="Building with the Claude API" data-title="RAG와 에이전틱 검색" data-file="Building with the Claude API - 06 RAG·검색.dc.html"><span class="num">⑥</span>RAG·검색</a>
-        <a class="navrow sub" href="#api-07" data-slug="api-07" data-sec="Building with the Claude API" data-title="Claude의 기능들" data-file="Building with the Claude API - 07 Claude 기능.dc.html"><span class="num">⑦</span>Claude 기능</a>
-        <a class="navrow sub" href="#api-08" data-slug="api-08" data-sec="Building with the Claude API" data-title="Model Context Protocol" data-file="Building with the Claude API - 08 MCP.dc.html"><span class="num">⑧</span>MCP</a>
-        <a class="navrow sub" href="#api-09" data-slug="api-09" data-sec="Building with the Claude API" data-title="Anthropic 앱 — Claude Code와 컴퓨터 사용" data-file="Building with the Claude API - 09 Anthropic 앱.dc.html"><span class="num">⑨</span>Anthropic 앱</a>
-        <a class="navrow sub" href="#api-10" data-slug="api-10" data-sec="Building with the Claude API" data-title="에이전트와 워크플로우" data-file="Building with the Claude API - 10 에이전트·워크플로우.dc.html"><span class="num">⑩</span>에이전트·워크플로우</a>
+  <p class="seclabel">학습 주제 선택</p>
+  <div class="grid">
+    <a class="topic" href="cca-f.dc.html">
+      <span class="tag">CCA-F</span>
+      <h2>Claude Certified Architect</h2>
+      <p class="full">Foundations · 자격 대비 학습 가이드</p>
+      <p class="desc">Claude로 애플리케이션을 설계·구축하기 위한 4개 핵심 강의를 한국어로 정리했습니다.</p>
+      <ul class="courses">
+        <li>Claude Code in Action</li>
+        <li>Introduction to Agent Skills</li>
+        <li>Introduction to Model Context Protocol</li>
+        <li>Building with the Claude API <span style="color:var(--faint)">(10개 섹션)</span></li>
+      </ul>
+      <div class="foot">
+        <span class="stat">4개 강의 · 13개 문서</span>
+        <span class="go">학습 시작 →</span>
       </div>
-    </nav>
-  </aside>
+    </a>
 
-  <main class="content">
-    <div class="topbar">
-      <div class="crumb"><span class="mut" id="crumbSec"></span><span class="sep" id="crumbSep" style="display:none">›</span><b id="crumbTitle">불러오는 중…</b></div>
-      <div class="spacer"></div>
-      <a class="openbtn" id="openNew" href="#" target="_blank" rel="noopener">새 탭에서 열기 ↗</a>
+    <div class="topic soon" aria-hidden="true">
+      <span class="tag">준비 중</span>
+      <h2>다음 학습 주제</h2>
+      <p class="full">새로운 자격·강의 가이드</p>
+      <div class="placeholder">추후 다른 주제의 가이드가<br>이곳에 추가됩니다</div>
     </div>
-    <div class="frameWrap">
-      <iframe id="guideFrame" title="학습 가이드" src="about:blank"></iframe>
-    </div>
-  </main>
+  </div>
+
+  <p class="footnote">선택한 주제로 진입하면 좌측 메뉴에서 강의·단원을 자유롭게 오갈 수 있습니다.</p>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const nav = document.getElementById('guideNav');
-    const frame = document.getElementById('guideFrame');
-    const crumbSec = document.getElementById('crumbSec');
-    const crumbSep = document.getElementById('crumbSep');
-    const crumbTitle = document.getElementById('crumbTitle');
-    const openNew = document.getElementById('openNew');
-    if (!nav || !frame) return;
-
-    const rows = Array.from(nav.querySelectorAll('[data-slug]'));
-    const bySlug = {};
-    rows.forEach(r => { bySlug[r.getAttribute('data-slug')] = r; });
-
-    const activate = (slug) => {
-      const row = bySlug[slug] || rows[0];
-      const file = row.getAttribute('data-file');
-      const title = row.getAttribute('data-title');
-      const sec = row.getAttribute('data-sec') || '';
-      const encoded = encodeURI(file);
-
-      rows.forEach(r => r.classList.toggle('active', r === row));
-
-      if (frame.getAttribute('data-file') !== file) {
-        frame.src = encoded;
-        frame.setAttribute('data-file', file);
-      }
-      crumbTitle.textContent = title;
-      if (sec) { crumbSec.textContent = sec; crumbSep.style.display = ''; }
-      else { crumbSec.textContent = ''; crumbSep.style.display = 'none'; }
-      openNew.href = encoded;
-      document.title = title + ' — Anthropic Academy 자습 가이드';
-    };
-
-    window.addEventListener('hashchange', () => {
-      activate(decodeURIComponent(location.hash.slice(1)));
-    });
-
-    const initial = decodeURIComponent(location.hash.slice(1));
-    if (initial && bySlug[initial]) {
-      activate(initial);
-    } else {
-      const def = rows[0].getAttribute('data-slug');
-      history.replaceState(null, '', '#' + def);
-      activate(def);
-    }
-  }
-}
-</script>
 </body>
 </html>
