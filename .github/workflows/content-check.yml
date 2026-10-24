@@ -1,0 +1,47 @@
+name: Content Check
+
+# 문제 콘텐츠(assets/quiz-data)와 파서를 검증한다.
+# master 에 푸시된 콘텐츠는 앱에 즉시 반영되므로, PR 단계에서 깨진 마크다운이나
+# config.json 의 questionCount 불일치를 잡는 것이 목적이다.
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - 'assets/quiz-data/**'
+      - 'lib/parser/**'
+      - '__tests__/**'
+      - '.github/workflows/content-check.yml'
+  pull_request:
+    paths:
+      - 'assets/quiz-data/**'
+      - 'lib/parser/**'
+      - '__tests__/**'
+      - '.github/workflows/content-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Validate quiz data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
