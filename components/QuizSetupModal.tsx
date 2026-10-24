@@ -64,8 +64,20 @@ export function QuizSetupModal({
     );
   };
 
+  // 문제 수: 칩은 항상 모두 보여 주고, 선택한 파일보다 큰 값만 비활성.
+  // 고른 값이 지금 불가능하면(파일 변경 등) 가능한 가장 큰 값을 선택된 것으로 보여 주고 그대로 쓴다.
+  const availableCounts: readonly number[] = COUNT_OPTIONS.filter((c) => c <= effectiveTotal);
+  const resolvedCount: number | 'all' | null =
+    effectiveTotal === 0
+      ? null
+      : selectedCount === 'all' || availableCounts.includes(selectedCount)
+      ? selectedCount
+      : availableCounts.length > 0
+      ? availableCounts[availableCounts.length - 1]
+      : 'all';
+
   const handleConfirm = () => {
-    const count = selectedCount === 'all' ? effectiveTotal : Math.min(selectedCount, effectiveTotal);
+    const count = resolvedCount === 'all' || resolvedCount === null ? effectiveTotal : resolvedCount;
     onConfirm({
       count,
       mode,
@@ -136,36 +148,63 @@ export function QuizSetupModal({
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>문제 수</Text>
             <View style={styles.countGrid}>
-              {COUNT_OPTIONS.filter((c) => c <= effectiveTotal).map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[styles.countChip, selectedCount === c && styles.countChipSelected]}
-                  onPress={() => setSelectedCount(c)}
-                  activeOpacity={0.8}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selectedCount === c }}
-                  accessibilityLabel={`${c}문제`}
+              {COUNT_OPTIONS.map((c) => {
+                const unavailable = c > effectiveTotal;
+                const checked = resolvedCount === c;
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    disabled={unavailable}
+                    style={[
+                      styles.countChip,
+                      checked && styles.countChipSelected,
+                      unavailable && styles.countChipDisabled,
+                    ]}
+                    onPress={() => setSelectedCount(c)}
+                    activeOpacity={0.8}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked, disabled: unavailable }}
+                    accessibilityLabel={`${c}문제`}
+                  >
+                    <Text
+                      style={[
+                        styles.countText,
+                        checked && styles.countTextSelected,
+                        unavailable && styles.countTextDisabled,
+                      ]}
+                    >
+                      {c}문제
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                disabled={effectiveTotal === 0}
+                style={[
+                  styles.countChip,
+                  resolvedCount === 'all' && styles.countChipSelected,
+                  effectiveTotal === 0 && styles.countChipDisabled,
+                ]}
+                onPress={() => setSelectedCount('all')}
+                activeOpacity={0.8}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: resolvedCount === 'all', disabled: effectiveTotal === 0 }}
+                accessibilityLabel={effectiveTotal > 0 ? `전체 (${effectiveTotal})` : '전체'}
+              >
+                <Text
+                  style={[
+                    styles.countText,
+                    resolvedCount === 'all' && styles.countTextSelected,
+                    effectiveTotal === 0 && styles.countTextDisabled,
+                  ]}
                 >
-                  <Text style={[styles.countText, selectedCount === c && styles.countTextSelected]}>
-                    {c}문제
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              {effectiveTotal > 0 && (
-                <TouchableOpacity
-                  style={[styles.countChip, selectedCount === 'all' && styles.countChipSelected]}
-                  onPress={() => setSelectedCount('all')}
-                  activeOpacity={0.8}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selectedCount === 'all' }}
-                  accessibilityLabel={`전체 (${effectiveTotal})`}
-                >
-                  <Text style={[styles.countText, selectedCount === 'all' && styles.countTextSelected]}>
-                    전체 ({effectiveTotal})
-                  </Text>
-                </TouchableOpacity>
-              )}
+                  {effectiveTotal > 0 ? `전체 (${effectiveTotal})` : '전체'}
+                </Text>
+              </TouchableOpacity>
             </View>
+            {effectiveTotal === 0 && (
+              <Text style={styles.countHint}>파일을 고르면 문제 수를 정할 수 있어요</Text>
+            )}
           </View>
 
           {/* 정답 확인 방식 */}
@@ -236,8 +275,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
     marginBottom: Spacing.sm,
   },
   fileChip: {
@@ -307,6 +344,19 @@ const styles = StyleSheet.create({
   countTextSelected: {
     color: Colors.accent.primary,
     fontWeight: Typography.weight.bold,
+  },
+  // 선택한 파일의 문제 수보다 큰 값
+  countChipDisabled: {
+    borderStyle: 'dashed',
+    backgroundColor: 'transparent',
+  },
+  countTextDisabled: {
+    color: '#7B8597',
+  },
+  countHint: {
+    marginTop: Spacing.sm,
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   modeOption: {
     flexDirection: 'row',

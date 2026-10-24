@@ -131,13 +131,7 @@ export default function SessionDetailScreen() {
           {/* 문제별 결과 */}
           <Text style={styles.sectionTitle}>문제별 결과</Text>
           {answers.map((ans, i) => (
-            <View
-              key={ans.id}
-              style={[
-                styles.answerRow,
-                { borderLeftColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
-              ]}
-            >
+            <View key={ans.id} style={styles.answerRow}>
               <View style={styles.answerMeta}>
                 <Text style={styles.answerNum}>Q{i + 1}</Text>
                 <NordBadge
@@ -243,8 +237,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
     marginTop: Spacing.sm,
   },
   answerRow: {
@@ -254,7 +246,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     padding: Spacing.sm,
     paddingLeft: Spacing.md,
-    borderLeftWidth: 3,
     borderWidth: 1,
     borderColor: Colors.border,
     gap: Spacing.sm,

@@ -17,6 +17,10 @@ import { fetchAllCategorySummaries } from '@/lib/db/stats';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
 import { NordButton } from '@/components/ui/NordButton';
+import { ScreenEnter } from '@/components/ui/ScreenEnter';
+import { PressableScale } from '@/components/ui/PressableScale';
+import Animated from 'react-native-reanimated';
+import { listEntering } from '@/lib/theme/motion';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -88,87 +92,92 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.appName}>문제은행</Text>
-          <Text style={styles.subtitle}>카테고리를 선택해주세요</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.historyButton}
-          onPress={() => router.push('/history?from=main')}
-          accessibilityRole="button"
-          accessibilityLabel="풀이 이력 보기"
-        >
-          <Ionicons name="time-outline" size={22} color={Colors.text.secondary} />
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={categories}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.accent.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="folder-open-outline" size={56} color={Colors.text.tertiary} />
-            <Text style={styles.emptyText}>등록된 카테고리가 없습니다.</Text>
+      {/* 웹에서만 짧은 진입 페이드 (네이티브는 스택 전환) */}
+      <ScreenEnter>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.appName}>문제은행</Text>
+            <Text style={styles.subtitle}>카테고리를 선택해주세요</Text>
           </View>
-        }
-        renderItem={({ item: cat }) => {
-          const stat = summaries[cat.id];
-          const hasHistory = stat && stat.sessions > 0;
-          const accuracyPct = hasHistory ? Math.round(stat.accuracy * 100) : null;
+          <TouchableOpacity
+            style={styles.historyButton}
+            onPress={() => router.push('/history?from=main')}
+            accessibilityRole="button"
+            accessibilityLabel="풀이 이력 보기"
+          >
+            <Ionicons name="time-outline" size={22} color={Colors.text.secondary} />
+          </TouchableOpacity>
+        </View>
 
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => handleSelect(cat)}
-              activeOpacity={0.82}
-              accessibilityRole="button"
-              accessibilityLabel={`${cat.name}, ${cat.description || ''}${hasHistory ? `, 정답률 ${accuracyPct} 퍼센트, ${stat.sessions}회 풀이` : ''}`}
-            >
-              {/* 아이콘 영역 */}
-              <View style={styles.iconBox}>
-                <Ionicons
-                  name={(cat.icon as any) || 'book-outline'}
-                  size={28}
-                  color={Colors.accent.primary}
-                />
-              </View>
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={Colors.accent.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="folder-open-outline" size={56} color={Colors.text.tertiary} />
+              <Text style={styles.emptyText}>등록된 카테고리가 없습니다.</Text>
+            </View>
+          }
+          renderItem={({ item: cat, index }) => {
+            const stat = summaries[cat.id];
+            const hasHistory = stat && stat.sessions > 0;
+            const accuracyPct = hasHistory ? Math.round(stat.accuracy * 100) : null;
 
-              {/* 텍스트 영역 */}
-              <View style={styles.textBox}>
-                <Text style={styles.catName}>{cat.name}</Text>
-                {cat.description ? (
-                  <Text style={styles.catDesc} numberOfLines={2}>
-                    {cat.description}
-                  </Text>
-                ) : null}
-
-                {hasHistory && (
-                  <View style={styles.statRow}>
-                    <NordBadge
-                      label={`정답률 ${accuracyPct}%`}
-                      variant={accuracyTone(accuracyPct!).badge}
-                      size="sm"
+            // 첫 진입 시 위에서부터 순차 등장, 누르는 동안 살짝 줄어든다
+            return (
+              <Animated.View entering={listEntering(index)}>
+                <PressableScale
+                  style={styles.card}
+                  onPress={() => handleSelect(cat)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${cat.name}, ${cat.description || ''}${hasHistory ? `, 정답률 ${accuracyPct} 퍼센트, ${stat.sessions}회 풀이` : ''}`}
+                >
+                  {/* 아이콘 영역 */}
+                  <View style={styles.iconBox}>
+                    <Ionicons
+                      name={(cat.icon as any) || 'book-outline'}
+                      size={28}
+                      color={Colors.accent.primary}
                     />
-                    <Text style={styles.sessionCount}>{stat.sessions}회 풀이</Text>
                   </View>
-                )}
-              </View>
 
-              <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
-            </TouchableOpacity>
-          );
-        }}
-      />
+                  {/* 텍스트 영역 */}
+                  <View style={styles.textBox}>
+                    <Text style={styles.catName}>{cat.name}</Text>
+                    {cat.description ? (
+                      <Text style={styles.catDesc} numberOfLines={2}>
+                        {cat.description}
+                      </Text>
+                    ) : null}
+
+                    {hasHistory && (
+                      <View style={styles.statRow}>
+                        <NordBadge
+                          label={`정답률 ${accuracyPct}%`}
+                          variant={accuracyTone(accuracyPct!).badge}
+                          size="sm"
+                        />
+                        <Text style={styles.sessionCount}>{stat.sessions}회 풀이</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
+                </PressableScale>
+              </Animated.View>
+            );
+          }}
+        />
+      </ScreenEnter>
     </SafeAreaView>
   );
 }
@@ -185,7 +194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.divider,
+    borderBottomColor: Colors.border,
   },
   appName: {
     fontSize: Typography.size.xxl,

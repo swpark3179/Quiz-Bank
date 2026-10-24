@@ -15,6 +15,8 @@ import type { Choice } from '@/lib/parser/quizParser';
 import { stripChoiceSymbol } from '@/lib/utils/quizUtils';
 import { InlineCodeText } from '@/components/InlineCodeText';
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
 
 interface ChoiceItemProps {
@@ -116,6 +118,8 @@ export function ChoiceItem({
   // 정답·오답 아이콘은 스프링으로 튀어나온다. 상태가 '바뀔 때'만 재생한다.
   const shakeX = useSharedValue(0);
   const markScale = useSharedValue(1);
+  // 누르는 동안 살짝 줄어든다
+  const pressScale = useSharedValue(1);
   const prevState = useRef(state);
 
   useEffect(() => {
@@ -138,7 +142,14 @@ export function ChoiceItem({
   }, [state, shakeX, markScale]);
 
   const shakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.get() }],
+    transform: [{ translateX: shakeX.get() }, { scale: pressScale.get() }],
+  }));
+  // 기본 ↔ 선택 ↔ 정답/오답 색이 툭 바뀌지 않도록 짧게 보간
+  const bgColor = s.container.backgroundColor as string;
+  const borderColor = s.container.borderColor as string;
+  const colorStyle = useAnimatedStyle(() => ({
+    backgroundColor: withTiming(bgColor, { duration: Motion.duration.color }),
+    borderColor: withTiming(borderColor, { duration: Motion.duration.color }),
   }));
   const markStyle = useAnimatedStyle(() => ({
     transform: [{ scale: markScale.get() }],
@@ -146,9 +157,11 @@ export function ChoiceItem({
 
   return (
     <Animated.View style={shakeStyle}>
-      <TouchableOpacity
-        activeOpacity={0.8}
+      <AnimatedTouchable
+        activeOpacity={0.85}
         onPress={onPress}
+        onPressIn={() => pressScale.set(withTiming(Motion.pressScale, { duration: Motion.duration.fast }))}
+        onPressOut={() => pressScale.set(withTiming(1, { duration: Motion.duration.fast }))}
         disabled={isDisabled}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabelText}
@@ -156,7 +169,7 @@ export function ChoiceItem({
           disabled: !!isDisabled,
           selected: state === 'selected' || state === 'correct' || state === 'wrong',
         }}
-        style={[styles.container, s.container]}
+        style={[styles.container, s.container, colorStyle]}
       >
         <Animated.View
           style={[
@@ -180,7 +193,7 @@ export function ChoiceItem({
             />
           ) : null}
         </View>
-      </TouchableOpacity>
+      </AnimatedTouchable>
     </Animated.View>
   );
 }

@@ -1,4 +1,4 @@
-import { Easing, ReduceMotion } from 'react-native-reanimated';
+import { Easing, FadeInDown, ReduceMotion } from 'react-native-reanimated';
 
 // Motion tokens
 // reanimated 의존성이 테마 전체로 퍼지지 않도록 lib/theme/index.ts 에서 재수출하지 않는다.
@@ -6,7 +6,8 @@ import { Easing, ReduceMotion } from 'react-native-reanimated';
 // 기기의 '동작 줄이기' 설정이 켜져 있으면 즉시 끝난다.
 export const Motion = {
   duration: {
-    fast: 120, // 누름·색 변화
+    fast: 120, // 누름 축소
+    color: 150, // 선택 상태 색 변화
     base: 220, // 문제 전환 등 화면 안의 이동
     progress: 250, // 진행바 폭
     slow: 320, // 오답 흔들림, 시트
@@ -20,6 +21,7 @@ export const Motion = {
     // 체크 아이콘이 살짝 튀어나오는 정도
     pop: { damping: 12, stiffness: 260, reduceMotion: ReduceMotion.System },
   },
+  pressScale: 0.98, // 카드·보기를 누르는 동안의 크기
   stagger: 60, // 목록 순차 등장 간격
   staggerMax: 8, // 이 개수 이후로는 지연을 늘리지 않음
 };
@@ -27,4 +29,13 @@ export const Motion = {
 /** 순차 등장 지연(ms) — 목록이 길어도 기다림이 늘어나지 않도록 상한을 둔다 */
 export function staggerDelay(index: number, base = 0): number {
   return base + Math.min(index, Motion.staggerMax) * Motion.stagger;
+}
+
+/**
+ * 목록 항목 순차 등장: 아래에서 올라오며 페이드 (entering 에 넘긴다).
+ * withInitialValues 로 이동 거리를 바꾸면 웹에서 사용자 정의 키프레임이 되어,
+ * 애니메이션 도중 화면을 떠날 때 reanimated(4.1) 웹 정리 코드가 오류를 낸다 → 기본 FadeInDown 만 쓴다.
+ */
+export function listEntering(index: number, base = 0) {
+  return FadeInDown.delay(staggerDelay(index, base)).duration(240).easing(Motion.easing.standard);
 }

@@ -100,8 +100,7 @@ export const GlobalStyles = StyleSheet.create({
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    // 한글 라벨에는 대문자 변환·넓은 자간을 쓰지 않는다
     marginBottom: Spacing.sm,
   },
   h1: {

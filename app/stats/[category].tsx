@@ -21,6 +21,7 @@ import { NordButton } from '@/components/ui/NordButton';
 import { BottomActionBar } from '@/components/ui/BottomActionBar';
 import { ScreenSkeleton } from '@/components/ui/Skeleton';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { listEntering } from '@/lib/theme/motion';
 import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
@@ -253,6 +254,9 @@ export default function StatsScreen() {
               <Text style={styles.chartSubtitle}>최근 {chartData.length}회</Text>
               <BarChart
                 data={chartData}
+                // 막대가 아래에서 차오른다
+                isAnimated
+                animationDuration={600}
                 width={SCREEN_WIDTH - Spacing.base * 2 - Spacing.xl * 2}
                 height={200}
                 barWidth={Math.max(20, (SCREEN_WIDTH - 100) / Math.max(chartData.length, 1))}
@@ -298,7 +302,7 @@ export default function StatsScreen() {
               {[...stats].reverse().slice(0, 10).map((s, i) => {
                 const pct = Math.round(s.accuracy * 100);
                 return (
-                  <View key={s.session_id} style={styles.sessionRow}>
+                  <Animated.View key={s.session_id} entering={listEntering(i)} style={styles.sessionRow}>
                     <Text style={styles.sessionIdx}>#{stats.length - i}</Text>
                     <View style={styles.sessionBar}>
                       <View
@@ -317,7 +321,7 @@ export default function StatsScreen() {
                       variant="neutral"
                       size="sm"
                     />
-                  </View>
+                  </Animated.View>
                 );
               })}
             </>
@@ -365,8 +369,9 @@ export default function StatsScreen() {
 
                     if (!file || fileQStats.length === 0) return null;
 
+                    // 파일을 고르면 그 파일의 문제 목록이 툭 펼쳐지지 않고 페이드로 나타난다
                     return (
-                      <View key={fileId} style={styles.fileQuestionGroup}>
+                      <Animated.View key={fileId} entering={FadeIn.duration(200)} style={styles.fileQuestionGroup}>
                         <View style={styles.fileQuestionHeader}>
                           <Text style={styles.fileQuestionTitle}>{file.name}</Text>
                           <NordButton
@@ -397,16 +402,15 @@ export default function StatsScreen() {
                               </View>
                               <Text style={styles.questionIdText}>{q.question_id}번 문제</Text>
                               <View style={styles.spacer} />
-                              <Text style={styles.questionAccuracyText}>정답률: {pct}%</Text>
                               <NordBadge
-                                label={`${q.correct_attempts}/${q.total_attempts}`}
+                                label={`${q.correct_attempts}/${q.total_attempts} · ${pct}%`}
                                 variant={accuracyTone(pct).badge}
                                 size="sm"
                               />
                             </TouchableOpacity>
                           );
                         })}
-                      </View>
+                      </Animated.View>
                     );
                   })}
                 </View>
@@ -539,8 +543,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
     marginTop: Spacing.sm,
   },
   sessionRow: {
@@ -667,10 +669,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
-  },
-  questionAccuracyText: {
-    fontSize: Typography.size.xs,
-    color: Colors.text.secondary,
   },
   retryButton: {
     flex: 1,
