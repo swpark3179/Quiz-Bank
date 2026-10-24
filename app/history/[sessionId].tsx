@@ -12,17 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   fetchSession,
   fetchAnswers,
-  fetchWrongAnswers,
   deleteSession,
 } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
-import { fetchQuizMarkdown } from '@/lib/local/storage';
-import { parseQuizMarkdown, QuizQuestion } from '@/lib/parser/quizParser';
-import { shuffleQuiz } from '@/lib/quiz/shuffler';
+import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from '@/components/ui/NordButton';
 import { NordBadge } from '@/components/ui/NordBadge';
-import { fetchQuizFiles } from '@/lib/local/categories';
 
 export default function SessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
@@ -62,55 +58,15 @@ export default function SessionDetailScreen() {
     if (!session) return;
 
     try {
-      // 오답 목록 가져오기
-      const wrongAnswers = await fetchWrongAnswers(sessionId);
-      if (wrongAnswers.length === 0) {
+      const setup = await buildWrongAnswerQuiz(sessionId, session.category_id, session.mode);
+      if (!setup) {
         Alert.alert('확인', '오답 문제가 없습니다!');
         return;
       }
 
-      // 파일별로 그룹화
-      const fileGroups = wrongAnswers.reduce<Record<string, number[]>>(
-        (acc, a) => {
-          if (!acc[a.source_file_id]) acc[a.source_file_id] = [];
-          acc[a.source_file_id].push(a.question_id);
-          return acc;
-        },
-        {}
-      );
-
-      // 파일 목록 로드 후 해당 문제만 필터링
-      const quizFiles = await fetchQuizFiles(session.category_id);
-
-      const fileEntries = Object.entries(fileGroups).map(entry => {
-        const fileId = entry[0];
-        const questionIds = entry[1];
-        const file = quizFiles.find((f) => f.id === fileId);
-        return { fileId, questionIds, file };
-      }).filter(entry => entry.file);
-
-      const allWrongQuestionsResults = await Promise.all(
-        fileEntries.map(async ({ fileId, questionIds, file }) => {
-          const md = await fetchQuizMarkdown(file!.storagePath);
-          const parsed = parseQuizMarkdown(md, fileId);
-          return parsed.filter((q) => questionIds.includes(q.id));
-        })
-      );
-
-      const allWrongQuestions = allWrongQuestionsResults.flat();
-
-      const shuffled = shuffleQuiz(allWrongQuestions);
-
       router.push({
         pathname: `/${session.category_id}/quiz`,
-        params: {
-          setup: JSON.stringify({
-            shuffled,
-            mode: session.mode,
-            categoryId: session.category_id,
-            sourceFileIds: JSON.parse(session.source_file_ids),
-          }),
-        },
+        params: { setup: JSON.stringify(setup) },
       });
     } catch (e) {
       console.error('오답 재시험 준비 오류:', e);
