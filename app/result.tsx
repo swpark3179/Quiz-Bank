@@ -14,7 +14,6 @@ import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   Easing,
   FadeIn,
-  FadeInDown,
   useAnimatedProps,
   useReducedMotion,
   useSharedValue,
@@ -24,20 +23,12 @@ import { fetchSession, fetchAnswers } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
-import { Motion, staggerDelay } from '@/lib/theme/motion';
+import { Motion, listEntering } from '@/lib/theme/motion';
 import { NordButton } from '@/components/ui/NordButton';
 import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
 import { ScreenSkeleton } from '@/components/ui/Skeleton';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-/**
- * 순차 등장: 아래에서 올라오며 페이드.
- * withInitialValues 로 이동 거리를 줄이면 웹에서 사용자 정의 키프레임이 되어,
- * 애니메이션 도중 화면을 떠날 때 reanimated(4.1) 웹 정리 코드가 오류를 낸다 → 기본 FadeInDown 사용.
- */
-const enterFromBelow = (delay: number) =>
-  FadeInDown.delay(delay).duration(240).easing(Motion.easing.standard);
 
 /**
  * 점수 링 — react-native-svg 기반 도넛 게이지.
@@ -184,21 +175,21 @@ export default function ResultScreen() {
             {/* 상세 수치 — 분리된 색 카드 */}
             <View style={styles.statsRow}>
               <Animated.View
-                entering={enterFromBelow(staggerDelay(0, 200))}
+                entering={listEntering(0, 200)}
                 style={[styles.statCard, styles.statCardTotal]}
               >
                 <Text style={styles.statNum}>{session.total}</Text>
                 <Text style={styles.statLabel}>총 문제</Text>
               </Animated.View>
               <Animated.View
-                entering={enterFromBelow(staggerDelay(1, 200))}
+                entering={listEntering(1, 200)}
                 style={[styles.statCard, styles.statCardCorrect]}
               >
                 <Text style={[styles.statNum, { color: Colors.status.correct }]}>{session.correct}</Text>
                 <Text style={styles.statLabel}>정답</Text>
               </Animated.View>
               <Animated.View
-                entering={enterFromBelow(staggerDelay(2, 200))}
+                entering={listEntering(2, 200)}
                 style={[styles.statCard, styles.statCardWrong]}
               >
                 <Text style={[styles.statNum, { color: Colors.status.wrong }]}>{wrongCount}</Text>
@@ -212,11 +203,8 @@ export default function ResultScreen() {
           {answers.map((ans, i) => (
             <Animated.View
               key={ans.id}
-              entering={enterFromBelow(staggerDelay(i, 400))}
-              style={[
-                styles.answerRow,
-                { borderLeftColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
-              ]}
+              entering={listEntering(i, 400)}
+              style={styles.answerRow}
             >
               <View style={styles.answerLeft}>
                 <Text style={styles.answerNum}>Q{i + 1}</Text>
@@ -364,8 +352,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
     marginTop: Spacing.sm,
   },
   answerRow: {
@@ -375,7 +361,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     padding: Spacing.sm,
     paddingLeft: Spacing.md,
-    borderLeftWidth: 3,
     borderWidth: 1,
     borderColor: Colors.border,
     gap: Spacing.sm,

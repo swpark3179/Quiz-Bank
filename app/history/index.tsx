@@ -14,6 +14,7 @@ import type { SessionRow } from '@/lib/db/sessions';
 import { fetchCategoryNames } from '@/lib/local/categories';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
+import { ScreenEnter } from '@/components/ui/ScreenEnter';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -57,70 +58,73 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <FlatList
-        data={sessions}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="time-outline" size={56} color={Colors.text.tertiary} />
-            <Text style={styles.emptyText}>풀이 이력이 없습니다.</Text>
-          </View>
-        }
-        renderItem={({ item: session, index }) => {
-          const accuracyPct = Math.round((session.correct / session.total) * 100);
-          const wrongCount = session.total - session.correct;
+      {/* 웹에서만 짧은 진입 페이드 (네이티브는 스택 전환) */}
+      <ScreenEnter>
+        <FlatList
+          data={sessions}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="time-outline" size={56} color={Colors.text.tertiary} />
+              <Text style={styles.emptyText}>풀이 이력이 없습니다.</Text>
+            </View>
+          }
+          renderItem={({ item: session, index }) => {
+            const accuracyPct = Math.round((session.correct / session.total) * 100);
+            const wrongCount = session.total - session.correct;
 
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/history/${session.id}`)}
-              activeOpacity={0.82}
-              accessibilityRole="button"
-              accessibilityLabel={`${categoryNames[session.category_id] ?? session.category_id} 풀이 기록. 정답률 ${accuracyPct}%. ${formatDate(session.created_at)}`}
-            >
-              <View style={styles.cardHeader}>
-                <View style={styles.rankCircle}>
-                  <Text style={styles.rankText}>{sessions.length - index}</Text>
-                </View>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.categoryLabel}>
-                    {categoryNames[session.category_id] ?? session.category_id}
-                  </Text>
-                  <Text style={styles.dateText}>{formatDate(session.created_at)}</Text>
-                </View>
-                <NordBadge
-                  label={`${accuracyPct}%`}
-                  variant={accuracyTone(accuracyPct).badge}
-                />
-              </View>
-
-              <View style={styles.cardStats}>
-                <Text style={styles.stat}>
-                  <Text style={styles.statBold}>{session.total}</Text> 문제
-                </Text>
-                <Text style={styles.statDot}>·</Text>
-                <Text style={[styles.stat, { color: Colors.status.correct }]}>
-                  정답 <Text style={styles.statBold}>{session.correct}</Text>
-                </Text>
-                <Text style={styles.statDot}>·</Text>
-                <Text style={[styles.stat, { color: Colors.status.wrong }]}>
-                  오답 <Text style={styles.statBold}>{wrongCount}</Text>
-                </Text>
-                <Text style={styles.statDot}>·</Text>
-                <View style={styles.modeTag}>
-                  <Ionicons
-                    name={session.mode === 'immediate' ? 'flash-outline' : 'list-outline'}
-                    size={12}
-                    color={Colors.text.secondary}
+            return (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push(`/history/${session.id}`)}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel={`${categoryNames[session.category_id] ?? session.category_id} 풀이 기록. 정답률 ${accuracyPct}%. ${formatDate(session.created_at)}`}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.rankCircle}>
+                    <Text style={styles.rankText}>{sessions.length - index}</Text>
+                  </View>
+                  <View style={styles.cardInfo}>
+                    <Text style={styles.categoryLabel}>
+                      {categoryNames[session.category_id] ?? session.category_id}
+                    </Text>
+                    <Text style={styles.dateText}>{formatDate(session.created_at)}</Text>
+                  </View>
+                  <NordBadge
+                    label={`${accuracyPct}%`}
+                    variant={accuracyTone(accuracyPct).badge}
                   />
-                  <Text style={styles.stat}>{session.mode === 'immediate' ? '즉시 확인' : '일괄 확인'}</Text>
                 </View>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
-      />
+
+                <View style={styles.cardStats}>
+                  <Text style={styles.stat}>
+                    <Text style={styles.statBold}>{session.total}</Text> 문제
+                  </Text>
+                  <Text style={styles.statDot}>·</Text>
+                  <Text style={[styles.stat, { color: Colors.status.correct }]}>
+                    정답 <Text style={styles.statBold}>{session.correct}</Text>
+                  </Text>
+                  <Text style={styles.statDot}>·</Text>
+                  <Text style={[styles.stat, { color: Colors.status.wrong }]}>
+                    오답 <Text style={styles.statBold}>{wrongCount}</Text>
+                  </Text>
+                  <Text style={styles.statDot}>·</Text>
+                  <View style={styles.modeTag}>
+                    <Ionicons
+                      name={session.mode === 'immediate' ? 'flash-outline' : 'list-outline'}
+                      size={12}
+                      color={Colors.text.secondary}
+                    />
+                    <Text style={styles.stat}>{session.mode === 'immediate' ? '즉시 확인' : '일괄 확인'}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </ScreenEnter>
     </SafeAreaView>
   );
 }

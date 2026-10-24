@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -21,6 +20,10 @@ import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib
 import { QuizSetupModal, QuizSetupOptions } from '@/components/QuizSetupModal';
 import { NordBadge } from '@/components/ui/NordBadge';
 import { NordButton } from '@/components/ui/NordButton';
+import { ScreenEnter } from '@/components/ui/ScreenEnter';
+import { PressableScale } from '@/components/ui/PressableScale';
+import Animated from 'react-native-reanimated';
+import { listEntering } from '@/lib/theme/motion';
 
 export default function CategoryScreen() {
   const { category: categoryId } = useLocalSearchParams<{ category: string }>();
@@ -166,115 +169,120 @@ export default function CategoryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      {/* 요약 헤더 */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{totalFileCount}</Text>
-            <Text style={styles.summaryLabel}>문제 파일</Text>
+      {/* 웹에서만 짧은 진입 페이드 (네이티브는 스택 전환) */}
+      <ScreenEnter>
+        {/* 요약 헤더 */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{totalFileCount}</Text>
+              <Text style={styles.summaryLabel}>문제 파일</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{totalQuestionCount}</Text>
+              <Text style={styles.summaryLabel}>총 문제 수</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{totalSessions}</Text>
+              <Text style={styles.summaryLabel}>풀이 횟수</Text>
+            </View>
+            {overallAccuracy !== null && (
+              <>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={[styles.summaryValue, { color: accuracyTone(overallPct!).color }]}>
+                    {overallPct}%
+                  </Text>
+                  <Text style={styles.summaryLabel}>정답률 · {accuracyTone(overallPct!).label}</Text>
+                </View>
+              </>
+            )}
           </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{totalQuestionCount}</Text>
-            <Text style={styles.summaryLabel}>총 문제 수</Text>
+
+          {/* 통계 & 이력 버튼 */}
+          <View style={styles.actionRow}>
+            <NordButton
+              label="통계 보기"
+              variant="tonal"
+              onPress={() => router.push(`/stats/${categoryId}`)}
+              icon={<Ionicons name="bar-chart-outline" size={17} color={Colors.accent.deep} />}
+              style={styles.smallButton}
+            />
+            <NordButton
+              label="풀이 이력"
+              variant="tonal"
+              onPress={() => router.push(`/history`)}
+              icon={<Ionicons name="time-outline" size={17} color={Colors.accent.deep} />}
+              style={styles.smallButton}
+            />
           </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{totalSessions}</Text>
-            <Text style={styles.summaryLabel}>풀이 횟수</Text>
-          </View>
-          {overallAccuracy !== null && (
-            <>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryItem}>
-                <Text style={[styles.summaryValue, { color: accuracyTone(overallPct!).color }]}>
-                  {overallPct}%
-                </Text>
-                <Text style={styles.summaryLabel}>정답률 · {accuracyTone(overallPct!).label}</Text>
-              </View>
-            </>
+        </View>
+
+        {/* 무작위 문제 풀기 버튼 */}
+        <View style={styles.randomSection}>
+          <NordButton
+            label="무작위 문제 풀어보기"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onPress={openRandomSetup}
+            icon={<Ionicons name="shuffle" size={20} color={Colors.text.inverse} />}
+            style={styles.randomButton}
+          />
+        </View>
+
+        {/* 파일 목록 */}
+        <Text style={styles.sectionLabel}>문제 파일 목록</Text>
+        <FlatList
+          data={files}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item: file, index }) => (
+            // 첫 진입 시 위에서부터 순차 등장, 누르는 동안 살짝 줄어든다
+            <Animated.View entering={listEntering(index)}>
+              <PressableScale
+                style={styles.fileCard}
+                onPress={() => openSingleFileSetup(file)}
+                accessibilityRole="button"
+                accessibilityLabel={`${file.name}, ${file.questionCount}문제`}
+              >
+                <View style={styles.fileIconBox}>
+                  <Ionicons name="document-text-outline" size={22} color={Colors.accent.primary} />
+                </View>
+                <View style={styles.fileInfo}>
+                  <Text style={styles.fileName}>{file.name}</Text>
+                  <Text style={styles.fileCount}>{file.questionCount}문제</Text>
+                </View>
+                <Ionicons name="play-circle-outline" size={26} color={Colors.accent.primary} />
+              </PressableScale>
+            </Animated.View>
           )}
-        </View>
-
-        {/* 통계 & 이력 버튼 */}
-        <View style={styles.actionRow}>
-          <NordButton
-            label="통계 보기"
-            variant="tonal"
-            onPress={() => router.push(`/stats/${categoryId}`)}
-            icon={<Ionicons name="bar-chart-outline" size={17} color={Colors.accent.deep} />}
-            style={styles.smallButton}
-          />
-          <NordButton
-            label="풀이 이력"
-            variant="tonal"
-            onPress={() => router.push(`/history`)}
-            icon={<Ionicons name="time-outline" size={17} color={Colors.accent.deep} />}
-            style={styles.smallButton}
-          />
-        </View>
-      </View>
-
-      {/* 무작위 문제 풀기 버튼 */}
-      <View style={styles.randomSection}>
-        <NordButton
-          label="무작위 문제 풀어보기"
-          variant="primary"
-          size="lg"
-          fullWidth
-          onPress={openRandomSetup}
-          icon={<Ionicons name="shuffle" size={20} color={Colors.text.inverse} />}
-          style={styles.randomButton}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>등록된 문제 파일이 없습니다.</Text>
+            </View>
+          }
         />
-      </View>
 
-      {/* 파일 목록 */}
-      <Text style={styles.sectionLabel}>문제 파일 목록</Text>
-      <FlatList
-        data={files}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item: file }) => (
-          <TouchableOpacity
-            style={styles.fileCard}
-            onPress={() => openSingleFileSetup(file)}
-            activeOpacity={0.82}
-            accessibilityRole="button"
-            accessibilityLabel={`${file.name}, ${file.questionCount}문제`}
-          >
-            <View style={styles.fileIconBox}>
-              <Ionicons name="document-text-outline" size={22} color={Colors.accent.primary} />
-            </View>
-            <View style={styles.fileInfo}>
-              <Text style={styles.fileName}>{file.name}</Text>
-              <Text style={styles.fileCount}>{file.questionCount}문제</Text>
-            </View>
-            <Ionicons name="play-circle-outline" size={26} color={Colors.accent.primary} />
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>등록된 문제 파일이 없습니다.</Text>
-          </View>
-        }
-      />
-
-      {/* 퀴즈 설정 모달 */}
-      <QuizSetupModal
-        visible={modalVisible}
-        files={files}
-        totalQuestions={
-          isRandom
-            ? totalQuestionCount
-            : selectedFileForSetup?.questionCount ?? 0
-        }
-        isRandom={isRandom}
-        preSelectedFileId={selectedFileForSetup?.id}
-        onConfirm={handleSetupConfirm}
-        onClose={() => setModalVisible(false)}
-        loading={preparingQuiz}
-        onHidden={handleSetupHidden}
-      />
+        {/* 퀴즈 설정 모달 */}
+        <QuizSetupModal
+          visible={modalVisible}
+          files={files}
+          totalQuestions={
+            isRandom
+              ? totalQuestionCount
+              : selectedFileForSetup?.questionCount ?? 0
+          }
+          isRandom={isRandom}
+          preSelectedFileId={selectedFileForSetup?.id}
+          onConfirm={handleSetupConfirm}
+          onClose={() => setModalVisible(false)}
+          loading={preparingQuiz}
+          onHidden={handleSetupHidden}
+        />
+      </ScreenEnter>
     </SafeAreaView>
   );
 }
@@ -344,8 +352,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.xs,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
     paddingHorizontal: Spacing.base,
     marginBottom: Spacing.sm,
   },

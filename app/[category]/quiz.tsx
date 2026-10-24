@@ -20,6 +20,7 @@ import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { NordButton } from '@/components/ui/NordButton';
 import { BottomActionBar } from '@/components/ui/BottomActionBar';
+import { ScreenEnter } from '@/components/ui/ScreenEnter';
 import { createSession, saveAnswer, updateSessionProgress } from '@/lib/db/sessions';
 import type { QuizSetup } from '@/lib/quiz/retry';
 import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
@@ -360,7 +361,7 @@ export default function QuizScreen() {
   };
 
   return (
-    <View style={styles.safeArea}>
+    <ScreenEnter style={styles.safeArea}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -379,10 +380,8 @@ export default function QuizScreen() {
         {/* 문제가 바뀔 때마다 새로 마운트되어 방향에 맞는 진입 애니메이션을 재생 */}
         <Animated.View key={currentIdx} entering={questionEntering}>
           {/* 문제 영역 */}
+          {/* 몇 번째 문제인지는 위 진행 표시가 보여 준다 */}
           <View style={styles.questionCard}>
-            <View style={styles.questionBadge}>
-              <Text style={styles.questionBadgeText}>문제 {currentIdx + 1}</Text>
-            </View>
             <MarkdownViewer content={currentQ.original.question} />
           </View>
 
@@ -480,7 +479,7 @@ export default function QuizScreen() {
           nextLabel={currentIdx + 1 >= total ? '결과 보기' : '다음 문제'}
         />
       )}
-    </View>
+    </ScreenEnter>
   );
 }
 
@@ -500,27 +499,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface.card,
     borderRadius: Radius.lg,
     padding: Spacing.base,
-    paddingLeft: Spacing.base + 2,
     marginBottom: Spacing.base,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.accent.primary,
-    ...Shadow.md,
-  },
-  questionBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.accent.primary,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    marginBottom: Spacing.sm,
-  },
-  questionBadgeText: {
-    fontSize: Typography.size.xs,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    ...Shadow.sm,
   },
   choicesSection: {
     marginBottom: Spacing.base,
@@ -529,8 +511,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.xs,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
     marginBottom: Spacing.sm,
   },
   headerClose: {

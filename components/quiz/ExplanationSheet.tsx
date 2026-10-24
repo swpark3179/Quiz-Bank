@@ -201,7 +201,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.xs,
     fontWeight: '700',
     color: Colors.text.secondary,
-    textTransform: 'uppercase',
     marginBottom: 3,
   },
   answerChipValue: {

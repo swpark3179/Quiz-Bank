@@ -33,7 +33,8 @@ export default function RootLayout() {
           name="[category]/quiz"
           options={{
             title: '퀴즈',
-            headerBackTitle: '목록',
+            // 풀이는 아래에서 올라오는 집중 모드 (헤더 왼쪽 닫기 X 와 짝)
+            animation: 'slide_from_bottom',
             gestureEnabled: false,
           }}
         />
@@ -41,6 +42,8 @@ export default function RootLayout() {
           name="result"
           options={{
             title: '결과',
+            // 같은 흐름의 마무리라 방향감 없이 페이드 (replace·dismissTo 모두)
+            animation: 'fade',
             headerBackVisible: false,
             gestureEnabled: false,
           }}
