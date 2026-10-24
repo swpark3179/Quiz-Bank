@@ -5,6 +5,8 @@
  * - Windows Electron 데스크탑: .exe 옆 `quiz-data/config.json`에서 로컬 로드
  */
 
+import { readCached, writeCached } from './diskCache';
+
 const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/master/assets/quiz-data';
 
 function isDesktop(): boolean {
@@ -58,8 +60,10 @@ export async function fetchQuizFiles(categoryId: string): Promise<QuizFile[]> {
 async function fetchConfig(): Promise<any[]> {
   if (configCache) return configCache;
 
+  const desktop = isDesktop();
+
   try {
-    const url = isDesktop()
+    const url = desktop
       ? `/quiz-data/config.json`
       : `${GITHUB_BASE_URL}/config.json?t=${Date.now()}`;
     const response = await fetch(url);
@@ -67,12 +71,23 @@ async function fetchConfig(): Promise<any[]> {
       throw new Error(`[QuizBank] Config 로드 실패: ${response.status}`);
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    const data = JSON.parse(text);
     configCache = data;
+    if (!desktop) writeCached('config.json', text);
     return data;
   } catch (error) {
     console.error('Config 로드 오류:', error);
-    // [Fallback] 앱에 내장된 파일로 임시 대체 (오프라인 지원)
+    // [Fallback 1] 마지막으로 받은 config 사용 (오프라인 지원)
+    const cached = desktop ? null : await readCached('config.json');
+    if (cached !== null) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // 손상된 캐시는 무시하고 내장 파일로 대체
+      }
+    }
+    // [Fallback 2] 앱에 내장된 파일로 임시 대체
     const localData = require('@/assets/quiz-data/config.json');
     return localData;
   }

@@ -1,9 +1,11 @@
 /**
  * 퀴즈 문제(.md) 콘텐츠 로더
  *
- * - 일반 웹/모바일: GitHub Raw에서 실시간 다운로드
+ * - 일반 웹/모바일: GitHub Raw에서 실시간 다운로드 (실패 시 마지막 다운로드본 사용)
  * - Windows Electron 데스크탑(`app://` 스킴): .exe 옆 `quiz-data/` 폴더에서 로컬 로드
  */
+
+import { readCached, writeCached } from './diskCache';
 
 const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/swpark3179/Quiz-Bank/master/assets/quiz-data';
 
@@ -26,7 +28,8 @@ export async function fetchQuizMarkdown(storagePath: string): Promise<string> {
   }
 
   // 데스크탑은 로컬 상대경로, 웹/모바일은 GitHub Raw URL을 사용한다.
-  const url = isDesktop()
+  const desktop = isDesktop();
+  const url = desktop
     ? `/quiz-data/${storagePath}`
     : `${GITHUB_BASE_URL}/${storagePath}?t=${Date.now()}`;
 
@@ -40,10 +43,19 @@ export async function fetchQuizMarkdown(storagePath: string): Promise<string> {
     const content = await response.text();
     // 성공 시 캐시 저장
     contentCache[storagePath] = content;
+    if (!desktop) writeCached(storagePath, content);
 
     return content;
 
   } catch (error) {
+    // [Fallback] 오프라인 등으로 실패하면 마지막으로 받은 내용 사용
+    const cached = desktop ? null : await readCached(storagePath);
+    if (cached !== null) {
+      // 메모리 캐시에는 넣지 않아 다음 호출 때 다시 최신본 다운로드를 시도한다.
+      console.warn(`[QuizBank] 다운로드 실패, 캐시 사용: ${storagePath}`);
+      return cached;
+    }
+
     console.error(`[QuizBank] 마크다운 로드 실패: ${url}`, error);
     throw error;
   }
