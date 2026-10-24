@@ -20,8 +20,19 @@ import { BottomActionBar } from '@/components/ui/BottomActionBar';
 import { createSession, saveAnswer, updateSessionProgress } from '@/lib/db/sessions';
 import type { QuizSetup } from '@/lib/quiz/retry';
 import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
+import { hapticAnswerResult } from '@/lib/utils/haptics';
 
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
+
+// 즉시 확인 피드백 타이밍(ms)
+// 오답: 흔들림(slow)이 끝나고 잠시 뒤 정답 보기를 강조하고, 그다음 해설 시트를 연다.
+const REVEAL_CORRECT_DELAY = Motion.duration.slow + 120;
+const SHEET_DELAY_CORRECT = 350;
+const SHEET_DELAY_WRONG = REVEAL_CORRECT_DELAY + 300;
+// 마지막 제출 후 진행바가 끝까지 차오르는 시간을 보여 준 뒤 결과로 이동
+const FINISH_DELAY = Motion.duration.progress + 50;
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export default function QuizScreen() {
   const { setup: setupStr } = useLocalSearchParams<{ setup: string }>();
@@ -54,6 +65,16 @@ export default function QuizScreen() {
   // 실제로 푼(응답한) 문제 수 — 모수(total)로 사용
   const answeredCountRef = useRef(0);
 
+  // 즉시 확인 모드: 오답일 때 정답 보기를 뒤늦게 강조했는지
+  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  // 마지막 제출 후 결과 화면으로 넘어가는 중 (진행바를 끝까지 채우고 버튼을 잠근다)
+  const [finishing, setFinishing] = useState(false);
+  const finishingRef = useRef(false);
+  // 진행 중인 응답 저장 — 결과로 넘어가기 전에 끝나기를 기다린다
+  const pendingSave = useRef<Promise<void> | null>(null);
+  // 피드백 연출용 타이머 — 문제를 넘기거나 화면을 떠나면 취소
+  const feedbackTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   const sheetRef = useRef<BottomSheet>(null);
   const scrollRef = useRef<ScrollView>(null);
   // 문제 이동 방향: 1 = 다음, -1 = 이전, 0 = 첫 문제(진입 애니메이션 없음)
@@ -63,6 +84,11 @@ export default function QuizScreen() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentIdx]);
+
+  useEffect(() => {
+    const timers = feedbackTimers.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
   const total = shuffled.length;
   const currentQ = shuffled[currentIdx];
@@ -79,8 +105,27 @@ export default function QuizScreen() {
   const isSubmitted = submitted[currentIdx] ?? false;
   const isCorrect = selectedIdx !== null && selectedIdx === currentQ.mappedAnswer;
 
+  const clearFeedbackTimers = () => {
+    feedbackTimers.current.forEach(clearTimeout);
+    // 언마운트 정리 effect 가 같은 배열을 보도록 새 배열로 바꾸지 않고 비운다
+    feedbackTimers.current.length = 0;
+  };
+
+  const later = (fn: () => void, ms: number) => {
+    feedbackTimers.current.push(setTimeout(fn, ms));
+  };
+
+  /** 마지막 제출: 버튼을 잠그고 진행바를 끝까지 채운다. 이미 진행 중이면 false */
+  const beginFinish = () => {
+    if (finishingRef.current) return false;
+    finishingRef.current = true;
+    setFinishing(true);
+    return true;
+  };
+
   /** 이전/다음 문제로 이동하며 방향을 기록 (진입 애니메이션 방향에 사용) */
   const goTo = (dir: 1 | -1) => {
+    clearFeedbackTimers();
     setNavDir(dir);
     setCurrentIdx((i) => i + dir);
   };
@@ -98,8 +143,10 @@ export default function QuizScreen() {
     if (!isSubmitted) {
       return selectedIdx === choiceArrayIdx ? 'selected' : 'default';
     }
-    // 제출 후
-    if (choiceArrayIdx === currentQ.mappedAnswer) return 'correct';
+    // 제출 후 — 오답이면 흔들림이 끝난 뒤 정답 보기를 강조한다
+    if (choiceArrayIdx === currentQ.mappedAnswer) {
+      return isCorrect || revealed[currentIdx] ? 'correct' : 'default';
+    }
     if (selectedIdx === choiceArrayIdx) return 'wrong';
     return 'default';
   };
@@ -140,11 +187,17 @@ export default function QuizScreen() {
 
   /** 다음 문제 이동 또는 결과 화면 */
   const moveNext = async (finalCorrect: number) => {
+    if (finishingRef.current) return;
     sheetRef.current?.close();
 
     if (currentIdx + 1 >= total) {
-      // 모든 문제 완료 — 실제 푼 문제 수 기준으로 최종 반영
-      await updateSessionProgress(sessionId, answeredCountRef.current, finalCorrect);
+      if (!beginFinish()) return;
+      // 모든 문제 완료 — 마지막 응답 저장이 끝난 뒤, 실제 푼 문제 수 기준으로 최종 반영
+      await pendingSave.current;
+      await Promise.all([
+        updateSessionProgress(sessionId, answeredCountRef.current, finalCorrect),
+        wait(FINISH_DELAY),
+      ]);
       router.replace({
         pathname: '/result',
         params: { sessionId, categoryId },
@@ -167,14 +220,22 @@ export default function QuizScreen() {
       setCorrectCount(correctCountRef.current);
     }
 
+    // 피드백: 햅틱 → (오답이면) 정답 강조 → 해설 시트
+    hapticAnswerResult(correct);
+    const idx = currentIdx;
+    if (!correct) {
+      later(() => setRevealed((prev) => ({ ...prev, [idx]: true })), REVEAL_CORRECT_DELAY);
+    }
+    later(() => sheetRef.current?.expand(), correct ? SHEET_DELAY_CORRECT : SHEET_DELAY_WRONG);
+
     const mappedExplanation = mapExplanationSymbols(
       currentQ.original.explanation,
       currentQ.original.choices,
       currentQ.shuffledChoices
     );
 
-    await persistAnswer(choiceArrayIdx, correct, mappedExplanation);
-    sheetRef.current?.expand();
+    pendingSave.current = persistAnswer(choiceArrayIdx, correct, mappedExplanation);
+    await pendingSave.current;
   };
 
   /** 일괄 확인 모드: 이전 문제로 이동 */
@@ -201,6 +262,9 @@ export default function QuizScreen() {
 
   /** 일괄 확인 모드: 모든 응답을 한 번에 저장하고 결과 화면으로 이동 */
   const finalizeDeferred = async () => {
+    if (!beginFinish()) return;
+    const startedAt = Date.now();
+
     // 실제로 응답한 문제 인덱스(오름차순)
     const answeredIndices = Object.keys(selections)
       .map(Number)
@@ -244,6 +308,8 @@ export default function QuizScreen() {
     }
 
     await updateSessionProgress(sessionId, answeredIndices.length, correct);
+    // 저장이 빨리 끝나도 진행바가 끝까지 차는 모습은 보여 준다
+    await wait(Math.max(0, FINISH_DELAY - (Date.now() - startedAt)));
     router.replace({
       pathname: '/result',
       params: { sessionId, categoryId },
@@ -268,6 +334,7 @@ export default function QuizScreen() {
           total={total}
           correctCount={correctCount}
           showScore={mode === 'immediate'}
+          complete={finishing}
         />
 
         {/* 문제가 바뀔 때마다 새로 마운트되어 방향에 맞는 진입 애니메이션을 재생 */}
@@ -325,6 +392,7 @@ export default function QuizScreen() {
             label={currentIdx + 1 >= total ? '결과 확인' : '다음 문제'}
             onPress={goToNext}
             disabled={selectedIdx === null}
+            loading={finishing}
             size="lg"
             style={styles.barButton}
           />
@@ -344,6 +412,7 @@ export default function QuizScreen() {
           <NordButton
             label={currentIdx + 1 >= total ? '결과 보기' : '다음 문제'}
             onPress={handleExplanationNext}
+            loading={finishing}
             size="lg"
             style={styles.barButton}
           />

@@ -25,6 +25,8 @@ interface QuizSetupModalProps {
   preSelectedFileId?: string; // 단일 파일 선택 모드
   onConfirm: (options: QuizSetupOptions) => void;
   onClose: () => void;
+  loading?: boolean;          // 문제를 준비하는 중 (시작 버튼 로딩, 닫기 잠금)
+  onHidden?: () => void;      // 닫힘 애니메이션이 끝난 뒤 호출
 }
 
 const COUNT_OPTIONS = [5, 10, 15, 20, 30, 50] as const;
@@ -37,6 +39,8 @@ export function QuizSetupModal({
   preSelectedFileId,
   onConfirm,
   onClose,
+  loading = false,
+  onHidden,
 }: QuizSetupModalProps) {
   const [selectedCount, setSelectedCount] = useState<number | 'all'>(10);
   const [mode, setMode] = useState<'immediate' | 'deferred'>('deferred');
@@ -68,11 +72,17 @@ export function QuizSetupModal({
 
   const canConfirm = isRandom ? selectedFileIds.length > 0 : true;
 
+  // 문제를 준비하는 동안에는 닫지 않는다 (준비가 끝나면 부모가 닫고 퀴즈로 이동)
+  const handleClose = () => {
+    if (!loading) onClose();
+  };
+
   return (
     <Modal
       isVisible={visible}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
+      onBackdropPress={handleClose}
+      onBackButtonPress={handleClose}
+      onModalHide={onHidden}
       backdropOpacity={0.45}
       animationIn="slideInUp"
       animationOut="slideOutDown"
@@ -84,7 +94,8 @@ export function QuizSetupModal({
         <View style={styles.header}>
           <Text style={styles.title}>퀴즈 설정</Text>
           <TouchableOpacity
-            onPress={onClose}
+            onPress={handleClose}
+            disabled={loading}
             hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
             accessibilityRole="button"
             accessibilityLabel="닫기"
@@ -197,6 +208,7 @@ export function QuizSetupModal({
           label={canConfirm ? '퀴즈 시작' : '파일을 선택해주세요'}
           onPress={handleConfirm}
           disabled={!canConfirm || effectiveTotal === 0}
+          loading={loading}
           fullWidth
           size="lg"
           style={styles.startButton}

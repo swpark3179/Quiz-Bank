@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useNavigation, useFocusEffect } from 'expo-router';
@@ -14,6 +15,7 @@ import { fetchCategories, fetchQuizFiles, QuizFile } from '@/lib/local/categorie
 import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown, QuizQuestion } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
+import type { QuizSetup } from '@/lib/quiz/retry';
 import { fetchCategorySummary, } from '@/lib/db/stats';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { QuizSetupModal, QuizSetupOptions } from '@/components/QuizSetupModal';
@@ -34,6 +36,10 @@ export default function CategoryScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isRandom, setIsRandom] = useState(false);
   const [selectedFileForSetup, setSelectedFileForSetup] = useState<QuizFile | null>(null);
+  // 설정 시트에서 '퀴즈 시작'을 누른 뒤 문제를 준비하는 중
+  const [preparingQuiz, setPreparingQuiz] = useState(false);
+  // 준비가 끝난 퀴즈 — 시트 닫힘 애니메이션이 끝나면 이동한다
+  const pendingQuizRef = useRef<QuizSetup | null>(null);
 
   useEffect(() => {
     if (categoryId) {
@@ -87,8 +93,14 @@ export default function CategoryScreen() {
     setModalVisible(true);
   };
 
+  /**
+   * 설정 시트 '퀴즈 시작': 시트를 연 채 버튼에 로딩을 보이며 문제를 준비하고,
+   * 준비가 끝나면 시트를 닫는다. 실제 이동은 닫힘 애니메이션이 끝난 뒤(handleSetupHidden).
+   * 시트가 닫히는 움직임과 퀴즈 화면이 들어오는 움직임이 겹치거나, 그 사이에 빈 시간이 생기지 않게 한다.
+   */
   const handleSetupConfirm = async (options: QuizSetupOptions) => {
-    setModalVisible(false);
+    if (preparingQuiz) return;
+    setPreparingQuiz(true);
 
     try {
       // 선택된 파일들 로드 & 파싱
@@ -109,21 +121,30 @@ export default function CategoryScreen() {
 
       const shuffled = shuffleQuiz(allQuestions, options.count === 'all' ? undefined : options.count);
 
-      // 퀴즈 화면으로 이동 (state 전달)
-      router.push({
-        pathname: `/${categoryId}/quiz`,
-        params: {
-          setup: JSON.stringify({
-            shuffled,
-            mode: options.mode,
-            categoryId,
-            sourceFileIds: fileIds,
-          }),
-        },
-      });
+      pendingQuizRef.current = {
+        shuffled,
+        mode: options.mode,
+        categoryId,
+        sourceFileIds: fileIds,
+      };
+      setModalVisible(false);
     } catch (e) {
       console.error('퀴즈 준비 오류:', e);
+      Alert.alert('오류', '문제를 불러오지 못했습니다.');
+    } finally {
+      setPreparingQuiz(false);
     }
+  };
+
+  /** 설정 시트가 완전히 닫힌 뒤: 준비된 퀴즈가 있으면 퀴즈 화면으로 이동 (state 전달) */
+  const handleSetupHidden = () => {
+    const setup = pendingQuizRef.current;
+    if (!setup) return;
+    pendingQuizRef.current = null;
+    router.push({
+      pathname: `/${categoryId}/quiz`,
+      params: { setup: JSON.stringify(setup) },
+    });
   };
 
   const totalFileCount = files.length;
@@ -261,6 +282,8 @@ export default function CategoryScreen() {
         preSelectedFileId={selectedFileForSetup?.id}
         onConfirm={handleSetupConfirm}
         onClose={() => setModalVisible(false)}
+        loading={preparingQuiz}
+        onHidden={handleSetupHidden}
       />
     </SafeAreaView>
   );

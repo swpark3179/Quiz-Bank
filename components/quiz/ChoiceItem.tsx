@@ -1,6 +1,16 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
+import { Motion } from '@/lib/theme/motion';
 import type { Choice } from '@/lib/parser/quizParser';
 import { stripChoiceSymbol } from '@/lib/utils/quizUtils';
 import { InlineCodeText } from '@/components/InlineCodeText';
@@ -98,37 +108,80 @@ export function ChoiceItem({
   const choiceLabelText = stripChoiceSymbol(choice.label);
   const accessibilityLabelText = `보기 ${sym}, ${choiceLabelText}, ${stateLabels[state]}`;
 
+  // 채점 결과는 색과 함께 아이콘으로도 표시한다
+  const isCorrectState = state === 'correct' || state === 'reveal-correct';
+  const markIcon = isCorrectState ? 'checkmark' : state === 'wrong' ? 'close' : null;
+
+  // 채점 피드백 모션: 오답은 가로로 흔들리고(40 + 80×3 + 40 = 320ms),
+  // 정답·오답 아이콘은 스프링으로 튀어나온다. 상태가 '바뀔 때'만 재생한다.
+  const shakeX = useSharedValue(0);
+  const markScale = useSharedValue(1);
+  const prevState = useRef(state);
+
+  useEffect(() => {
+    const prev = prevState.current;
+    prevState.current = state;
+    if (prev === state) return;
+
+    if (state === 'wrong') {
+      shakeX.set(
+        withSequence(
+          withTiming(-8, { duration: 40 }),
+          withRepeat(withTiming(8, { duration: 80 }), 3, true),
+          withTiming(0, { duration: 40 })
+        )
+      );
+    }
+    if (state === 'wrong' || state === 'correct' || state === 'reveal-correct') {
+      markScale.set(withSequence(withTiming(0.4, { duration: 0 }), withSpring(1, Motion.spring.pop)));
+    }
+  }, [state, shakeX, markScale]);
+
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.get() }],
+  }));
+  const markStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: markScale.get() }],
+  }));
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={onPress}
-      disabled={isDisabled}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabelText}
-      accessibilityState={{
-        disabled: !!isDisabled,
-        selected: state === 'selected' || state === 'correct' || state === 'wrong',
-      }}
-      style={[styles.container, s.container]}
-    >
-      <View
-        style={[
-          styles.symbolBox,
-          { backgroundColor: s.symbolBg, borderColor: s.container.borderColor },
-        ]}
+    <Animated.View style={shakeStyle}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={onPress}
+        disabled={isDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabelText}
+        accessibilityState={{
+          disabled: !!isDisabled,
+          selected: state === 'selected' || state === 'correct' || state === 'wrong',
+        }}
+        style={[styles.container, s.container]}
       >
-        <Text style={[styles.symbol, s.symbol]}>{sym}</Text>
-      </View>
-      <View style={styles.textBox}>
-        <InlineCodeText style={[styles.label, s.text]} text={choiceLabelText} />
-        {choice.description ? (
-          <InlineCodeText
-            style={[styles.description, { color: s.text.color ?? Colors.text.secondary }]}
-            text={choice.description}
-          />
-        ) : null}
-      </View>
-    </TouchableOpacity>
+        <Animated.View
+          style={[
+            styles.symbolBox,
+            { backgroundColor: s.symbolBg, borderColor: s.container.borderColor },
+            markStyle,
+          ]}
+        >
+          {markIcon ? (
+            <Ionicons name={markIcon} size={18} color="#FFFFFF" />
+          ) : (
+            <Text style={[styles.symbol, s.symbol]}>{sym}</Text>
+          )}
+        </Animated.View>
+        <View style={styles.textBox}>
+          <InlineCodeText style={[styles.label, s.text]} text={choiceLabelText} />
+          {choice.description ? (
+            <InlineCodeText
+              style={[styles.description, { color: s.text.color ?? Colors.text.secondary }]}
+              text={choice.description}
+            />
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 

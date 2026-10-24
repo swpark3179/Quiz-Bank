@@ -12,23 +12,77 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '@gorhom/bottom-sheet';
 import Svg, { Circle } from 'react-native-svg';
+import Animated, {
+  Easing,
+  FadeInDown,
+  useAnimatedProps,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { fetchSession, fetchAnswers } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { Motion, staggerDelay } from '@/lib/theme/motion';
 import { NordButton } from '@/components/ui/NordButton';
 import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
 
-/** 점수 링 — react-native-svg 기반 도넛 게이지 */
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/**
+ * 순차 등장: 아래에서 올라오며 페이드.
+ * withInitialValues 로 이동 거리를 줄이면 웹에서 사용자 정의 키프레임이 되어,
+ * 애니메이션 도중 화면을 떠날 때 reanimated(4.1) 웹 정리 코드가 오류를 낸다 → 기본 FadeInDown 사용.
+ */
+const enterFromBelow = (delay: number) =>
+  FadeInDown.delay(delay).duration(240).easing(Motion.easing.standard);
+
+/**
+ * 점수 링 — react-native-svg 기반 도넛 게이지.
+ * 결과 화면에 들어오면 0에서 점수까지 링이 차오르고, 가운데 숫자도 같은 시간·곡선으로 올라간다.
+ */
 function ScoreRing({ pct, color }: { pct: number; color: string }) {
   const size = 132, stroke = 11, r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - pct / 100);
+
+  const reduceMotion = useReducedMotion();
+  const progress = useSharedValue(0);
+  const [shownPct, setShownPct] = useState(reduceMotion ? pct : 0);
+
+  useEffect(() => {
+    progress.set(
+      withTiming(pct / 100, { duration: Motion.duration.emphasis, easing: Easing.out(Easing.cubic) })
+    );
+  }, [pct, progress]);
+
+  // 숫자 카운트업 (ease-out cubic, 링과 동일)
+  useEffect(() => {
+    if (reduceMotion) return;
+    const startedAt = Date.now();
+    let frame = 0;
+    const tick = () => {
+      const t = Math.min(1, (Date.now() - startedAt) / Motion.duration.emphasis);
+      setShownPct(Math.round(pct * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [pct, reduceMotion]);
+
+  const ringProps = useAnimatedProps(() => ({
+    strokeDashoffset: circ * (1 - progress.get()),
+  }));
+
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+      accessible
+      accessibilityLabel={`정답률 ${pct}퍼센트`}
+    >
       <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke="#D7DEE9" strokeWidth={stroke} fill="none" />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -37,10 +91,10 @@ function ScoreRing({ pct, color }: { pct: number; color: string }) {
           fill="none"
           strokeLinecap="round"
           strokeDasharray={circ}
-          strokeDashoffset={offset}
+          animatedProps={ringProps}
         />
       </Svg>
-      <Text style={{ fontSize: 32, fontWeight: '800', color }}>{pct}%</Text>
+      <Text style={{ fontSize: 32, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{shownPct}%</Text>
       <Text style={{ fontSize: 11, color: Colors.text.secondary }}>정답률</Text>
     </View>
   );
@@ -127,26 +181,36 @@ export default function ResultScreen() {
 
           {/* 상세 수치 — 분리된 색 카드 */}
           <View style={styles.statsRow}>
-            <View style={[styles.statCard, styles.statCardTotal]}>
+            <Animated.View
+              entering={enterFromBelow(staggerDelay(0, 200))}
+              style={[styles.statCard, styles.statCardTotal]}
+            >
               <Text style={styles.statNum}>{session.total}</Text>
               <Text style={styles.statLabel}>총 문제</Text>
-            </View>
-            <View style={[styles.statCard, styles.statCardCorrect]}>
+            </Animated.View>
+            <Animated.View
+              entering={enterFromBelow(staggerDelay(1, 200))}
+              style={[styles.statCard, styles.statCardCorrect]}
+            >
               <Text style={[styles.statNum, { color: Colors.status.correct }]}>{session.correct}</Text>
               <Text style={styles.statLabel}>정답</Text>
-            </View>
-            <View style={[styles.statCard, styles.statCardWrong]}>
+            </Animated.View>
+            <Animated.View
+              entering={enterFromBelow(staggerDelay(2, 200))}
+              style={[styles.statCard, styles.statCardWrong]}
+            >
               <Text style={[styles.statNum, { color: Colors.status.wrong }]}>{wrongCount}</Text>
               <Text style={styles.statLabel}>오답</Text>
-            </View>
+            </Animated.View>
           </View>
         </View>
 
         {/* 문제별 결과 목록 */}
         <Text style={styles.sectionTitle}>문제별 결과</Text>
         {answers.map((ans, i) => (
-          <View
+          <Animated.View
             key={ans.id}
+            entering={enterFromBelow(staggerDelay(i, 400))}
             style={[
               styles.answerRow,
               { borderLeftColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
@@ -186,7 +250,7 @@ export default function ResultScreen() {
             >
               <Text style={styles.explanationBtnText}>해설</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ))}
 
         {/* 액션 버튼 */}
