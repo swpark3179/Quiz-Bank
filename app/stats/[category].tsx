@@ -14,11 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchSessionStats, fetchCategorySummary, fetchQuestionStats } from '@/lib/db/stats';
 import { clearCategorySessions } from '@/lib/db';
 import type { SessionStat, CategorySummary, QuestionStat } from '@/lib/db/stats';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
 import { fetchQuizFiles, QuizFile } from '@/lib/local/categories';
 import { NordButton } from '@/components/ui/NordButton';
 import { BottomActionBar } from '@/components/ui/BottomActionBar';
+import { ScreenSkeleton } from '@/components/ui/Skeleton';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
@@ -112,7 +114,7 @@ export default function StatsScreen() {
   }, [navigation, categoryId, loadData]);
 
   if (loading || !summary) {
-    return <View style={styles.safeArea} />;
+    return <ScreenSkeleton summaryHeight={160} rows={3} />;
   }
 
   const overallPct = Math.round(summary.overallAccuracy * 100);
@@ -203,237 +205,216 @@ export default function StatsScreen() {
   const chartData = stats.slice(-15).map((s, i) => ({
     value: Math.round(s.accuracy * 100),
     label: `#${stats.length - stats.slice(-15).length + i + 1}`,
-    frontColor:
-      s.accuracy >= 0.8
-        ? Colors.status.correct
-        : s.accuracy >= 0.6
-        ? Colors.status.warning
-        : Colors.status.wrong,
+    frontColor: accuracyTone(Math.round(s.accuracy * 100)).color,
   }));
 
   return (
     <View style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* 로딩 골격에서 콘텐츠로 짧게 페이드 교체 */}
+      <Animated.View entering={FadeIn.duration(160)} style={styles.fill}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* 전체 요약 카드 */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.cardTitle}>전체 통계</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{summary.totalSessions}</Text>
-              <Text style={styles.statLabel}>총 풀이 횟수</Text>
+          {/* 전체 요약 카드 */}
+          <View style={styles.summaryCard}>
+            <Text style={styles.cardTitle}>전체 통계</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{summary.totalSessions}</Text>
+                <Text style={styles.statLabel}>총 풀이 횟수</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{summary.totalQuestions}</Text>
+                <Text style={styles.statLabel}>총 문제 수</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: accuracyTone(overallPct).color }]}>
+                  {overallPct}%
+                </Text>
+                <Text style={styles.statLabel}>전체 정답률 · {accuracyTone(overallPct).label}</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{summary.totalQuestions}</Text>
-              <Text style={styles.statLabel}>총 문제 수</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text
-                style={[
-                  styles.statValue,
-                  {
-                    color:
-                      overallPct >= 80
-                        ? Colors.status.correct
-                        : overallPct >= 60
-                        ? Colors.status.warning
-                        : Colors.status.wrong,
-                  },
-                ]}
-              >
-                {overallPct}%
-              </Text>
-              <Text style={styles.statLabel}>전체 정답률</Text>
+
+            {/* 최근 정답률 */}
+            <View style={styles.recentRow}>
+              <Text style={styles.recentLabel}>최근 5회 평균</Text>
+              <NordBadge
+                label={`${recentPct}%`}
+                variant={accuracyTone(recentPct).badge}
+              />
             </View>
           </View>
 
-          {/* 최근 정답률 */}
-          <View style={styles.recentRow}>
-            <Text style={styles.recentLabel}>최근 5회 평균</Text>
-            <NordBadge
-              label={`${recentPct}%`}
-              variant={
-                recentPct >= 80 ? 'success' : recentPct >= 60 ? 'warning' : 'error'
-              }
-            />
-          </View>
-        </View>
+          {/* 차트 */}
+          {chartData.length > 0 ? (
+            <View style={styles.chartCard}>
+              <Text style={styles.cardTitle}>차수별 정답률 추이</Text>
+              <Text style={styles.chartSubtitle}>최근 {chartData.length}회</Text>
+              <BarChart
+                data={chartData}
+                width={SCREEN_WIDTH - Spacing.base * 2 - Spacing.xl * 2}
+                height={200}
+                barWidth={Math.max(20, (SCREEN_WIDTH - 100) / Math.max(chartData.length, 1))}
+                maxValue={100}
+                noOfSections={5}
+                yAxisThickness={0}
+                xAxisThickness={1}
+                xAxisColor={Colors.border}
+                yAxisTextStyle={{
+                  color: Colors.text.secondary,
+                  fontSize: Typography.size.xs,
+                }}
+                xAxisLabelTextStyle={{
+                  color: Colors.text.secondary,
+                  fontSize: Typography.size.xs,
+                }}
+                rulesColor={Colors.divider}
+                rulesType="solid"
+                showValuesAsTopLabel
+                topLabelTextStyle={{
+                  color: Colors.text.secondary,
+                  fontSize: Typography.size.xs,
+                  fontWeight: Typography.weight.bold,
+                }}
+                renderTooltip={(item: any) => (
+                  <View style={styles.tooltip}>
+                    <Text style={styles.tooltipText}>{item.value}%</Text>
+                  </View>
+                )}
+              />
+            </View>
+          ) : (
+            <View style={styles.emptyChart}>
+              <Text style={styles.emptyText}>아직 풀이 이력이 없습니다.</Text>
+              <Text style={styles.emptySubtext}>퀴즈를 풀어보면 여기에 통계가 표시됩니다.</Text>
+            </View>
+          )}
 
-        {/* 차트 */}
-        {chartData.length > 0 ? (
-          <View style={styles.chartCard}>
-            <Text style={styles.cardTitle}>차수별 정답률 추이</Text>
-            <Text style={styles.chartSubtitle}>최근 {chartData.length}회</Text>
-            <BarChart
-              data={chartData}
-              width={SCREEN_WIDTH - Spacing.base * 2 - Spacing.xl * 2}
-              height={200}
-              barWidth={Math.max(20, (SCREEN_WIDTH - 100) / Math.max(chartData.length, 1))}
-              maxValue={100}
-              noOfSections={5}
-              yAxisThickness={0}
-              xAxisThickness={1}
-              xAxisColor={Colors.border}
-              yAxisTextStyle={{
-                color: Colors.text.secondary,
-                fontSize: Typography.size.xs,
-              }}
-              xAxisLabelTextStyle={{
-                color: Colors.text.secondary,
-                fontSize: Typography.size.xs,
-              }}
-              rulesColor={Colors.divider}
-              rulesType="solid"
-              showValuesAsTopLabel
-              topLabelTextStyle={{
-                color: Colors.text.secondary,
-                fontSize: Typography.size.xs,
-                fontWeight: Typography.weight.bold,
-              }}
-              renderTooltip={(item: any) => (
-                <View style={styles.tooltip}>
-                  <Text style={styles.tooltipText}>{item.value}%</Text>
-                </View>
-              )}
-            />
-          </View>
-        ) : (
-          <View style={styles.emptyChart}>
-            <Text style={styles.emptyText}>아직 풀이 이력이 없습니다.</Text>
-            <Text style={styles.emptySubtext}>퀴즈를 풀어보면 여기에 통계가 표시됩니다.</Text>
-          </View>
-        )}
-
-        {/* 최근 차수 목록 */}
-        {stats.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>최근 풀이 목록</Text>
-            {[...stats].reverse().slice(0, 10).map((s, i) => {
-              const pct = Math.round(s.accuracy * 100);
-              return (
-                <View key={s.session_id} style={styles.sessionRow}>
-                  <Text style={styles.sessionIdx}>#{stats.length - i}</Text>
-                  <View style={styles.sessionBar}>
-                    <View
-                      style={[
-                        styles.sessionFill,
-                        {
-                          width: `${s.accuracy * 100}%` as any,
-                          backgroundColor:
-                            s.accuracy >= 0.8
-                              ? Colors.status.correct
-                              : s.accuracy >= 0.6
-                              ? Colors.status.warning
-                              : Colors.status.wrong,
-                        },
-                      ]}
+          {/* 최근 차수 목록 */}
+          {stats.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>최근 풀이 목록</Text>
+              {[...stats].reverse().slice(0, 10).map((s, i) => {
+                const pct = Math.round(s.accuracy * 100);
+                return (
+                  <View key={s.session_id} style={styles.sessionRow}>
+                    <Text style={styles.sessionIdx}>#{stats.length - i}</Text>
+                    <View style={styles.sessionBar}>
+                      <View
+                        style={[
+                          styles.sessionFill,
+                          {
+                            width: `${s.accuracy * 100}%` as any,
+                            backgroundColor: accuracyTone(pct).color,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.sessionPct}>{pct}%</Text>
+                    <NordBadge
+                      label={`${s.correct}/${s.total}`}
+                      variant="neutral"
+                      size="sm"
                     />
                   </View>
-                  <Text style={styles.sessionPct}>{pct}%</Text>
-                  <NordBadge
-                    label={`${s.correct}/${s.total}`}
-                    variant="neutral"
-                    size="sm"
-                  />
-                </View>
-              );
-            })}
-          </>
-        )}
-
-        {/* 문제별 통계 및 재풀이 선택 */}
-        {files.length > 0 && (
-          <View style={styles.questionStatsSection}>
-            <Text style={styles.sectionTitle}>문제별 통계 및 다시 풀기</Text>
-
-            <View style={styles.fileSelectionArea}>
-              <Text style={styles.subsectionLabel}>문제 파일 선택</Text>
-              {files.map((file) => {
-                const isSelected = selectedFileIds.includes(file.id);
-                return (
-                  <TouchableOpacity
-                    key={file.id}
-                    style={[styles.fileChip, isSelected && styles.fileChipSelected]}
-                    onPress={() => toggleFileSelection(file.id)}
-                    activeOpacity={0.8}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isSelected }}
-                    accessibilityLabel={file.name}
-                  >
-                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                      {isSelected && <Text style={styles.checkMark}>✓</Text>}
-                    </View>
-                    <Text style={[styles.fileName, isSelected && { color: Colors.accent.primary }]}>
-                      {file.name}
-                    </Text>
-                  </TouchableOpacity>
                 );
               })}
-            </View>
+            </>
+          )}
 
-            {loadingQuestionStats && (
-              <Text style={styles.loadingText}>문제 통계를 불러오는 중...</Text>
-            )}
+          {/* 문제별 통계 및 재풀이 선택 */}
+          {files.length > 0 && (
+            <View style={styles.questionStatsSection}>
+              <Text style={styles.sectionTitle}>문제별 통계 및 다시 풀기</Text>
 
-            {!loadingQuestionStats && selectedFileIds.length > 0 && (
-              <View style={styles.questionListArea}>
-                {selectedFileIds.map((fileId) => {
-                  const file = files.find((f) => f.id === fileId);
-                  const fileQStats = questionStats.filter((q) => q.source_file_id === fileId);
-
-                  if (!file || fileQStats.length === 0) return null;
-
+              <View style={styles.fileSelectionArea}>
+                <Text style={styles.subsectionLabel}>문제 파일 선택</Text>
+                {files.map((file) => {
+                  const isSelected = selectedFileIds.includes(file.id);
                   return (
-                    <View key={fileId} style={styles.fileQuestionGroup}>
-                      <View style={styles.fileQuestionHeader}>
-                        <Text style={styles.fileQuestionTitle}>{file.name}</Text>
-                        <TouchableOpacity
-                          onPress={() => toggleAllQuestionsForFile(fileId)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${file.name} 전체 선택 및 해제`}
-                        >
-                          <Text style={styles.selectAllText}>전체 선택/해제</Text>
-                        </TouchableOpacity>
+                    <TouchableOpacity
+                      key={file.id}
+                      style={[styles.fileChip, isSelected && styles.fileChipSelected]}
+                      onPress={() => toggleFileSelection(file.id)}
+                      activeOpacity={0.8}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isSelected }}
+                      accessibilityLabel={file.name}
+                    >
+                      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                        {isSelected && <Ionicons name="checkmark" size={14} color={Colors.text.inverse} />}
                       </View>
-
-                      {fileQStats.map((q) => {
-                        const key = `${fileId}_${q.question_id}`;
-                        const isSelected = selectedQuestionKeys.includes(key);
-                        const pct = Math.round(q.accuracy * 100);
-
-                        return (
-                          <TouchableOpacity
-                            key={key}
-                            style={[styles.questionRow, isSelected && styles.questionRowSelected]}
-                            onPress={() => toggleQuestionSelection(fileId, q.question_id)}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: isSelected }}
-                            accessibilityLabel={`${q.question_id}번 문제, 정답률 ${pct}%`}
-                          >
-                            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                              {isSelected && <Text style={styles.checkMark}>✓</Text>}
-                            </View>
-                            <Text style={styles.questionIdText}>{q.question_id}번 문제</Text>
-                            <View style={styles.spacer} />
-                            <Text style={styles.questionAccuracyText}>정답률: {pct}%</Text>
-                            <NordBadge
-                              label={`${q.correct_attempts}/${q.total_attempts}`}
-                              variant={pct >= 80 ? 'success' : pct >= 50 ? 'warning' : 'error'}
-                              size="sm"
-                            />
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                      <Text style={[styles.fileName, isSelected && { color: Colors.accent.primary }]}>
+                        {file.name}
+                      </Text>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
+
+              {loadingQuestionStats && (
+                <Text style={styles.loadingText}>문제 통계를 불러오는 중...</Text>
+              )}
+
+              {!loadingQuestionStats && selectedFileIds.length > 0 && (
+                <View style={styles.questionListArea}>
+                  {selectedFileIds.map((fileId) => {
+                    const file = files.find((f) => f.id === fileId);
+                    const fileQStats = questionStats.filter((q) => q.source_file_id === fileId);
+
+                    if (!file || fileQStats.length === 0) return null;
+
+                    return (
+                      <View key={fileId} style={styles.fileQuestionGroup}>
+                        <View style={styles.fileQuestionHeader}>
+                          <Text style={styles.fileQuestionTitle}>{file.name}</Text>
+                          <NordButton
+                            label="전체 선택/해제"
+                            variant="ghost"
+                            size="sm"
+                            onPress={() => toggleAllQuestionsForFile(fileId)}
+                            accessibilityLabel={`${file.name} 전체 선택 및 해제`}
+                          />
+                        </View>
+
+                        {fileQStats.map((q) => {
+                          const key = `${fileId}_${q.question_id}`;
+                          const isSelected = selectedQuestionKeys.includes(key);
+                          const pct = Math.round(q.accuracy * 100);
+
+                          return (
+                            <TouchableOpacity
+                              key={key}
+                              style={[styles.questionRow, isSelected && styles.questionRowSelected]}
+                              onPress={() => toggleQuestionSelection(fileId, q.question_id)}
+                              accessibilityRole="checkbox"
+                              accessibilityState={{ checked: isSelected }}
+                              accessibilityLabel={`${q.question_id}번 문제, 정답률 ${pct}%`}
+                            >
+                              <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                                {isSelected && <Ionicons name="checkmark" size={14} color={Colors.text.inverse} />}
+                              </View>
+                              <Text style={styles.questionIdText}>{q.question_id}번 문제</Text>
+                              <View style={styles.spacer} />
+                              <Text style={styles.questionAccuracyText}>정답률: {pct}%</Text>
+                              <NordBadge
+                                label={`${q.correct_attempts}/${q.total_attempts}`}
+                                variant={accuracyTone(pct).badge}
+                                size="sm"
+                              />
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </Animated.View>
 
       {/* 선택한 문제 다시 풀기 — 목록이 길어도 보이도록 화면 하단 고정 */}
       {selectedQuestionKeys.length > 0 && (
@@ -454,6 +435,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.bg.primary,
+  },
+  fill: {
+    flex: 1,
   },
   content: {
     padding: Spacing.base,
@@ -631,11 +615,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.accent.primary,
     backgroundColor: Colors.accent.primary,
   },
-  checkMark: {
-    color: Colors.text.inverse,
-    fontSize: 12,
-    fontWeight: Typography.weight.bold,
-  },
   fileName: {
     fontSize: Typography.size.sm,
     color: Colors.text.primary,
@@ -671,10 +650,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.bold,
     color: Colors.text.primary,
-  },
-  selectAllText: {
-    fontSize: Typography.size.xs,
-    color: Colors.accent.primary,
   },
   questionRow: {
     flexDirection: 'row',

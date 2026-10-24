@@ -56,19 +56,21 @@ export const Colors = {
   accent: {
     primary: '#4C6F9C',      // ← Nord.nord10(#5E81AC) 다크닝 · 버튼/선택/링크
     primaryFill: Nord.nord10,// 밝은 채움이 필요할 때
-    secondary: Nord.nord9,   // 보조 강조
+    deep: '#2C4B73',         // 옅은 파랑(#EAF1FB) 위 글자·아이콘
+    secondary: Nord.nord9,   // 보조 강조 — 글자색으로 쓰지 말 것 (흰 배경 대비 2.7:1)
     light: Nord.nord8,       // 밝은 강조
   },
 
   // Status
   status: {
-    correct: '#5E7E3E',      // ← 텍스트/아이콘/보더용 다크닝 (was nord14)
+    correct: '#4F6B33',      // 텍스트/아이콘 — 흰 배경 6.0:1, correctBg 위 5.2:1 (was #5E7E3E: 배지 위 4.0:1)
     correctBg: '#E7F1E0',
     correctBorder: '#9DB87E',
     wrong: '#B0414B',        // ← 다크닝 (was nord11)
     wrongBg: '#FBEAEB',
     wrongBorder: '#DBA9AE',
-    warning: Nord.nord12,    // 경고
+    warning: '#7A5F08',      // 정답률 '보통' — 흰 배경 6.0:1 (was nord12 #D08770: 2.8:1)
+    warningBg: '#FBF3DE',
     neutral: Nord.nord13,    // 미채점
     special: Nord.nord15,    // 특수
   },

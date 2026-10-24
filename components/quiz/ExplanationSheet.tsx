@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { MarkdownViewer } from '../MarkdownViewer';
 import { NordButton } from '../ui/NordButton';
+import { sheetStyles } from '../ui/SheetParts';
 
 interface ExplanationSheetProps {
   sheetRef: React.RefObject<BottomSheet | null>;
@@ -63,27 +64,40 @@ export function ExplanationSheet({
       ref={sheetRef}
       index={-1}
       snapPoints={snapPoints}
-      enablePanDownToClose={false}
+      // 닫아도 하단 바의 '해설 다시 보기'로 다시 열 수 있다
+      enablePanDownToClose
       backdropComponent={renderBackdrop}
-      handleIndicatorStyle={styles.handle}
-      backgroundStyle={styles.background}
+      handleIndicatorStyle={sheetStyles.handleIndicator}
+      backgroundStyle={[sheetStyles.background, styles.background]}
       onAnimate={handleAnimate}
     >
       <BottomSheetScrollView
         ref={scrollRef as never}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* 솔리드 결과 헤더 */}
+        {/* 결과 상태 카드 — 옅은 배경 + 아이콘 + 문구 (꽉 찬 색 띠 대신) */}
         <View
           style={[
             styles.resultHeader,
-            { backgroundColor: isCorrect ? Colors.status.correct : Colors.status.wrong },
+            isCorrect ? styles.resultHeaderCorrect : styles.resultHeaderWrong,
           ]}
         >
-          <View style={styles.resultIcon}>
-            <Ionicons name={isCorrect ? 'checkmark' : 'close'} size={26} color="#FFFFFF" />
+          <View
+            style={[
+              styles.resultIcon,
+              { backgroundColor: isCorrect ? Colors.status.correct : Colors.status.wrong },
+            ]}
+          >
+            <Ionicons name={isCorrect ? 'checkmark' : 'close'} size={22} color={Colors.text.inverse} />
           </View>
-          <Text style={styles.resultTitle}>{isCorrect ? '정답입니다!' : '오답입니다'}</Text>
+          <Text
+            style={[
+              styles.resultTitle,
+              { color: isCorrect ? Colors.status.correct : Colors.status.wrong },
+            ]}
+          >
+            {isCorrect ? '정답입니다!' : '오답입니다'}
+          </Text>
         </View>
 
         {/* 정답 · 내 선택 칩 */}
@@ -102,7 +116,10 @@ export function ExplanationSheet({
 
         {/* 해설 */}
         <View style={styles.explanationBox}>
-          <Text style={styles.sectionLabel}>📖 해설</Text>
+          <View style={styles.sectionLabelRow}>
+            <Ionicons name="book-outline" size={15} color={Colors.text.secondary} />
+            <Text style={styles.sectionLabel}>해설</Text>
+          </View>
           <View style={styles.explanationCard}>
             <MarkdownViewer content={explanation} />
           </View>
@@ -123,20 +140,11 @@ export function ExplanationSheet({
 
 const styles = StyleSheet.create({
   background: {
-    backgroundColor: Colors.surface.sheet,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
     shadowColor: '#2E3440',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 10,
-  },
-  handle: {
-    backgroundColor: Colors.border,
-    width: 40,
-    height: 4,
-    borderRadius: Radius.full,
   },
   scrollContent: {
     padding: Spacing.base,
@@ -146,24 +154,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.base,
-    marginHorizontal: -Spacing.base,
-    marginTop: -Spacing.xs,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
     marginBottom: Spacing.base,
   },
+  resultHeaderCorrect: {
+    backgroundColor: Colors.status.correctBg,
+    borderColor: Colors.status.correctBorder,
+  },
+  resultHeaderWrong: {
+    backgroundColor: Colors.status.wrongBg,
+    borderColor: Colors.status.wrongBorder,
+  },
   resultIcon: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: Radius.full,
-    backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   resultTitle: {
     fontSize: Typography.size.xl,
     fontWeight: '800',
-    color: '#FFFFFF',
   },
   answerRow: {
     flexDirection: 'row',
@@ -207,13 +220,16 @@ const styles = StyleSheet.create({
   explanationBox: {
     marginBottom: Spacing.xl,
   },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
   sectionLabel: {
     fontSize: Typography.size.sm,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: Spacing.sm,
   },
   nextButton: {
     marginTop: Spacing.sm,

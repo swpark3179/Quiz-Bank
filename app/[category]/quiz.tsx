@@ -1,12 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { usePreventRemove } from '@react-navigation/native';
 import BottomSheet from '@gorhom/bottom-sheet';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import uuid from 'react-native-uuid';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
@@ -21,6 +24,7 @@ import { createSession, saveAnswer, updateSessionProgress } from '@/lib/db/sessi
 import type { QuizSetup } from '@/lib/quiz/retry';
 import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
 import { hapticAnswerResult } from '@/lib/utils/haptics';
+import { confirmAsync } from '@/lib/utils/confirm';
 
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
 
@@ -75,8 +79,43 @@ export default function QuizScreen() {
   // 피드백 연출용 타이머 — 문제를 넘기거나 화면을 떠나면 취소
   const feedbackTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  const navigation = useNavigation();
   const sheetRef = useRef<BottomSheet>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  // 헤더 왼쪽은 '뒤로'가 아니라 '닫기' — 풀이는 들어갔다 나오는 집중 모드
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerBackVisible: false,
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerClose}
+          accessibilityRole="button"
+          accessibilityLabel="퀴즈 그만두기"
+        >
+          <Ionicons name="close" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, router]);
+
+  // 답을 하나라도 고른 뒤 나가려 하면 확인한다 (헤더 닫기, Android 뒤로 가기 모두).
+  // 결과 화면으로 넘어가는 중(finishing)에는 막지 않는다.
+  usePreventRemove(Object.keys(selections).length > 0 && !finishing, ({ data }) => {
+    confirmAsync({
+      title: '퀴즈를 그만둘까요?',
+      message:
+        mode === 'immediate'
+          ? '지금까지 푼 문제는 풀이 이력에 저장돼요.'
+          : '모두 푼 뒤 한 번에 채점하는 방식이라, 지금 나가면 고른 답이 저장되지 않아요.',
+      confirmLabel: '그만두기',
+      cancelLabel: '계속 풀기',
+      destructive: true,
+    }).then((ok) => {
+      if (ok) navigation.dispatch(data.action);
+    });
+  });
   // 문제 이동 방향: 1 = 다음, -1 = 이전, 0 = 첫 문제(진입 애니메이션 없음)
   const [navDir, setNavDir] = useState<1 | -1 | 0>(0);
 
@@ -493,6 +532,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: Spacing.sm,
+  },
+  headerClose: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -Spacing.sm,
   },
   barButton: {
     flex: 1,

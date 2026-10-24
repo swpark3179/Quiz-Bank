@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
+import { Colors, Typography, Spacing, Radius, accuracyTone } from '@/lib/theme';
 import { Motion } from '@/lib/theme/motion';
 
 interface ProgressBarProps {
@@ -34,6 +34,7 @@ export function ProgressBar({ current, total, correctCount, showScore, complete 
   // '현재 내 정답률' 표시 조건: showScore가 켜져 있고, 채점된 문제가 1개 이상일 때
   const scoreVisible = !!showScore && answered > 0 && correctCount !== undefined;
   const accuracy = scoreVisible ? (correctCount as number) / answered : 0;
+  const tone = accuracyTone(Math.round(accuracy * 100));
 
   return (
     <View
@@ -50,9 +51,7 @@ export function ProgressBar({ current, total, correctCount, showScore, complete 
           <Text
             style={[
               styles.accuracy,
-              accuracy >= 0.7
-                ? { color: Colors.status.correct, backgroundColor: Colors.status.correctBg }
-                : { color: Colors.status.wrong, backgroundColor: Colors.status.wrongBg },
+              { color: tone.color, backgroundColor: tone.bg },
             ]}
             accessibilityLabel={`현재 내 정답률 ${Math.round(accuracy * 100)}퍼센트 (${answered}문제 중 ${correctCount}문제 정답)`}
           >

@@ -16,8 +16,8 @@ const variantConfig: Record<BadgeVariant, { bg: string; text: string }> = {
   default:  { bg: Colors.choice.selected,    text: Colors.accent.primary },
   success:  { bg: Colors.status.correctBg,   text: Colors.status.correct },
   error:    { bg: Colors.status.wrongBg,     text: Colors.status.wrong },
-  warning:  { bg: '#FBF3DE',                  text: '#8A6D0A' },
-  info:     { bg: '#EFF4F8',                  text: Colors.accent.secondary },
+  warning:  { bg: Colors.status.warningBg,   text: Colors.status.warning },
+  info:     { bg: '#EFF4F8',                  text: Colors.accent.primary },
   neutral:  { bg: Colors.bg.tertiary,        text: Colors.text.secondary },
 };
 

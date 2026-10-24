@@ -7,8 +7,11 @@ import {
   ScrollView,
 } from 'react-native';
 import Modal from 'react-native-modal';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from './ui/NordButton';
+import { BottomActionBar } from './ui/BottomActionBar';
+import { SheetHandle, SheetHeader, sheetStyles } from './ui/SheetParts';
 import type { QuizFile } from '@/lib/local/categories';
 
 export interface QuizSetupOptions {
@@ -83,32 +86,25 @@ export function QuizSetupModal({
       onBackdropPress={handleClose}
       onBackButtonPress={handleClose}
       onModalHide={onHidden}
-      backdropOpacity={0.45}
+      // 해설 시트처럼 끌어내려 닫을 수 있다 (준비 중에는 잠금)
+      swipeDirection={loading ? undefined : 'down'}
+      onSwipeComplete={handleClose}
+      propagateSwipe
+      backdropOpacity={0.4}
       animationIn="slideInUp"
       animationOut="slideOutDown"
       style={styles.modal}
       avoidKeyboard
     >
-      <View style={styles.container}>
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <Text style={styles.title}>퀴즈 설정</Text>
-          <TouchableOpacity
-            onPress={handleClose}
-            disabled={loading}
-            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel="닫기"
-          >
-            <Text style={styles.closeIcon}>✕</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={[sheetStyles.background, styles.container]}>
+        <SheetHandle />
+        <SheetHeader title="퀴즈 설정" onClose={handleClose} closeDisabled={loading} />
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* 무작위 모드: 파일 다중 선택 */}
           {isRandom && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>📁 문제 파일 선택 (1개 이상)</Text>
+              <Text style={styles.sectionLabel}>문제 파일 선택 (1개 이상)</Text>
               {files.map((file) => {
                 const isSelected = selectedFileIds.includes(file.id);
                 return (
@@ -122,7 +118,7 @@ export function QuizSetupModal({
                     accessibilityLabel={`${file.name}, ${file.questionCount}문제`}
                   >
                     <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                      {isSelected && <Text style={styles.checkMark}>✓</Text>}
+                      {isSelected && <Ionicons name="checkmark" size={15} color={Colors.text.inverse} />}
                     </View>
                     <View style={styles.fileChipText}>
                       <Text style={[styles.fileName, isSelected && { color: Colors.accent.primary }]}>
@@ -138,7 +134,7 @@ export function QuizSetupModal({
 
           {/* 문제 수 선택 */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>🔢 문제 수</Text>
+            <Text style={styles.sectionLabel}>문제 수</Text>
             <View style={styles.countGrid}>
               {COUNT_OPTIONS.filter((c) => c <= effectiveTotal).map((c) => (
                 <TouchableOpacity
@@ -174,7 +170,7 @@ export function QuizSetupModal({
 
           {/* 정답 확인 방식 */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>✅ 정답 확인 방식</Text>
+            <Text style={styles.sectionLabel}>정답 확인 방식</Text>
             {(['deferred', 'immediate'] as const).map((m) => (
               <TouchableOpacity
                 key={m}
@@ -203,16 +199,17 @@ export function QuizSetupModal({
           </View>
         </ScrollView>
 
-        {/* 시작 버튼 */}
-        <NordButton
-          label={canConfirm ? '퀴즈 시작' : '파일을 선택해주세요'}
-          onPress={handleConfirm}
-          disabled={!canConfirm || effectiveTotal === 0}
-          loading={loading}
-          fullWidth
-          size="lg"
-          style={styles.startButton}
-        />
+        {/* 시작 버튼 — 목록이 길어도 항상 보이도록 하단 고정 */}
+        <BottomActionBar>
+          <NordButton
+            label={canConfirm ? '퀴즈 시작' : '파일을 선택해주세요'}
+            onPress={handleConfirm}
+            disabled={!canConfirm || effectiveTotal === 0}
+            loading={loading}
+            size="lg"
+            style={styles.startButton}
+          />
+        </BottomActionBar>
       </View>
     </Modal>
   );
@@ -224,31 +221,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: Colors.bg.primary,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    padding: Spacing.base,
-    paddingBottom: Spacing.xxxl,
     maxHeight: '90%',
+    overflow: 'hidden',
     ...Shadow.lg,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.base,
-    paddingBottom: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.divider,
-  },
-  title: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
-  },
-  closeIcon: {
-    fontSize: 18,
-    color: Colors.text.secondary,
+  scrollContent: {
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.sm,
   },
   section: {
     marginBottom: Spacing.lg,
@@ -269,7 +248,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: Colors.bg.secondary,
+    backgroundColor: Colors.surface.card,
     marginBottom: Spacing.sm,
   },
   fileChipSelected: {
@@ -284,16 +263,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.bg.primary,
+    backgroundColor: Colors.surface.card,
   },
   checkboxSelected: {
     borderColor: Colors.accent.primary,
     backgroundColor: Colors.accent.primary,
-  },
-  checkMark: {
-    color: Colors.text.inverse,
-    fontSize: 13,
-    fontWeight: Typography.weight.bold,
   },
   fileChipText: {
     flex: 1,
@@ -319,7 +293,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: Colors.bg.secondary,
+    backgroundColor: Colors.surface.card,
   },
   countChipSelected: {
     borderColor: Colors.accent.primary,
@@ -342,7 +316,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: Colors.bg.secondary,
+    backgroundColor: Colors.surface.card,
     marginBottom: Spacing.sm,
   },
   modeOptionSelected: {
@@ -381,6 +355,7 @@ const styles = StyleSheet.create({
     lineHeight: Typography.size.xs * 1.5,
   },
   startButton: {
-    marginTop: Spacing.sm,
+    flex: 1,
+    borderRadius: Radius.lg,
   },
 });

@@ -11,7 +11,8 @@ import { useFocusEffect, useRouter, useLocalSearchParams, useNavigation } from '
 import { Ionicons } from '@expo/vector-icons';
 import { fetchAllSessions } from '@/lib/db/sessions';
 import type { SessionRow } from '@/lib/db/sessions';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { fetchCategoryNames } from '@/lib/local/categories';
+import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
 
 export default function HistoryScreen() {
@@ -19,11 +20,12 @@ export default function HistoryScreen() {
   const navigation = useNavigation();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
     navigation.setOptions({
-      headerBackTitle: from === 'main' ? '메인' : '문제목록',
+      headerBackTitle: from === 'main' ? '홈' : '문제 목록',
     });
   }, [from, navigation]);
 
@@ -32,9 +34,10 @@ export default function HistoryScreen() {
       let isActive = true;
 
       const loadSessions = async () => {
-        const s = await fetchAllSessions();
+        const [s, names] = await Promise.all([fetchAllSessions(), fetchCategoryNames()]);
         if (isActive) {
           setSessions(s);
+          setCategoryNames(names);
           setLoading(false);
         }
       };
@@ -74,21 +77,21 @@ export default function HistoryScreen() {
               onPress={() => router.push(`/history/${session.id}`)}
               activeOpacity={0.82}
               accessibilityRole="button"
-              accessibilityLabel={`${session.category_id} 풀이 기록. 정답률 ${accuracyPct}%. ${formatDate(session.created_at)}`}
+              accessibilityLabel={`${categoryNames[session.category_id] ?? session.category_id} 풀이 기록. 정답률 ${accuracyPct}%. ${formatDate(session.created_at)}`}
             >
               <View style={styles.cardHeader}>
                 <View style={styles.rankCircle}>
                   <Text style={styles.rankText}>{sessions.length - index}</Text>
                 </View>
                 <View style={styles.cardInfo}>
-                  <Text style={styles.categoryLabel}>{session.category_id}</Text>
+                  <Text style={styles.categoryLabel}>
+                    {categoryNames[session.category_id] ?? session.category_id}
+                  </Text>
                   <Text style={styles.dateText}>{formatDate(session.created_at)}</Text>
                 </View>
                 <NordBadge
                   label={`${accuracyPct}%`}
-                  variant={
-                    accuracyPct >= 80 ? 'success' : accuracyPct >= 60 ? 'warning' : 'error'
-                  }
+                  variant={accuracyTone(accuracyPct).badge}
                 />
               </View>
 
@@ -105,9 +108,14 @@ export default function HistoryScreen() {
                   오답 <Text style={styles.statBold}>{wrongCount}</Text>
                 </Text>
                 <Text style={styles.statDot}>·</Text>
-                <Text style={styles.stat}>
-                  {session.mode === 'immediate' ? '🔍 즉시확인' : '📋 일괄확인'}
-                </Text>
+                <View style={styles.modeTag}>
+                  <Ionicons
+                    name={session.mode === 'immediate' ? 'flash-outline' : 'list-outline'}
+                    size={12}
+                    color={Colors.text.secondary}
+                  />
+                  <Text style={styles.stat}>{session.mode === 'immediate' ? '즉시 확인' : '일괄 확인'}</Text>
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -182,6 +190,11 @@ const styles = StyleSheet.create({
   },
   statBold: {
     fontWeight: Typography.weight.bold,
+  },
+  modeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   statDot: {
     fontSize: Typography.size.xs,
