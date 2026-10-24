@@ -8,7 +8,6 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { BarChart } from 'react-native-gifted-charts';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +18,7 @@ import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
 import { fetchQuizFiles, QuizFile } from '@/lib/local/categories';
 import { NordButton } from '@/components/ui/NordButton';
+import { BottomActionBar } from '@/components/ui/BottomActionBar';
 import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
@@ -212,7 +212,7 @@ export default function StatsScreen() {
   }));
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <View style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* 전체 요약 카드 */}
@@ -431,19 +431,22 @@ export default function StatsScreen() {
                 })}
               </View>
             )}
-
-            {selectedQuestionKeys.length > 0 && (
-              <NordButton
-                label={`${selectedQuestionKeys.length}개 문제 다시 풀기`}
-                onPress={handleRetrySelectedQuestions}
-                style={styles.retryButton}
-                size="lg"
-              />
-            )}
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* 선택한 문제 다시 풀기 — 목록이 길어도 보이도록 화면 하단 고정 */}
+      {selectedQuestionKeys.length > 0 && (
+        <BottomActionBar>
+          <NordButton
+            label={`${selectedQuestionKeys.length}개 문제 다시 풀기`}
+            onPress={handleRetrySelectedQuestions}
+            style={styles.retryButton}
+            size="lg"
+          />
+        </BottomActionBar>
+      )}
+    </View>
   );
 }
 
@@ -695,6 +698,7 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
   },
   retryButton: {
-    marginTop: Spacing.lg,
+    flex: 1,
+    borderRadius: Radius.lg,
   },
 });

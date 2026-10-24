@@ -6,33 +6,27 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchCategories, fetchQuizFiles, QuizFile } from '@/lib/local/categories';
 import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown, QuizQuestion } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
 import { fetchCategorySummary, } from '@/lib/db/stats';
-import { fetchWrongAnswers } from '@/lib/db/sessions';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { QuizSetupModal, QuizSetupOptions } from '@/components/QuizSetupModal';
 import { NordBadge } from '@/components/ui/NordBadge';
 import { NordButton } from '@/components/ui/NordButton';
 
 export default function CategoryScreen() {
-  const { category: categoryId, retrySession } = useLocalSearchParams<{
-    category: string;
-    retrySession?: string;
-  }>();
+  const { category: categoryId } = useLocalSearchParams<{ category: string }>();
   const router = useRouter();
   const navigation = useNavigation();
 
   const [files, setFiles] = useState<QuizFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [preparingQuiz, setPreparingQuiz] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [overallAccuracy, setOverallAccuracy] = useState<number | null>(null);
 
@@ -47,23 +41,30 @@ export default function CategoryScreen() {
     }
   }, [categoryId]);
 
-  // 오답 재시험 파라미터 처리
-  useEffect(() => {
-    if (retrySession && files.length > 0) {
-      handleRetrySession(retrySession);
-    }
-  }, [retrySession, files]);
+  // 요약 통계는 화면에 돌아올 때마다 다시 읽는다
+  // (결과 화면에서 dismissTo 로 돌아오면 이 화면이 다시 마운트되지 않는다)
+  useFocusEffect(
+    useCallback(() => {
+      if (!categoryId) return;
+      let isActive = true;
+      fetchCategorySummary(categoryId)
+        .then((summary) => {
+          if (!isActive) return;
+          setTotalSessions(summary.totalSessions);
+          setOverallAccuracy(summary.totalSessions > 0 ? summary.overallAccuracy : null);
+        })
+        .catch((e) => console.error('요약 통계 로드 오류:', e));
+      return () => {
+        isActive = false;
+      };
+    }, [categoryId])
+  );
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [quizFiles, summary] = await Promise.all([
-        fetchQuizFiles(categoryId),
-        fetchCategorySummary(categoryId),
-      ]);
+      const quizFiles = await fetchQuizFiles(categoryId);
       setFiles(quizFiles);
-      setTotalSessions(summary.totalSessions);
-      setOverallAccuracy(summary.totalSessions > 0 ? summary.overallAccuracy : null);
 
       // 헤더 타이틀을 '문제 목록'으로 고정
       navigation.setOptions({ title: '문제 목록' });
@@ -71,58 +72,6 @@ export default function CategoryScreen() {
       console.error('파일 목록 로드 오류:', e);
     } finally {
       setLoading(false);
-    }
-  };
-
-  /** 오답 재시험: retrySession에서 오답 문제만 로드해 바로 퀴즈 시작 */
-  const handleRetrySession = async (sessionId: string) => {
-    try {
-      setPreparingQuiz(true);
-      const wrongAnswers = await fetchWrongAnswers(sessionId);
-      if (wrongAnswers.length === 0) {
-        Alert.alert('확인', '오답 문제가 없습니다!');
-        setPreparingQuiz(false);
-        return;
-      }
-
-      // 파일별 오답 ID 그룹화
-      const fileGroups = wrongAnswers.reduce<Record<string, number[]>>(
-        (acc, a) => {
-          if (!acc[a.source_file_id]) acc[a.source_file_id] = [];
-          acc[a.source_file_id].push(a.question_id);
-          return acc;
-        },
-        {}
-      );
-
-      const retryQuestionsResults = await Promise.all(
-        Object.entries(fileGroups).map(async ([fileId, questionIds]) => {
-          const file = files.find((f) => f.id === fileId);
-          if (!file) return [];
-          const md = await fetchQuizMarkdown(file.storagePath);
-          const parsed = parseQuizMarkdown(md, fileId);
-          return parsed.filter((q) => questionIds.includes(q.id));
-        })
-      );
-      const allWrongQuestions = retryQuestionsResults.flat();
-
-      const shuffled = shuffleQuiz(allWrongQuestions);
-      router.push({
-        pathname: `/${categoryId}/quiz`,
-        params: {
-          setup: JSON.stringify({
-            shuffled,
-            mode: 'immediate',
-            categoryId,
-            sourceFileIds: Object.keys(fileGroups),
-          }),
-        },
-      });
-    } catch (e) {
-      console.error('오답 재시험 준비 오류:', e);
-      Alert.alert('오류', '오답 문제를 불러오지 못했습니다.');
-    } finally {
-      setPreparingQuiz(false);
     }
   };
 
@@ -180,14 +129,11 @@ export default function CategoryScreen() {
   const totalFileCount = files.length;
   const totalQuestionCount = files.reduce((s, f) => s + f.questionCount, 0);
 
-  if (loading || preparingQuiz) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.accent.primary} />
-          {preparingQuiz && (
-            <Text style={styles.preparingText}>오답 문제 불러오는 중...</Text>
-          )}
         </View>
       </SafeAreaView>
     );
@@ -330,11 +276,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.md,
-  },
-  preparingText: {
-    fontSize: Typography.size.sm,
-    color: Colors.text.secondary,
-    marginTop: Spacing.sm,
   },
   summaryCard: {
     margin: Spacing.base,

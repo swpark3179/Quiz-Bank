@@ -5,14 +5,16 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '@gorhom/bottom-sheet';
 import Svg, { Circle } from 'react-native-svg';
-import { fetchSession, fetchAnswers, fetchWrongAnswers } from '@/lib/db/sessions';
+import { fetchSession, fetchAnswers } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
+import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from '@/components/ui/NordButton';
 import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
@@ -57,6 +59,8 @@ export default function ResultScreen() {
 
   const [selectedAnswer, setSelectedAnswer] = useState<AnswerRow | null>(null);
   const sheetRef = useRef<BottomSheet>(null);
+  // 오답 다시 풀기: 문제를 준비하는 동안 버튼에 로딩 표시
+  const [preparingRetry, setPreparingRetry] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -87,11 +91,25 @@ export default function ResultScreen() {
 
   const grade = getGrade();
 
+  /** 오답만 모아 이 화면에서 바로 퀴즈로 교체 (카테고리 화면을 거치지 않는다) */
   const handleRetryWrong = async () => {
-    router.push({
-      pathname: `/${categoryId}`,
-      params: { retrySession: sessionId },
-    });
+    try {
+      setPreparingRetry(true);
+      const setup = await buildWrongAnswerQuiz(sessionId, categoryId, 'immediate');
+      if (!setup) {
+        Alert.alert('확인', '오답 문제가 없습니다!');
+        return;
+      }
+      router.replace({
+        pathname: `/${categoryId}/quiz`,
+        params: { setup: JSON.stringify(setup) },
+      });
+    } catch (e) {
+      console.error('오답 재시험 준비 오류:', e);
+      Alert.alert('오류', '오답 문제를 불러오지 못했습니다.');
+    } finally {
+      setPreparingRetry(false);
+    }
   };
 
   return (
@@ -180,15 +198,17 @@ export default function ResultScreen() {
               fullWidth
               size="lg"
               onPress={handleRetryWrong}
+              loading={preparingRetry}
               icon={<Ionicons name="refresh-outline" size={18} color={Colors.accent.primary} />}
             />
           )}
+          {/* 스택에 있는 카테고리 화면까지 되돌아간다 (없으면 현재 화면을 교체) */}
           <NordButton
             label="카테고리로 돌아가기"
             variant="ghost"
             fullWidth
             size="lg"
-            onPress={() => router.replace(`/${categoryId}`)}
+            onPress={() => router.dismissTo(`/${categoryId}`)}
           />
           <NordButton
             label="통계 보기"

@@ -1,32 +1,27 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import BottomSheet from '@gorhom/bottom-sheet';
+import Animated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import uuid from 'react-native-uuid';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { Motion } from '@/lib/theme/motion';
 import { ProgressBar } from '@/components/quiz/ProgressBar';
 import { ChoiceItem } from '@/components/quiz/ChoiceItem';
 import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { NordButton } from '@/components/ui/NordButton';
+import { BottomActionBar } from '@/components/ui/BottomActionBar';
 import { createSession, saveAnswer, updateSessionProgress } from '@/lib/db/sessions';
-import type { ShuffledQuestion } from '@/lib/quiz/shuffler';
+import type { QuizSetup } from '@/lib/quiz/retry';
 import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
 
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
-
-interface QuizSetup {
-  shuffled: ShuffledQuestion[];
-  mode: 'immediate' | 'deferred';
-  categoryId: string;
-  sourceFileIds: string[];
-}
 
 export default function QuizScreen() {
   const { setup: setupStr } = useLocalSearchParams<{ setup: string }>();
@@ -60,6 +55,14 @@ export default function QuizScreen() {
   const answeredCountRef = useRef(0);
 
   const sheetRef = useRef<BottomSheet>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  // 문제 이동 방향: 1 = 다음, -1 = 이전, 0 = 첫 문제(진입 애니메이션 없음)
+  const [navDir, setNavDir] = useState<1 | -1 | 0>(0);
+
+  // 문제가 바뀌면 항상 맨 위(진행 표시)부터 보이도록 스크롤을 초기화
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [currentIdx]);
 
   const total = shuffled.length;
   const currentQ = shuffled[currentIdx];
@@ -75,6 +78,20 @@ export default function QuizScreen() {
   const selectedIdx = selections[currentIdx] ?? null;
   const isSubmitted = submitted[currentIdx] ?? false;
   const isCorrect = selectedIdx !== null && selectedIdx === currentQ.mappedAnswer;
+
+  /** 이전/다음 문제로 이동하며 방향을 기록 (진입 애니메이션 방향에 사용) */
+  const goTo = (dir: 1 | -1) => {
+    setNavDir(dir);
+    setCurrentIdx((i) => i + dir);
+  };
+
+  // 다음 문제는 오른쪽에서, 이전 문제는 왼쪽에서 들어온다
+  const questionEntering =
+    navDir === 0
+      ? undefined
+      : (navDir > 0 ? FadeInRight : FadeInLeft)
+          .duration(Motion.duration.base)
+          .easing(Motion.easing.standard);
 
   /** 보기 상태 결정 */
   const getChoiceState = (choiceArrayIdx: number): ChoiceState => {
@@ -133,7 +150,7 @@ export default function QuizScreen() {
         params: { sessionId, categoryId },
       });
     } else {
-      setCurrentIdx((i) => i + 1);
+      goTo(1);
     }
   };
 
@@ -163,7 +180,7 @@ export default function QuizScreen() {
   /** 일괄 확인 모드: 이전 문제로 이동 */
   const goToPrev = () => {
     if (currentIdx > 0) {
-      setCurrentIdx((i) => i - 1);
+      goTo(-1);
     }
   };
 
@@ -178,7 +195,7 @@ export default function QuizScreen() {
     if (currentIdx + 1 >= total) {
       await finalizeDeferred();
     } else {
-      setCurrentIdx((i) => i + 1);
+      goTo(1);
     }
   };
 
@@ -238,8 +255,9 @@ export default function QuizScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <View style={styles.safeArea}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -252,75 +270,85 @@ export default function QuizScreen() {
           showScore={mode === 'immediate'}
         />
 
-        {/* 문제 영역 */}
-        <View style={styles.questionCard}>
-          <View style={styles.questionBadge}>
-            <Text style={styles.questionBadgeText}>문제 {currentIdx + 1}</Text>
+        {/* 문제가 바뀔 때마다 새로 마운트되어 방향에 맞는 진입 애니메이션을 재생 */}
+        <Animated.View key={currentIdx} entering={questionEntering}>
+          {/* 문제 영역 */}
+          <View style={styles.questionCard}>
+            <View style={styles.questionBadge}>
+              <Text style={styles.questionBadgeText}>문제 {currentIdx + 1}</Text>
+            </View>
+            <MarkdownViewer content={currentQ.original.question} />
           </View>
-          <MarkdownViewer content={currentQ.original.question} />
-        </View>
 
-        {/* 보기 영역 */}
-        <View style={styles.choicesSection}>
-          <Text style={styles.choicesLabel}>보기</Text>
-          {currentQ.shuffledChoices.map((choice, arrIdx) => {
-            const state = getChoiceState(arrIdx);
-            return (
-              <ChoiceItem
-                key={choice.index}
-                choice={choice}
-                displayIndex={arrIdx}
-                state={state}
-                disabled={isSubmitted}
-                onPress={() => {
-                  if (mode === 'immediate') {
-                    handleImmediateSubmit(arrIdx);
-                  } else {
-                    if (!isSubmitted) {
-                      setSelections((prev) => ({ ...prev, [currentIdx]: arrIdx }));
+          {/* 보기 영역 */}
+          <View style={styles.choicesSection}>
+            <Text style={styles.choicesLabel}>보기</Text>
+            {currentQ.shuffledChoices.map((choice, arrIdx) => {
+              const state = getChoiceState(arrIdx);
+              return (
+                <ChoiceItem
+                  key={choice.index}
+                  choice={choice}
+                  displayIndex={arrIdx}
+                  state={state}
+                  disabled={isSubmitted}
+                  onPress={() => {
+                    if (mode === 'immediate') {
+                      handleImmediateSubmit(arrIdx);
+                    } else {
+                      if (!isSubmitted) {
+                        setSelections((prev) => ({ ...prev, [currentIdx]: arrIdx }));
+                      }
                     }
-                  }
-                }}
-              />
-            );
-          })}
-        </View>
-
-        {/* 일괄 확인 모드: 이전/다음(결과 확인) 이동 버튼.
-            이미 푼 문제 사이를 오가며 답을 번복할 수 있고,
-            현재 문제를 풀지 않았으면 다음 이동이 비활성화된다. */}
-        {mode === 'deferred' && (
-          <View style={styles.navRow}>
-            <NordButton
-              label="이전 문제"
-              variant="secondary"
-              onPress={goToPrev}
-              disabled={currentIdx === 0}
-              size="lg"
-              style={styles.navButton}
-            />
-            <NordButton
-              label={currentIdx + 1 >= total ? '결과 확인' : '다음 문제'}
-              onPress={goToNext}
-              disabled={selectedIdx === null}
-              size="lg"
-              style={styles.navButton}
-            />
+                  }}
+                />
+              );
+            })}
           </View>
-        )}
+        </Animated.View>
+      </ScrollView>
 
-        {/* 즉시 확인 모드: 제출 후 해설 시트를 닫았을 때 다시 열 수 있는 버튼 */}
-        {mode === 'immediate' && isSubmitted && (
+      {/* 일괄 확인 모드: 이전/다음(결과 확인) 이동 버튼 — 화면 하단 고정.
+          이미 푼 문제 사이를 오가며 답을 번복할 수 있고,
+          현재 문제를 풀지 않았으면 다음 이동이 비활성화된다. */}
+      {mode === 'deferred' && (
+        <BottomActionBar>
+          <NordButton
+            label="이전 문제"
+            variant="secondary"
+            onPress={goToPrev}
+            disabled={currentIdx === 0}
+            size="lg"
+            style={styles.barButton}
+          />
+          <NordButton
+            label={currentIdx + 1 >= total ? '결과 확인' : '다음 문제'}
+            onPress={goToNext}
+            disabled={selectedIdx === null}
+            size="lg"
+            style={styles.barButton}
+          />
+        </BottomActionBar>
+      )}
+
+      {/* 즉시 확인 모드: 제출 후 해설 시트를 닫았을 때 다시 열거나 바로 넘어갈 수 있는 버튼 */}
+      {mode === 'immediate' && isSubmitted && (
+        <BottomActionBar>
           <NordButton
             label="해설 다시 보기"
             variant="secondary"
             onPress={() => sheetRef.current?.expand()}
-            fullWidth
             size="lg"
-            style={styles.nextButton}
+            style={styles.barButton}
           />
-        )}
-      </ScrollView>
+          <NordButton
+            label={currentIdx + 1 >= total ? '결과 보기' : '다음 문제'}
+            onPress={handleExplanationNext}
+            size="lg"
+            style={styles.barButton}
+          />
+        </BottomActionBar>
+      )}
 
       {/* 즉시 확인 모드: 해설 바텀시트 */}
       {mode === 'immediate' && (
@@ -344,7 +372,7 @@ export default function QuizScreen() {
           nextLabel={currentIdx + 1 >= total ? '결과 보기' : '다음 문제'}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -397,16 +425,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: Spacing.sm,
   },
-  nextButton: {
-    marginTop: Spacing.sm,
-    borderRadius: Radius.lg,
-  },
-  navRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  navButton: {
+  barButton: {
     flex: 1,
     borderRadius: Radius.lg,
   },
