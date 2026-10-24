@@ -14,8 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchCategories, Category } from '@/lib/local/categories';
 import { getDatabase } from '@/lib/db/schema';
 import { fetchAllCategorySummaries } from '@/lib/db/stats';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
+import { NordButton } from '@/components/ui/NordButton';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -79,14 +80,7 @@ export default function HomeScreen() {
         <View style={styles.centered}>
           <Ionicons name="cloud-offline-outline" size={56} color={Colors.text.tertiary} />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => load()}
-            accessibilityRole="button"
-            accessibilityLabel="다시 시도"
-          >
-            <Text style={styles.retryText}>다시 시도</Text>
-          </TouchableOpacity>
+          <NordButton label="다시 시도" onPress={() => load()} style={styles.retryButton} />
         </View>
       </SafeAreaView>
     );
@@ -162,13 +156,7 @@ export default function HomeScreen() {
                   <View style={styles.statRow}>
                     <NordBadge
                       label={`정답률 ${accuracyPct}%`}
-                      variant={
-                        accuracyPct! >= 80
-                          ? 'success'
-                          : accuracyPct! >= 60
-                          ? 'warning'
-                          : 'error'
-                      }
+                      variant={accuracyTone(accuracyPct!).badge}
                       size="sm"
                     />
                     <Text style={styles.sessionCount}>{stat.sessions}회 풀이</Text>
@@ -288,13 +276,6 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: Spacing.sm,
     paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.accent.primary,
-    borderRadius: Radius.md,
-  },
-  retryText: {
-    color: Colors.text.inverse,
-    fontWeight: Typography.weight.semibold,
   },
   empty: {
     alignItems: 'center',

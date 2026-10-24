@@ -16,9 +16,12 @@ import {
 } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { fetchCategoryNames } from '@/lib/local/categories';
+import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordButton } from '@/components/ui/NordButton';
 import { NordBadge } from '@/components/ui/NordBadge';
+import { ScreenSkeleton } from '@/components/ui/Skeleton';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 export default function SessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
@@ -27,15 +30,18 @@ export default function SessionDetailScreen() {
   const [session, setSession] = useState<SessionRow | null>(null);
   const [answers, setAnswers] = useState<AnswerRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [s, a] = await Promise.all([
+      const [s, a, names] = await Promise.all([
         fetchSession(sessionId),
         fetchAnswers(sessionId),
+        fetchCategoryNames(),
       ]);
       setSession(s);
       setAnswers(a);
+      setCategoryName(s ? names[s.category_id] ?? null : null);
       setLoading(false);
     })();
   }, [sessionId]);
@@ -75,7 +81,7 @@ export default function SessionDetailScreen() {
   };
 
   if (loading || !session) {
-    return <View style={styles.safeArea} />;
+    return <ScreenSkeleton summaryHeight={130} />;
   }
 
   const accuracyPct = Math.round((session.correct / session.total) * 100);
@@ -88,95 +94,86 @@ export default function SessionDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 요약 */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Text style={styles.categoryText}>{session.category_id}</Text>
-            <Text style={styles.dateText}>{formatDate(session.created_at)}</Text>
+      {/* 로딩 골격에서 콘텐츠로 짧게 페이드 교체 */}
+      <Animated.View entering={FadeIn.duration(160)} style={styles.fill}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* 요약 */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryHeader}>
+              <Text style={styles.categoryText}>{categoryName ?? session.category_id}</Text>
+              <Text style={styles.dateText}>{formatDate(session.created_at)}</Text>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNum}>{session.total}</Text>
+                <Text style={styles.statLabel}>총 문제</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNum, { color: Colors.status.correct }]}>{session.correct}</Text>
+                <Text style={styles.statLabel}>정답</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNum, { color: Colors.status.wrong }]}>{wrongCount}</Text>
+                <Text style={styles.statLabel}>오답</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNum, { color: accuracyTone(accuracyPct).color }]}>
+                  {accuracyPct}%
+                </Text>
+                <Text style={styles.statLabel}>정답률 · {accuracyTone(accuracyPct).label}</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNum}>{session.total}</Text>
-              <Text style={styles.statLabel}>총 문제</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: Colors.status.correct }]}>{session.correct}</Text>
-              <Text style={styles.statLabel}>정답</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: Colors.status.wrong }]}>{wrongCount}</Text>
-              <Text style={styles.statLabel}>오답</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text
-                style={[
-                  styles.statNum,
-                  {
-                    color:
-                      accuracyPct >= 80
-                        ? Colors.status.correct
-                        : accuracyPct >= 60
-                        ? Colors.status.warning
-                        : Colors.status.wrong,
-                  },
-                ]}
-              >
-                {accuracyPct}%
+
+          {/* 문제별 결과 */}
+          <Text style={styles.sectionTitle}>문제별 결과</Text>
+          {answers.map((ans, i) => (
+            <View
+              key={ans.id}
+              style={[
+                styles.answerRow,
+                { borderLeftColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
+              ]}
+            >
+              <View style={styles.answerMeta}>
+                <Text style={styles.answerNum}>Q{i + 1}</Text>
+                <NordBadge
+                  label={ans.is_correct ? '정답' : '오답'}
+                  variant={ans.is_correct ? 'success' : 'error'}
+                  size="sm"
+                />
+              </View>
+              <Text style={styles.answerQuestion} numberOfLines={3}>
+                {ans.question_text}
               </Text>
-              <Text style={styles.statLabel}>정답률</Text>
             </View>
-          </View>
-        </View>
+          ))}
 
-        {/* 문제별 결과 */}
-        <Text style={styles.sectionTitle}>문제별 결과</Text>
-        {answers.map((ans, i) => (
-          <View
-            key={ans.id}
-            style={[
-              styles.answerRow,
-              { borderLeftColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
-            ]}
-          >
-            <View style={styles.answerMeta}>
-              <Text style={styles.answerNum}>Q{i + 1}</Text>
-              <NordBadge
-                label={ans.is_correct ? '정답' : '오답'}
-                variant={ans.is_correct ? 'success' : 'error'}
-                size="sm"
+          {/* 액션 버튼 */}
+          <View style={styles.actions}>
+            {wrongCount > 0 && (
+              <NordButton
+                label={`오답 ${wrongCount}문제 다시 풀기`}
+                variant="primary"
+                fullWidth
+                size="lg"
+                onPress={handleRetryWrong}
+                icon={<Ionicons name="refresh-outline" size={18} color={Colors.text.inverse} />}
               />
-            </View>
-            <Text style={styles.answerQuestion} numberOfLines={3}>
-              {ans.question_text}
-            </Text>
-          </View>
-        ))}
-
-        {/* 액션 버튼 */}
-        <View style={styles.actions}>
-          {wrongCount > 0 && (
+            )}
             <NordButton
-              label={`오답 ${wrongCount}문제 다시 풀기`}
-              variant="primary"
+              label="이 기록 삭제"
+              variant="ghost"
               fullWidth
-              size="lg"
-              onPress={handleRetryWrong}
-              icon={<Ionicons name="refresh-outline" size={18} color={Colors.text.inverse} />}
+              onPress={handleDelete}
+              style={{ marginTop: Spacing.sm }}
             />
-          )}
-          <NordButton
-            label="이 기록 삭제"
-            variant="ghost"
-            fullWidth
-            onPress={handleDelete}
-            style={{ marginTop: Spacing.sm }}
-          />
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -185,6 +182,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.bg.primary,
+  },
+  fill: {
+    flex: 1,
   },
   content: {
     padding: Spacing.base,

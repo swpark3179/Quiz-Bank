@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import BottomSheet from '@gorhom/bottom-sheet';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   Easing,
+  FadeIn,
   FadeInDown,
   useAnimatedProps,
   useReducedMotion,
@@ -23,10 +23,11 @@ import Animated, {
 import { fetchSession, fetchAnswers } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { Motion, staggerDelay } from '@/lib/theme/motion';
 import { NordButton } from '@/components/ui/NordButton';
 import { ExplanationSheet } from '@/components/quiz/ExplanationSheet';
+import { ScreenSkeleton } from '@/components/ui/Skeleton';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -129,21 +130,23 @@ export default function ResultScreen() {
   }, [sessionId]);
 
   if (loading || !session) {
-    return <View style={styles.centered} />;
+    return <ScreenSkeleton summaryHeight={330} />;
   }
 
   const accuracy = session.total > 0 ? session.correct / session.total : 0;
   const accuracyPct = Math.round(accuracy * 100);
   const wrongCount = session.total - session.correct;
 
-  const getGrade = () => {
-    if (accuracyPct >= 90) return { label: '완벽해요! 🏆', color: Colors.status.correct };
-    if (accuracyPct >= 70) return { label: '잘 했어요! 👍', color: Colors.accent.secondary };
-    if (accuracyPct >= 50) return { label: '괜찮아요! 💪', color: Colors.status.warning };
-    return { label: '다시 도전! 🔥', color: Colors.status.wrong };
+  // 등급 문구는 결과 화면 고유의 구간을 쓰고, 색은 앱 공통 정답률 등급에서 가져온다.
+  // (시각적 강조는 점수 링이 맡으므로 이모지는 쓰지 않는다)
+  const getGradeLabel = () => {
+    if (accuracyPct >= 90) return '완벽해요!';
+    if (accuracyPct >= 70) return '잘 했어요!';
+    if (accuracyPct >= 50) return '괜찮아요!';
+    return '다시 도전!';
   };
 
-  const grade = getGrade();
+  const grade = { label: getGradeLabel(), color: accuracyTone(accuracyPct).color };
 
   /** 오답만 모아 이 화면에서 바로 퀴즈로 교체 (카테고리 화면을 거치지 않는다) */
   const handleRetryWrong = async () => {
@@ -168,121 +171,121 @@ export default function ResultScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 결과 카드 */}
-        <View style={styles.resultCard}>
-          <Text style={styles.gradeEmoji}>{
-            accuracyPct >= 90 ? '🏆' : accuracyPct >= 70 ? '👍' : accuracyPct >= 50 ? '💪' : '🔥'
-          }</Text>
-          <Text style={[styles.gradeText, { color: grade.color }]}>{grade.label}</Text>
+      {/* 로딩 골격에서 콘텐츠로 짧게 페이드 교체 */}
+      <Animated.View entering={FadeIn.duration(160)} style={styles.fill}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* 결과 카드 */}
+          <View style={styles.resultCard}>
+            <Text style={[styles.gradeText, { color: grade.color }]}>{grade.label}</Text>
 
-          {/* 점수 링 표시 */}
-          <ScoreRing pct={accuracyPct} color={grade.color} />
+            {/* 점수 링 표시 */}
+            <ScoreRing pct={accuracyPct} color={grade.color} />
 
-          {/* 상세 수치 — 분리된 색 카드 */}
-          <View style={styles.statsRow}>
-            <Animated.View
-              entering={enterFromBelow(staggerDelay(0, 200))}
-              style={[styles.statCard, styles.statCardTotal]}
-            >
-              <Text style={styles.statNum}>{session.total}</Text>
-              <Text style={styles.statLabel}>총 문제</Text>
-            </Animated.View>
-            <Animated.View
-              entering={enterFromBelow(staggerDelay(1, 200))}
-              style={[styles.statCard, styles.statCardCorrect]}
-            >
-              <Text style={[styles.statNum, { color: Colors.status.correct }]}>{session.correct}</Text>
-              <Text style={styles.statLabel}>정답</Text>
-            </Animated.View>
-            <Animated.View
-              entering={enterFromBelow(staggerDelay(2, 200))}
-              style={[styles.statCard, styles.statCardWrong]}
-            >
-              <Text style={[styles.statNum, { color: Colors.status.wrong }]}>{wrongCount}</Text>
-              <Text style={styles.statLabel}>오답</Text>
-            </Animated.View>
-          </View>
-        </View>
-
-        {/* 문제별 결과 목록 */}
-        <Text style={styles.sectionTitle}>문제별 결과</Text>
-        {answers.map((ans, i) => (
-          <Animated.View
-            key={ans.id}
-            entering={enterFromBelow(staggerDelay(i, 400))}
-            style={[
-              styles.answerRow,
-              { borderLeftColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
-            ]}
-          >
-            <View style={styles.answerLeft}>
-              <Text style={styles.answerNum}>Q{i + 1}</Text>
-              <View
-                style={[
-                  styles.answerBadge,
-                  { backgroundColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
-                ]}
+            {/* 상세 수치 — 분리된 색 카드 */}
+            <View style={styles.statsRow}>
+              <Animated.View
+                entering={enterFromBelow(staggerDelay(0, 200))}
+                style={[styles.statCard, styles.statCardTotal]}
               >
-                <Ionicons name={ans.is_correct ? 'checkmark' : 'close'} size={15} color="#FFFFFF" />
-              </View>
+                <Text style={styles.statNum}>{session.total}</Text>
+                <Text style={styles.statLabel}>총 문제</Text>
+              </Animated.View>
+              <Animated.View
+                entering={enterFromBelow(staggerDelay(1, 200))}
+                style={[styles.statCard, styles.statCardCorrect]}
+              >
+                <Text style={[styles.statNum, { color: Colors.status.correct }]}>{session.correct}</Text>
+                <Text style={styles.statLabel}>정답</Text>
+              </Animated.View>
+              <Animated.View
+                entering={enterFromBelow(staggerDelay(2, 200))}
+                style={[styles.statCard, styles.statCardWrong]}
+              >
+                <Text style={[styles.statNum, { color: Colors.status.wrong }]}>{wrongCount}</Text>
+                <Text style={styles.statLabel}>오답</Text>
+              </Animated.View>
             </View>
-            <View style={styles.answerCenter}>
-              <Text style={styles.answerQuestion} numberOfLines={2}>
-                {ans.question_text}
-              </Text>
-              <Text style={styles.answerChoiceInfo}>
-                내 선택: {ans.chosen_index !== null ? ans.chosen_index + 1 : '선택안함'} / 정답: {
-                  ans.mapped_correct_index !== null && ans.mapped_correct_index !== undefined
-                    ? ans.mapped_correct_index + 1
-                    : ans.correct_index + 1
-                }
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.explanationBtn}
-              onPress={() => {
-                setSelectedAnswer(ans);
-                sheetRef.current?.expand();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`문제 ${i + 1} 해설 보기`}
-            >
-              <Text style={styles.explanationBtnText}>해설</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
+          </View>
 
-        {/* 액션 버튼 */}
-        <View style={styles.actions}>
-          {wrongCount > 0 && (
+          {/* 문제별 결과 목록 */}
+          <Text style={styles.sectionTitle}>문제별 결과</Text>
+          {answers.map((ans, i) => (
+            <Animated.View
+              key={ans.id}
+              entering={enterFromBelow(staggerDelay(i, 400))}
+              style={[
+                styles.answerRow,
+                { borderLeftColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
+              ]}
+            >
+              <View style={styles.answerLeft}>
+                <Text style={styles.answerNum}>Q{i + 1}</Text>
+                <View
+                  style={[
+                    styles.answerBadge,
+                    { backgroundColor: ans.is_correct ? Colors.status.correct : Colors.status.wrong },
+                  ]}
+                >
+                  <Ionicons name={ans.is_correct ? 'checkmark' : 'close'} size={15} color="#FFFFFF" />
+                </View>
+              </View>
+              <View style={styles.answerCenter}>
+                <Text style={styles.answerQuestion} numberOfLines={2}>
+                  {ans.question_text}
+                </Text>
+                <Text style={styles.answerChoiceInfo}>
+                  내 선택: {ans.chosen_index !== null ? ans.chosen_index + 1 : '선택안함'} / 정답: {
+                    ans.mapped_correct_index !== null && ans.mapped_correct_index !== undefined
+                      ? ans.mapped_correct_index + 1
+                      : ans.correct_index + 1
+                  }
+                </Text>
+              </View>
+              <NordButton
+                label="해설"
+                variant="tonal"
+                size="sm"
+                onPress={() => {
+                  setSelectedAnswer(ans);
+                  sheetRef.current?.expand();
+                }}
+                accessibilityLabel={`문제 ${i + 1} 해설 보기`}
+                style={styles.explanationBtn}
+              />
+            </Animated.View>
+          ))}
+
+          {/* 액션 버튼 */}
+          <View style={styles.actions}>
+            {wrongCount > 0 && (
+              <NordButton
+                label={`오답 ${wrongCount}문제 다시 풀기`}
+                variant="secondary"
+                fullWidth
+                size="lg"
+                onPress={handleRetryWrong}
+                loading={preparingRetry}
+                icon={<Ionicons name="refresh-outline" size={18} color={Colors.accent.deep} />}
+              />
+            )}
+            {/* 스택에 있는 카테고리 화면까지 되돌아간다 (없으면 현재 화면을 교체) */}
             <NordButton
-              label={`오답 ${wrongCount}문제 다시 풀기`}
-              variant="secondary"
+              label="카테고리로 돌아가기"
+              variant="ghost"
               fullWidth
               size="lg"
-              onPress={handleRetryWrong}
-              loading={preparingRetry}
-              icon={<Ionicons name="refresh-outline" size={18} color={Colors.accent.primary} />}
+              onPress={() => router.dismissTo(`/${categoryId}`)}
             />
-          )}
-          {/* 스택에 있는 카테고리 화면까지 되돌아간다 (없으면 현재 화면을 교체) */}
-          <NordButton
-            label="카테고리로 돌아가기"
-            variant="ghost"
-            fullWidth
-            size="lg"
-            onPress={() => router.dismissTo(`/${categoryId}`)}
-          />
-          <NordButton
-            label="통계 보기"
-            variant="ghost"
-            fullWidth
-            onPress={() => router.push(`/stats/${categoryId}`)}
-            icon={<Ionicons name="bar-chart-outline" size={16} color={Colors.accent.primary} />}
-          />
-        </View>
-      </ScrollView>
+            <NordButton
+              label="통계 보기"
+              variant="ghost"
+              fullWidth
+              onPress={() => router.push(`/stats/${categoryId}`)}
+              icon={<Ionicons name="bar-chart-outline" size={16} color={Colors.accent.deep} />}
+            />
+          </View>
+        </ScrollView>
+      </Animated.View>
 
       {/* 해설 바텀시트 */}
       <ExplanationSheet
@@ -316,9 +319,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     ...Shadow.md,
     gap: Spacing.md,
-  },
-  gradeEmoji: {
-    fontSize: 48,
   },
   gradeText: {
     fontSize: Typography.size.xl,
@@ -412,25 +412,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   explanationBtn: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    backgroundColor: Colors.choice.selected,
-    borderWidth: 1,
-    borderColor: Colors.choice.selectedBorder,
-    borderRadius: Radius.sm,
     alignSelf: 'center',
-  },
-  explanationBtnText: {
-    fontSize: Typography.size.xs,
-    fontWeight: Typography.weight.bold,
-    color: Colors.accent.primary,
   },
   actions: {
     gap: Spacing.sm,
     marginTop: Spacing.sm,
   },
-  centered: {
+  fill: {
     flex: 1,
-    backgroundColor: Colors.bg.primary,
   },
 });

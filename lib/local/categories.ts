@@ -40,6 +40,19 @@ export async function fetchCategories(): Promise<Category[]> {
   return config.map(({ files: _files, ...cat }: any) => cat);
 }
 
+/**
+ * 카테고리 id → 표시 이름. 화면 제목·이력 표시용이라 실패해도 던지지 않고
+ * 빈 객체를 돌려준다 (호출부는 id 로 대신 표시).
+ */
+export async function fetchCategoryNames(): Promise<Record<string, string>> {
+  try {
+    const categories = await fetchCategories();
+    return Object.fromEntries(categories.map((c) => [c.id, c.name]));
+  } catch {
+    return {};
+  }
+}
+
 /** 특정 카테고리의 퀴즈 파일 목록 반환 */
 export async function fetchQuizFiles(categoryId: string): Promise<QuizFile[]> {
   const config = await fetchConfig();

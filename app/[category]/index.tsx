@@ -11,13 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchCategories, fetchQuizFiles, QuizFile } from '@/lib/local/categories';
+import { fetchCategoryNames, fetchQuizFiles, QuizFile } from '@/lib/local/categories';
 import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown, QuizQuestion } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
 import type { QuizSetup } from '@/lib/quiz/retry';
 import { fetchCategorySummary, } from '@/lib/db/stats';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
+import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { QuizSetupModal, QuizSetupOptions } from '@/components/QuizSetupModal';
 import { NordBadge } from '@/components/ui/NordBadge';
 import { NordButton } from '@/components/ui/NordButton';
@@ -69,11 +69,14 @@ export default function CategoryScreen() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const quizFiles = await fetchQuizFiles(categoryId);
+      const [quizFiles, names] = await Promise.all([
+        fetchQuizFiles(categoryId),
+        fetchCategoryNames(),
+      ]);
       setFiles(quizFiles);
 
-      // 헤더 타이틀을 '문제 목록'으로 고정
-      navigation.setOptions({ title: '문제 목록' });
+      // 헤더 타이틀은 카테고리 이름 (어느 카테고리인지 보이도록)
+      navigation.setOptions({ title: names[categoryId] ?? '문제 목록' });
     } catch (e) {
       console.error('파일 목록 로드 오류:', e);
     } finally {
@@ -148,6 +151,7 @@ export default function CategoryScreen() {
   };
 
   const totalFileCount = files.length;
+  const overallPct = overallAccuracy !== null ? Math.round(overallAccuracy * 100) : null;
   const totalQuestionCount = files.reduce((s, f) => s + f.questionCount, 0);
 
   if (loading) {
@@ -183,22 +187,10 @@ export default function CategoryScreen() {
             <>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryItem}>
-                <Text
-                  style={[
-                    styles.summaryValue,
-                    {
-                      color:
-                        overallAccuracy >= 0.8
-                          ? Colors.status.correct
-                          : overallAccuracy >= 0.6
-                          ? Colors.status.warning
-                          : Colors.status.wrong,
-                    },
-                  ]}
-                >
-                  {Math.round(overallAccuracy * 100)}%
+                <Text style={[styles.summaryValue, { color: accuracyTone(overallPct!).color }]}>
+                  {overallPct}%
                 </Text>
-                <Text style={styles.summaryLabel}>정답률</Text>
+                <Text style={styles.summaryLabel}>정답률 · {accuracyTone(overallPct!).label}</Text>
               </View>
             </>
           )}
@@ -206,34 +198,32 @@ export default function CategoryScreen() {
 
         {/* 통계 & 이력 버튼 */}
         <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={styles.smallButton}
+          <NordButton
+            label="통계 보기"
+            variant="tonal"
             onPress={() => router.push(`/stats/${categoryId}`)}
-            accessibilityRole="button"
-            accessibilityLabel="통계 보기"
-          >
-            <Ionicons name="bar-chart-outline" size={15} color={Colors.accent.secondary} />
-            <Text style={styles.smallButtonText}>통계 보기</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+            icon={<Ionicons name="bar-chart-outline" size={17} color={Colors.accent.deep} />}
             style={styles.smallButton}
+          />
+          <NordButton
+            label="풀이 이력"
+            variant="tonal"
             onPress={() => router.push(`/history`)}
-            accessibilityRole="button"
-            accessibilityLabel="풀이 이력"
-          >
-            <Ionicons name="time-outline" size={15} color={Colors.accent.secondary} />
-            <Text style={styles.smallButtonText}>풀이 이력</Text>
-          </TouchableOpacity>
+            icon={<Ionicons name="time-outline" size={17} color={Colors.accent.deep} />}
+            style={styles.smallButton}
+          />
         </View>
       </View>
 
       {/* 무작위 문제 풀기 버튼 */}
       <View style={styles.randomSection}>
         <NordButton
-          label="🎲  무작위 문제 풀어보기"
+          label="무작위 문제 풀어보기"
           variant="primary"
+          size="lg"
           fullWidth
           onPress={openRandomSetup}
+          icon={<Ionicons name="shuffle" size={20} color={Colors.text.inverse} />}
           style={styles.randomButton}
         />
       </View>
@@ -253,7 +243,7 @@ export default function CategoryScreen() {
             accessibilityLabel={`${file.name}, ${file.questionCount}문제`}
           >
             <View style={styles.fileIconBox}>
-              <Ionicons name="document-text-outline" size={22} color={Colors.accent.secondary} />
+              <Ionicons name="document-text-outline" size={22} color={Colors.accent.primary} />
             </View>
             <View style={styles.fileInfo}>
               <Text style={styles.fileName}>{file.name}</Text>
@@ -341,20 +331,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.divider,
   },
   smallButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.bg.secondary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  smallButtonText: {
-    fontSize: Typography.size.xs,
-    color: Colors.accent.secondary,
-    fontWeight: Typography.weight.medium,
+    flex: 1,
   },
   randomSection: {
     paddingHorizontal: Spacing.base,
