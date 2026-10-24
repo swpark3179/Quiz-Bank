@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
+import { Motion } from '@/lib/theme/motion';
 
 interface ProgressBarProps {
   current: number;  // 현재 문제 번호 (1-indexed)
@@ -9,10 +11,24 @@ interface ProgressBarProps {
   // '현재 내 정답률'(지금까지 채점된 문제 기준 본인의 정답률)을 표시할지 여부.
   // 즉시 확인 모드처럼 푸는 도중 정답이 채점되는 경우에만 true.
   showScore?: boolean;
+  // 마지막 문제를 제출하고 결과로 넘어가기 직전: 막대를 끝까지 채운다
+  complete?: boolean;
 }
 
-export function ProgressBar({ current, total, correctCount, showScore }: ProgressBarProps) {
-  const progress = total > 0 ? (current - 1) / total : 0;
+export function ProgressBar({ current, total, correctCount, showScore, complete }: ProgressBarProps) {
+  const progress = complete ? 1 : total > 0 ? (current - 1) / total : 0;
+
+  // 폭은 즉시 바꾸지 않고 짧게 보간해 '한 칸 나아갔다'는 느낌을 준다
+  const fillRatio = useSharedValue(progress);
+  useEffect(() => {
+    fillRatio.set(
+      withTiming(progress, { duration: Motion.duration.progress, easing: Motion.easing.standard })
+    );
+  }, [progress, fillRatio]);
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${fillRatio.get() * 100}%`,
+  }));
+
   // 지금까지 채점이 끝난 문제 수
   const answered = current - 1;
   // '현재 내 정답률' 표시 조건: showScore가 켜져 있고, 채점된 문제가 1개 이상일 때
@@ -45,12 +61,7 @@ export function ProgressBar({ current, total, correctCount, showScore }: Progres
         )}
       </View>
       <View style={styles.track}>
-        <View
-          style={[
-            styles.fill,
-            { width: `${progress * 100}%` as any },
-          ]}
-        />
+        <Animated.View style={[styles.fill, fillStyle]} />
       </View>
     </View>
   );
