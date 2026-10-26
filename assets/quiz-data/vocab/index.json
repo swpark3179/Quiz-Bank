@@ -531,7 +531,7 @@
     "word": "descriptive",
     "pos": "형용사",
     "ipa": "dɪˈskrɪptɪv",
-    "meaning": "설명적인, 내용을 잘 드러내는"
+    "meaning": "설명적인, 서술형의 — 내용을 그대로 풀어 쓰는"
   },
   {
     "id": "destructive",
@@ -636,9 +636,9 @@
   {
     "id": "duplicate",
     "word": "duplicate",
-    "pos": "명사·형용사",
+    "pos": "형용사·명사·동사",
     "ipa": "ˈduːplɪkət",
-    "meaning": "중복(된 것), 똑같은 사본",
+    "meaning": "중복된 (것) / (이미 있는 것과) 중복되다, 되풀이하다",
     "forms": ["duplicated", "duplicating", "duplication"]
   },
   {
@@ -832,7 +832,7 @@
     "word": "flag",
     "pos": "동사·명사",
     "ipa": "flæɡ",
-    "meaning": "① (문제가 있다고) 표시하다, 짚어 두다 ② (명령줄) 옵션",
+    "meaning": "① (문제가 있다고) 표시하다 / 표시된 지적 항목 ② (명령줄) 옵션",
     "forms": ["flagged", "flagging"]
   },
   {
@@ -856,7 +856,7 @@
     "word": "frustration",
     "pos": "명사",
     "ipa": "frʌˈstreɪʃn",
-    "meaning": "좌절감, 답답함",
+    "meaning": "(고객의) 불만, 짜증 / 좌절감",
     "forms": ["frustrated", "frustrating"]
   },
   {
@@ -1009,7 +1009,7 @@
     "word": "intervention",
     "pos": "명사",
     "ipa": "ˌɪntərˈvenʃn",
-    "meaning": "개입 — (사람이) 끼어들어 처리함",
+    "meaning": "개입 — (다른 주체가) 끼어들어 처리함",
     "forms": ["intervene"]
   },
   {
@@ -1163,7 +1163,7 @@
   {
     "id": "on-demand",
     "word": "on-demand",
-    "pos": "형용사",
+    "pos": "형용사·부사",
     "ipa": "ˌɑːn dɪˈmænd",
     "meaning": "필요할 때마다 (그때그때) 하는",
     "forms": ["on demand"]
