@@ -1309,7 +1309,7 @@
     "word": "precision",
     "pos": "명사",
     "ipa": "prɪˈsɪʒn",
-    "meaning": "정밀도 — 찾아낸 것 중 실제로 맞은 비율",
+    "meaning": "① 정밀함, 정확성 ② (평가 지표) 정밀도 — 찾아낸 것 중 실제로 맞은 비율",
     "forms": ["high-precision", "precise", "precisely"]
   },
   {
@@ -1542,7 +1542,7 @@
     "word": "retrieve",
     "pos": "동사",
     "ipa": "rɪˈtriːv",
-    "meaning": "(저장된 것을) 찾아서 가져오다",
+    "meaning": "(저장된 것을) 찾아서 가져오다 — retrieval (명) 조회, 검색",
     "forms": ["retrieved", "retrieving", "retrieval"]
   },
   {
