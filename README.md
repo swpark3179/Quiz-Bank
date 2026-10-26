@@ -18,6 +18,7 @@
 - **마크다운 렌더링** — 문제 본문·보기·해설을 마크다운으로 작성하면 그대로 렌더링됩니다. (코드, 표, 링크 등)
 - **풀이 이력 & 통계** — 차수(세션)별 풀이 기록을 저장하고, 카테고리별 정답률·추이를 차트로 시각화합니다.
 - **오답 다시 풀기** — 틀린 문제만 모아 새로운 세트로 재시험할 수 있습니다.
+- **단어장 모드** — 영어 문제 속 등록 단어 옆에 작은 `°` 표시가 붙고, 누르면 그 자리에 뜻·예문 팝업이 뜹니다. 단어는 문제처럼 `assets/quiz-data/vocab/` 에 등록합니다.
 - **Nord Light 테마** — 차분한 Nord 팔레트 기반의 일관된 UI.
 - **오프라인 지원** — Windows 데스크탑 빌드는 문제 파일을 함께 패키징하여 네트워크 없이 동작합니다. 모바일·웹은 마지막으로 내려받은 문제를 기기에 저장해 두었다가 오프라인일 때 사용합니다.
 
@@ -78,15 +79,18 @@ app/                      # expo-router 화면 (파일 기반 라우팅)
   stats/[category].tsx    #   카테고리별 통계
 components/
   quiz/                   # ChoiceItem · ProgressBar · ExplanationSheet
+  vocab/                  # 단어장 모드 — 단어 표시 · 뜻 팝업 · 헤더 토글
   ui/                     # NordButton · NordCard · NordBadge 등 디자인 컴포넌트
   MarkdownViewer.tsx      # 마크다운 렌더러
 lib/
   parser/quizParser.ts    # 마크다운 → 문제 객체 파싱
   quiz/shuffler.ts        # 문제·보기 셔플 + 정답 remapping
+  vocab/matcher.ts        # 문제 텍스트에서 등록 단어 찾기
   db/                     # expo-sqlite 스키마 · 세션 · 통계 쿼리
   theme/                  # Nord Light 컬러·스타일 토큰
   local/                  # 로컬(오프라인) 문제 로딩
 assets/quiz-data/         # ⭐ 문제 콘텐츠 (config.json + 카테고리별 .md)
+  vocab/                  #   단어장 (index.json + 단어별 .md)
 electron/                 # Windows 데스크탑 셸
 .github/workflows/        # CI/CD (네이티브 빌드 · 데스크탑 릴리스)
 ```
@@ -173,11 +177,25 @@ LLM 은 Large Language Model 의 약자입니다. 해설과 링크를 자유롭�
 ]
 ```
 
-### 3) 커밋 & Push
+### 3) (선택) 단어장 등록
+
+영어 문제를 풀 때 뜻을 바로 확인하고 싶은 단어는 `assets/quiz-data/vocab/` 에 등록합니다. 문제와 같은 방식입니다.
+
+1. `vocab/index.json` 에 단어·한 줄 뜻·찾을 변형을 등록
+2. (선택) `vocab/{id}.md` 에 상세 설명을 Markdown 으로 작성 — [`_template.md`](assets/quiz-data/vocab/_template.md) 복사
+
+```json
+{ "id": "escalate", "word": "escalate", "pos": "동사", "ipa": "ˈeskəleɪt",
+  "meaning": "(상위 담당자에게) 넘기다", "forms": ["escalated", "escalation"] }
+```
+
+필드·매칭 규칙·템플릿은 [단어장 가이드](assets/quiz-data/vocab/README.md)에 정리되어 있습니다.
+
+### 4) 커밋 & Push
 
 변경사항을 기본 브랜치(`master`)에 커밋/푸시하면, 앱스토어·OTA 배포를 거치지 않고 **사용자가 앱을 여는 즉시** 새 데이터가 표출됩니다.
 
-> 💡 PR 로 올리면 `Content Check` 워크플로가 모든 `.md` 를 파싱해 형식 오류와 `questionCount` 불일치를 자동으로 검사합니다. 로컬에서는 `pnpm test` 로 같은 검사를 실행할 수 있습니다.
+> 💡 PR 로 올리면 `Content Check` 워크플로가 모든 `.md` 를 파싱해 형식 오류와 `questionCount` 불일치를, 단어장의 `index.json` 형식과 중복 표현을 자동으로 검사합니다. 로컬에서는 `pnpm test` 로 같은 검사를 실행할 수 있습니다.
 
 ---
 

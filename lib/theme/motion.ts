@@ -20,6 +20,8 @@ export const Motion = {
   spring: {
     // 체크 아이콘이 살짝 튀어나오는 정도
     pop: { damping: 12, stiffness: 260, reduceMotion: ReduceMotion.System },
+    // 단어 팝업이 누른 자리에서 커지며 자리 잡는 정도 (아주 약한 반동)
+    popover: { damping: 20, stiffness: 340, mass: 0.9, reduceMotion: ReduceMotion.System },
   },
   pressScale: 0.98, // 카드·보기를 누르는 동안의 크기
   stagger: 60, // 목록 순차 등장 간격

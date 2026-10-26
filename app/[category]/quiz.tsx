@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  AccessibilityInfo,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { usePreventRemove } from '@react-navigation/native';
@@ -21,10 +22,14 @@ import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { NordButton } from '@/components/ui/NordButton';
 import { BottomActionBar } from '@/components/ui/BottomActionBar';
 import { ScreenEnter } from '@/components/ui/ScreenEnter';
+import { VocabProvider } from '@/components/vocab/VocabProvider';
+import { VocabToggleButton } from '@/components/vocab/VocabToggleButton';
+import { useVocabIndex } from '@/hooks/use-vocab-index';
+import { getPreference, setPreference } from '@/lib/local/preferences';
 import { createSession, saveAnswer, updateSessionProgress } from '@/lib/db/sessions';
 import type { QuizSetup } from '@/lib/quiz/retry';
 import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
-import { hapticAnswerResult } from '@/lib/utils/haptics';
+import { hapticAnswerResult, hapticSelection } from '@/lib/utils/haptics';
 import { confirmAsync } from '@/lib/utils/confirm';
 
 type ChoiceState = 'default' | 'selected' | 'correct' | 'wrong' | 'reveal-correct';
@@ -84,9 +89,25 @@ export default function QuizScreen() {
   const sheetRef = useRef<BottomSheet>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  // 단어장 모드: 설정 시트에서 고른 값(기기에 저장)으로 시작하고, 헤더에서 바로 켜고 끈다
+  const vocabEntries = useVocabIndex();
+  const [vocabOn, setVocabOn] = useState(() => getPreference('vocabMode'));
+  const hasVocab = (vocabEntries?.length ?? 0) > 0;
+
+  const toggleVocab = React.useCallback(() => {
+    const next = !vocabOn;
+    setVocabOn(next);
+    setPreference('vocabMode', next);
+    hapticSelection();
+    AccessibilityInfo.announceForAccessibility(next ? '단어장 모드 켜짐' : '단어장 모드 꺼짐');
+  }, [vocabOn]);
+
   // 헤더 왼쪽은 '뒤로'가 아니라 '닫기' — 풀이는 들어갔다 나오는 집중 모드
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerRight: hasVocab
+        ? () => <VocabToggleButton value={vocabOn} onToggle={toggleVocab} />
+        : undefined,
       headerBackVisible: false,
       headerLeft: () => (
         <TouchableOpacity
@@ -99,7 +120,7 @@ export default function QuizScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, router]);
+  }, [navigation, router, hasVocab, vocabOn, toggleVocab]);
 
   // 답을 하나라도 고른 뒤 나가려 하면 확인한다 (헤더 닫기, Android 뒤로 가기 모두).
   // 결과 화면으로 넘어가는 중(finishing)에는 막지 않는다.
@@ -362,56 +383,59 @@ export default function QuizScreen() {
 
   return (
     <ScreenEnter style={styles.safeArea}>
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* 진행 표시 */}
-        <ProgressBar
-          current={currentIdx + 1}
-          total={total}
-          correctCount={correctCount}
-          showScore={mode === 'immediate'}
-          complete={finishing}
-        />
+      {/* 단어장 모드: 문제 본문·보기 속 등록 단어를 눌러 뜻 팝업 (해설 시트는 제외) */}
+      <VocabProvider entries={vocabOn ? vocabEntries : null}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 진행 표시 */}
+          <ProgressBar
+            current={currentIdx + 1}
+            total={total}
+            correctCount={correctCount}
+            showScore={mode === 'immediate'}
+            complete={finishing}
+          />
 
-        {/* 문제가 바뀔 때마다 새로 마운트되어 방향에 맞는 진입 애니메이션을 재생 */}
-        <Animated.View key={currentIdx} entering={questionEntering}>
-          {/* 문제 영역 */}
-          {/* 몇 번째 문제인지는 위 진행 표시가 보여 준다 */}
-          <View style={styles.questionCard}>
-            <MarkdownViewer content={currentQ.original.question} />
-          </View>
+          {/* 문제가 바뀔 때마다 새로 마운트되어 방향에 맞는 진입 애니메이션을 재생 */}
+          <Animated.View key={currentIdx} entering={questionEntering}>
+            {/* 문제 영역 */}
+            {/* 몇 번째 문제인지는 위 진행 표시가 보여 준다 */}
+            <View style={styles.questionCard}>
+              <MarkdownViewer content={currentQ.original.question} />
+            </View>
 
-          {/* 보기 영역 */}
-          <View style={styles.choicesSection}>
-            <Text style={styles.choicesLabel}>보기</Text>
-            {currentQ.shuffledChoices.map((choice, arrIdx) => {
-              const state = getChoiceState(arrIdx);
-              return (
-                <ChoiceItem
-                  key={choice.index}
-                  choice={choice}
-                  displayIndex={arrIdx}
-                  state={state}
-                  disabled={isSubmitted}
-                  onPress={() => {
-                    if (mode === 'immediate') {
-                      handleImmediateSubmit(arrIdx);
-                    } else {
-                      if (!isSubmitted) {
-                        setSelections((prev) => ({ ...prev, [currentIdx]: arrIdx }));
+            {/* 보기 영역 */}
+            <View style={styles.choicesSection}>
+              <Text style={styles.choicesLabel}>보기</Text>
+              {currentQ.shuffledChoices.map((choice, arrIdx) => {
+                const state = getChoiceState(arrIdx);
+                return (
+                  <ChoiceItem
+                    key={choice.index}
+                    choice={choice}
+                    displayIndex={arrIdx}
+                    state={state}
+                    disabled={isSubmitted}
+                    onPress={() => {
+                      if (mode === 'immediate') {
+                        handleImmediateSubmit(arrIdx);
+                      } else {
+                        if (!isSubmitted) {
+                          setSelections((prev) => ({ ...prev, [currentIdx]: arrIdx }));
+                        }
                       }
-                    }
-                  }}
-                />
-              );
-            })}
-          </View>
-        </Animated.View>
-      </ScrollView>
+                    }}
+                  />
+                );
+              })}
+            </View>
+          </Animated.View>
+        </ScrollView>
+      </VocabProvider>
 
       {/* 일괄 확인 모드: 이전/다음(결과 확인) 이동 버튼 — 화면 하단 고정.
           이미 푼 문제 사이를 오가며 답을 번복할 수 있고,

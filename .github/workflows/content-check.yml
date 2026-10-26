@@ -1,6 +1,6 @@
 name: Content Check
 
-# 문제 콘텐츠(assets/quiz-data)와 파서를 검증한다.
+# 문제 콘텐츠(assets/quiz-data — 단어장 포함)와 파서·단어 매칭을 검증한다.
 # master 에 푸시된 콘텐츠는 앱에 즉시 반영되므로, PR 단계에서 깨진 마크다운이나
 # config.json 의 questionCount 불일치를 잡는 것이 목적이다.
 
@@ -10,12 +10,14 @@ on:
     paths:
       - 'assets/quiz-data/**'
       - 'lib/parser/**'
+      - 'lib/vocab/**'
       - '__tests__/**'
       - '.github/workflows/content-check.yml'
   pull_request:
     paths:
       - 'assets/quiz-data/**'
       - 'lib/parser/**'
+      - 'lib/vocab/**'
       - '__tests__/**'
       - '.github/workflows/content-check.yml'
 

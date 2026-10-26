@@ -1,0 +1,105 @@
+[
+  {
+    "id": "ambiguous",
+    "word": "ambiguous",
+    "pos": "형용사",
+    "ipa": "æmˈbɪɡjuəs",
+    "meaning": "모호한, 두 가지 이상으로 해석될 수 있는",
+    "forms": ["ambiguity", "ambiguities", "ambiguously"]
+  },
+  {
+    "id": "consolidate",
+    "word": "consolidate",
+    "pos": "동사",
+    "ipa": "kənˈsɑːlɪdeɪt",
+    "meaning": "하나로 통합하다, 합치다",
+    "forms": ["consolidated", "consolidating", "consolidation"]
+  },
+  {
+    "id": "demarcate",
+    "word": "demarcate",
+    "pos": "동사",
+    "ipa": "ˈdiːmɑːrkeɪt",
+    "meaning": "경계를 정하다, 구분 짓다",
+    "forms": ["demarcated", "demarcating", "demarcation"]
+  },
+  {
+    "id": "discrepancy",
+    "word": "discrepancy",
+    "pos": "명사",
+    "ipa": "dɪˈskrepənsi",
+    "meaning": "(값·내용 사이의) 불일치, 차이",
+    "forms": ["discrepancies"]
+  },
+  {
+    "id": "escalate",
+    "word": "escalate",
+    "pos": "동사",
+    "ipa": "ˈeskəleɪt",
+    "meaning": "(상위 담당자에게) 넘기다, 단계를 올려 처리하다",
+    "forms": ["escalated", "escalating", "escalation"]
+  },
+  {
+    "id": "exponential-backoff",
+    "word": "exponential backoff",
+    "pos": "명사구",
+    "ipa": "ˌekspəˈnenʃl ˈbækɔːf",
+    "meaning": "지수 백오프 — 실패할 때마다 재시도 간격을 두 배씩 늘리는 방식",
+    "forms": ["exponential back-off"]
+  },
+  {
+    "id": "propagate",
+    "word": "propagate",
+    "pos": "동사",
+    "ipa": "ˈprɑːpəɡeɪt",
+    "meaning": "(오류·정보를) 위로 전달하다, 퍼뜨리다",
+    "forms": ["propagated", "propagating", "propagation"]
+  },
+  {
+    "id": "subsequent",
+    "word": "subsequent",
+    "pos": "형용사",
+    "ipa": "ˈsʌbsɪkwənt",
+    "meaning": "그다음의, 이후의",
+    "forms": ["subsequently"]
+  },
+  {
+    "id": "synthesis",
+    "word": "synthesis",
+    "pos": "명사",
+    "ipa": "ˈsɪnθəsɪs",
+    "meaning": "종합 — 여러 결과를 하나로 합쳐 정리하는 것",
+    "forms": ["synthesize", "synthesized", "synthesizing"]
+  },
+  {
+    "id": "transient",
+    "word": "transient",
+    "pos": "형용사",
+    "ipa": "ˈtrænziənt",
+    "meaning": "일시적인, 곧 사라지는",
+    "forms": ["transiently"]
+  },
+  {
+    "id": "upfront",
+    "word": "upfront",
+    "pos": "부사·형용사",
+    "ipa": "ˌʌpˈfrʌnt",
+    "meaning": "미리, 처음부터",
+    "forms": ["up-front"]
+  },
+  {
+    "id": "verbatim",
+    "word": "verbatim",
+    "pos": "부사·형용사",
+    "ipa": "vɜːrˈbeɪtɪm",
+    "meaning": "글자 그대로, 원문 그대로"
+  },
+  {
+    "id": "verbose",
+    "word": "verbose",
+    "pos": "형용사",
+    "ipa": "vɜːrˈboʊs",
+    "meaning": "장황한, (출력이) 지나치게 많은",
+    "forms": ["verbosity"]
+  }
+]

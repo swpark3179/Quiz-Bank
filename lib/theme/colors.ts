@@ -35,6 +35,7 @@ export const Colors = {
     secondary: Nord.nord5,   // #E5E9F0
     tertiary: Nord.nord4,    // #D8DEE9 · 진행바 트랙 등
     overlay: 'rgba(46,52,64,0.55)', // 모달 오버레이
+    scrim: 'rgba(46,52,64,0.22)',   // 팝오버 뒤 옅은 막 (본문이 비쳐 보이게)
   },
 
   // 면(카드/시트) — 순백으로 띄운다 [신규]

@@ -1,12 +1,16 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useMemo, type ReactNode } from 'react';
+import { View, Text, StyleSheet, ScrollView, type TextStyle } from 'react-native';
 import Markdown, { MarkdownProps, Renderer } from 'react-native-marked';
 import type { RendererInterface } from 'react-native-marked';
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
+import { useVocabLookup, type VocabLookup } from '@/components/vocab/VocabContext';
+import { renderVocabText } from '@/components/vocab/VocabWord';
 
 interface MarkdownViewerProps {
   content: string;
   scrollable?: boolean;
+  /** 작은 카드(단어 팝업) 안에서 쓰는 촘촘한 스타일 — 제목을 작은 구역 라벨로 */
+  compact?: boolean;
 }
 
 const markdownStyles: MarkdownProps['styles'] = {
@@ -101,6 +105,47 @@ const markdownStyles: MarkdownProps['styles'] = {
   },
 };
 
+/** 단어 팝업용 제목 — 화면의 구역 라벨처럼 작은 회색 글씨 (라이브러리 기본 밑줄·큰 행간을 지운다) */
+const compactHeading: TextStyle = {
+  fontSize: Typography.size.sm,
+  lineHeight: Typography.size.sm * 1.5,
+  fontWeight: Typography.weight.semibold,
+  color: Colors.text.secondary,
+  marginTop: Spacing.md,
+  marginBottom: 2,
+  paddingBottom: 0,
+  borderBottomWidth: 0,
+};
+
+/** 단어 팝업용: 본문은 한 단계 작게, 제목은 작은 구역 라벨로 */
+const compactMarkdownStyles: MarkdownProps['styles'] = {
+  ...markdownStyles,
+  text: {
+    color: Colors.text.primary,
+    fontSize: Typography.size.sm + 1,
+    lineHeight: (Typography.size.sm + 1) * 1.65,
+  },
+  paragraph: {
+    marginVertical: Spacing.xs,
+  },
+  h1: compactHeading,
+  h2: compactHeading,
+  h3: compactHeading,
+  li: {
+    fontSize: Typography.size.sm + 1,
+    color: Colors.text.primary,
+    lineHeight: (Typography.size.sm + 1) * 1.6,
+  },
+  list: {
+    marginVertical: 2,
+  },
+  blockquote: {
+    ...markdownStyles.blockquote,
+    paddingVertical: Spacing.xs,
+    marginVertical: Spacing.xs,
+  },
+};
+
 /**
  * 다중 행 코드블록을 인라인 코드와 같은 웜 클레이 배경 + 언어 라벨 헤더로 렌더링.
  * react-native-marked 의 기본 code() 만 오버라이드한다.
@@ -121,6 +166,38 @@ class QuizRenderer extends Renderer implements RendererInterface {
 }
 
 const renderer = new QuizRenderer();
+
+/**
+ * 단어장 모드: 일반 텍스트·굵게·기울임·제목 속 등록 단어를 누를 수 있게 바꾼다.
+ * 인라인 코드·코드블록은 건드리지 않는다.
+ */
+class VocabRenderer extends QuizRenderer {
+  constructor(private lookup: VocabLookup) {
+    super();
+  }
+
+  private mark(children: string | ReactNode[]): string | ReactNode[] {
+    return typeof children === 'string'
+      ? renderVocabText(children, this.lookup, () => this.getKey())
+      : children;
+  }
+
+  text(children: string | ReactNode[], styles?: TextStyle) {
+    return super.text(this.mark(children), styles);
+  }
+
+  strong(children: string | ReactNode[], styles?: TextStyle) {
+    return super.strong(this.mark(children), styles);
+  }
+
+  em(children: string | ReactNode[], styles?: TextStyle) {
+    return super.em(this.mark(children), styles);
+  }
+
+  heading(children: string | ReactNode[], styles?: TextStyle) {
+    return super.heading(this.mark(children), styles);
+  }
+}
 
 const cb = StyleSheet.create({
   wrap: {
@@ -154,12 +231,20 @@ const cb = StyleSheet.create({
   },
 });
 
-export const MarkdownViewer = React.memo(function MarkdownViewer({ content, scrollable = false }: MarkdownViewerProps) {
+export const MarkdownViewer = React.memo(function MarkdownViewer({
+  content,
+  scrollable = false,
+  compact = false,
+}: MarkdownViewerProps) {
+  // 단어장 모드 영역(VocabProvider) 안에서만 단어 표시 렌더러를 쓴다
+  const lookup = useVocabLookup();
+  const activeRenderer = useMemo(() => (lookup ? new VocabRenderer(lookup) : renderer), [lookup]);
+
   const markdown = (
     <Markdown
       value={content}
-      renderer={renderer}
-      styles={markdownStyles}
+      renderer={activeRenderer}
+      styles={compact ? compactMarkdownStyles : markdownStyles}
       flatListProps={{ scrollEnabled: false, style: { backgroundColor: 'transparent' } }}
       theme={{ colors: { background: 'transparent', code: Colors.code.bg, link: Colors.text.link, text: Colors.text.primary, border: Colors.border } }}
     />
