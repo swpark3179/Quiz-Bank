@@ -1657,7 +1657,7 @@
     "word": "silently",
     "pos": "부사",
     "ipa": "ˈsaɪləntli",
-    "meaning": "아무 알림 없이, 조용히",
+    "meaning": "① 아무 알림 없이, 조용히 ② (be silent on ~) ~에 대해 언급이 없는",
     "forms": ["silent"]
   },
   {
@@ -1749,7 +1749,7 @@
     "word": "surface",
     "pos": "동사·명사",
     "ipa": "ˈsɜːrfɪs",
-    "meaning": "(숨은 것을) 드러내다, 보이게 하다 / 표면",
+    "meaning": "(숨은 것을) 드러내다 / 드러나다, 표면화되다 / 표면",
     "forms": ["surfaced", "surfacing"]
   },
   {
@@ -1796,7 +1796,7 @@
     "word": "terminology",
     "pos": "명사",
     "ipa": "ˌtɜːrmɪˈnɑːlədʒi",
-    "meaning": "(분야의) 전문 용어"
+    "meaning": "용어, (특정 분야·맥락에서 쓰는) 어휘"
   },
   {
     "id": "thorough",
@@ -1848,7 +1848,7 @@
     "word": "trigger",
     "pos": "동사·명사",
     "ipa": "ˈtrɪɡər",
-    "meaning": "(어떤 동작을) 일으키다, 실행시키다 / 계기",
+    "meaning": "(어떤 동작을) 일으키다, 실행시키다 / 계기, 발동 조건",
     "forms": ["triggered", "triggering"]
   },
   {
