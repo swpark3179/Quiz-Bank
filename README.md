@@ -225,6 +225,8 @@ pnpm bump:major   # 1.4.2 → 2.0.0
 
 > **필요한 GitHub Secrets** — Android 서명(`ANDROID_KEYSTORE_*`), iOS 코드 서명(`IOS_P12_*`, `IOS_PROVISIONING_*`, `IOS_TEAM_ID` 등), TestFlight 업로드(`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`), 릴리스 봇 토큰(`RELEASE_APP_ID`, `RELEASE_APP_PRIVATE_KEY`). 자세한 항목은 워크플로 파일 상단 주석을 참고하세요.
 
+> 📱 **Android 배포 상세 절차** (GitHub Release APK · Google Play) 는 [docs/android-deployment.md](docs/android-deployment.md) 를 참고하세요.
+
 ### 설치 방법 (최종 사용자)
 
 - **Android** — Release 의 `app-release.apk` 를 다운로드해 설치 (출처를 알 수 없는 앱 설치 허용 필요)
