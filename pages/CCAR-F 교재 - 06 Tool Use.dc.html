@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 자격시험 교재 <span class="cat">· 제7장 · 세션 5 / 자습 정리</span></div>
+    <h1>Tool Use (Function Calling)</h1>
+    <p class="sub">에이전트 루프 · tool_use/tool_result · 병렬 호출 · tool_choice · 툴 설계 원칙</p>
+    <p class="meta">원문 · <a href="https://koding.kr/ebooks/claude-certified-architect-foundations-cca-f-%EC%9E%90%EA%B2%A9%EC%8B%9C%ED%97%98-%EA%B5%90%EC%9E%AC-7oi2kh?ch=7" target="_blank" rel="noopener">koding.kr — 제7장</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 (18%)</p>
+    <div class="secrow">
+      <span class="s">⓪ 시험 개요</span><span class="s">① 환경</span><span class="s">② 모델</span><span class="s">③ API</span><span class="s">④ 프롬프트</span><span class="s">⑤ 구조화 출력</span><span class="s on">⑥ Tool Use</span><span class="s">⑦ MCP</span><span class="s">⑧ 이후 장</span><span class="s">⑨ 자가진단</span>
+    </div>
+  </header>
+
+  <p class="lede">LLM은 기본적으로 '텍스트를 넣으면 텍스트를 돌려주는' 존재다. 외부 함수·API·DB를 부를 수 있게 되면 세계의 상태를 가져오고 작업을 실행하는 <em>에이전트</em>가 된다. Claude는 머리가 명석한 상담원이지만 직접 전화를 걸지는 못한다 — <strong>Tool Use는 상담원의 지시로 옆의 어시스턴트(앱)가 실제 작업을 하는 분업 구조</strong>다. 도메인 2(18%)의 출발점이다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>요청 → tool_use → 툴 실행 → tool_result → 최종 답변의 흐름</li>
+      <li>툴 정의 3요소(name · description · input_schema)와 description의 역할</li>
+      <li>에이전트 루프: <code>stop_reason</code> 분기 · <code>tool_use_id</code> 매칭 · 무한 루프 방지</li>
+      <li>에러 반환(<code>is_error</code>) · 병렬 툴 호출 · <code>tool_choice</code> · 툴 설계 원칙(단일 책무, 적정 개수)</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>기본 흐름</h3><span class="unit-en">Claude decides, the app executes</span></div>
+    <ol class="proc">
+      <li>앱이 <code>messages</code> + <code>tools</code> 정의를 보낸다</li>
+      <li>Claude가 <code>tool_use</code> 블록을 반환한다 — <code>stop_reason = "tool_use"</code></li>
+      <li><strong>앱이</strong> 해당 툴(함수·외부 API)을 실행한다</li>
+      <li>실행 결과를 <code>tool_result</code> 블록으로 만들어 <strong>user 메시지</strong>에 담아 다시 보낸다</li>
+      <li>Claude가 결과를 통합해 최종 텍스트 답변을 반환한다 — <code>stop_reason = "end_turn"</code></li>
+    </ol>
+    <div class="note"><span class="lbl">분업 모델</span><p>Claude 자신은 외부 API를 호출하지 않는다. Claude가 "API를 호출했다"고 말해도 실제로는 앱이 tool_use를 받아 실행한 것이다. 덕분에 외부 I/O의 제어권이 앱 쪽에 남아 <strong>감사 · 샌드박스 · 타임아웃 제어</strong>가 쉬워진다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>툴 정의 스키마</h3><span class="unit-en">name · description · input_schema</span></div>
+    <table class="t">
+      <thead><tr><th style="width:22%">요소</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code></td><td>툴 식별자 (snake_case 권장). Claude가 선택할 때 쓴다</td></tr>
+        <tr><td><code>description</code></td><td><strong>Claude가 툴을 고르는 판단 재료</strong> — 무엇을 하는지 + <strong>언제 써야 하는지</strong>를 구체적으로</td></tr>
+        <tr><td><code>input_schema</code></td><td>JSON 스키마 — 인자 타입 · 필수 항목 · enum</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 판단 재료 부족</div><div class="code">{"name": "search",
+ "description": "검색한다"}</div><p>무엇을, 언제 검색하는지 알 수 없다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 용도와 사용 시점</div><div class="code">{"name": "search_documents",
+ "description": "사내 문서를 전문 검색한다. 사용자가
+  규정·매뉴얼·과거 안건 정보를 요청할 때 사용."}</div></div>
+    </div>
+    <p class="cap">툴을 늘리기 전에 description의 질부터 개선하는 편이 선택 정확도에 더 잘 듣는 경우가 많다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>에이전트 루프</h3><span class="unit-en">Loop on stop_reason</span></div>
+    <div class="code">messages = [{"role": "user", "content": user_message}]
+for _ in range(MAX_ITERATIONS):                          <span class="c"># 무한 루프 방지 (보통 5~10회)</span>
+    resp = client.messages.create(model=MODEL, max_tokens=1024,
+                                  tools=tools, messages=messages)
+    messages.append({"role": "assistant", "content": resp.content})   <span class="c"># text+tool_use 전체 보존</span>
+
+    if resp.stop_reason == "end_turn":
+        return final_text(resp)
+    if resp.stop_reason == "tool_use":
+        results = []
+        for block in resp.content:
+            if block.type == "tool_use":
+                output = run_tool(block.name, block.input)       <span class="c"># 앱이 실행</span>
+                results.append({"type": "tool_result",
+                                "tool_use_id": block.id,         <span class="c"># 1:1 매칭</span>
+                                "content": json.dumps(output, ensure_ascii=False)})
+        messages.append({"role": "user", "content": results})    <span class="c"># user role로 반환</span>
+raise RuntimeError("max iterations exceeded")</div>
+    <table class="t">
+      <thead><tr><th style="width:36%">포인트</th><th>주의</th></tr></thead>
+      <tbody>
+        <tr><td>어시스턴트 응답을 이력에 추가</td><td>텍스트 + tool_use를 포함한 <strong>content 전체</strong>를 보존</td></tr>
+        <tr><td>분기 근거</td><td><code>stop_reason == "tool_use"</code> — 응답 길이나 문구가 아니다</td></tr>
+        <tr><td>결과 반환</td><td><code>tool_result</code>는 <strong>user role</strong> 메시지에 담는다 (assistant 아님, 별도 tool role 없음)</td></tr>
+        <tr><td>대응 관계</td><td><code>tool_use_id</code> = 해당 <code>tool_use.id</code> (불일치 시 에러)</td></tr>
+        <tr><td>종료 보장</td><td><code>MAX_ITERATIONS</code>로 중단</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>블록 구조와 에러 반환</h3><span class="unit-en">tool_use · tool_result · is_error</span></div>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">tool_use (Claude → 앱)</div><div class="code">{"type": "tool_use",
+ "id": "toolu_01ABC…",
+ "name": "get_weather",
+ "input": {"city": "Seoul"}}</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">tool_result (앱 → Claude)</div><div class="code">{"type": "tool_result",
+ "tool_use_id": "toolu_01ABC…",
+ "content": "{\"temp\": 22}",
+ "is_error": false}</div></div>
+    </div>
+    <p>툴 실행이 실패하면 <code>is_error: true</code>와 함께 <strong>무엇이 일어났고 어떻게 대처할 수 있는지</strong>를 구조적으로 알린다 (예: "외부 API 타임아웃. 10초 후 재시도 권장"). Claude는 이를 보고 다른 툴 시도·사용자 안내 등 <strong>스스로 복구를 시도</strong>한다.</p>
+    <div class="note"><span class="lbl">보안</span><p>스택 트레이스 같은 내부 정보를 그대로 반환하지 않는다. 같은 툴이 반복 호출된다면 에러 메시지가 모호하거나 description이 불분명한 신호다 — <code>is_error</code> + 명확한 메시지, 그리고 반복 상한으로 막는다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>병렬 툴 호출과 tool_choice</h3><span class="unit-en">parallel tool use · tool_choice</span></div>
+    <p>Claude는 한 턴에 여러 <code>tool_use</code> 블록을 낼 수 있다 — 날씨 + 환율 + 주가처럼 <strong>독립적인 조회</strong>에 효과적이다. 반면 A의 결과로 B의 인자가 정해지는 <strong>순차 의존</strong>이 있으면 병렬 실행이 잘못된 결과를 낳는다.</p>
+    <div class="code">tool_choice={"type": "auto", "disable_parallel_tool_use": True}   <span class="c"># 병렬 호출 끄기</span></div>
+    <table class="t">
+      <thead><tr><th style="width:38%">tool_choice</th><th style="width:28%">동작</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td><code>{"type": "auto"}</code> (기본값)</td><td>Claude가 판단</td><td>일반 대화 에이전트</td></tr>
+        <tr><td><code>{"type": "any"}</code></td><td>어떤 툴이든 하나는 반드시 호출</td><td>툴 호출이 필수인 플로</td></tr>
+        <tr><td><code>{"type": "tool", "name": "…"}</code></td><td>특정 툴을 반드시 호출</td><td>구조화 출력 (⑤)</td></tr>
+      </tbody>
+    </table>
+    <p class="cap">참고: 툴을 정의해 두되 이번 턴에는 호출을 막는 <code>{"type": "none"}</code>도 있다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>툴 설계 원칙</h3><span class="unit-en">Single responsibility · right-sized toolset</span></div>
+    <h4>단일 책무</h4>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 만능 툴</div><div class="code">{"name": "user_action",
+ "description": "조회·갱신·삭제·검색·메일·SMS",
+ "input_schema": {"properties": {
+     "action": {"type": "string"}, …}}}</div><p>description이 비대해지고 오용이 잦다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 1툴 1역할</div><div class="code">get_user · update_user
+delete_user · search_users</div><p>선택 정확도가 오르고 오용이 준다.</p></div>
+    </div>
+    <h4>툴 개수와 추론 부하</h4>
+    <p>Claude는 매 턴 등록된 모든 툴 정의를 읽고 무엇을 쓸지 판단한다. 툴이 늘면 비교 대상이 늘어 비슷한 툴끼리 헷갈리고, 토큰·지연도 늘어난다.</p>
+    <table class="t">
+      <caption>교재의 경험칙</caption>
+      <thead><tr><th style="width:26%">툴 수</th><th>영향</th></tr></thead>
+      <tbody>
+        <tr><td>5개 이하</td><td>최적</td></tr>
+        <tr><td>6~15개</td><td>허용 범위</td></tr>
+        <tr><td>16개 이상</td><td>정확도 저하 · 토큰 소비 증가</td></tr>
+        <tr><td>30개 이상</td><td>설계의 근본적 재검토 필요</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">툴이 너무 많을 때의 판단 축</span><ul><li>문제는 <strong>개수(count)</strong>이지 description 길이가 아니다 → description을 한 줄로 깎으면 판단 재료만 사라져 오히려 악화</li><li>정답은 <strong>Claude가 한 번에 보는 툴 수를 줄이는 것</strong>: 관련 툴을 <strong>서브에이전트</strong>로 떼어내 상위 에이전트는 소수의 위임 툴만 갖게 하거나, 고수준 → 저수준으로 <strong>계층화</strong></li><li>비유: 메뉴 100개짜리 식당은 설명문을 줄이는 게 아니라 코스(카테고리)로 묶어야 한다</li></ul></div>
+    <div class="map">
+      <div class="pc"><div class="pck">개선 1단계</div><h4>현황 분석</h4><ul><li>툴을 기능 카테고리로 분류</li><li>이용 빈도·의존 관계 시각화</li></ul></div>
+      <div class="pc"><div class="pck">개선 2단계</div><h4>서브에이전트 계층화</h4><ul><li>카테고리별 서브에이전트가 자기 툴 보유</li><li>상위(허브)는 위임 판단만 — 툴 5개 안팎</li></ul></div>
+      <div class="pc"><div class="pck">개선 3단계</div><h4>툴 정의 리팩터링</h4><ul><li>복합 툴 분할(단일 책무)</li><li>언제 쓰고 언제 쓰지 않는지 description에 명시</li></ul></div>
+      <div class="pc"><div class="pck">참고 (교재 보완)</div><h4>대규모 툴 환경 옵션</h4><ul><li>Tool Search Tool — 필요할 때 툴 정의를 검색해 로딩</li><li>Programmatic Tool Calling — 코드 실행 환경에서 툴을 코드로 호출</li></ul></div>
+    </div>
+  </div>
+
+  <h2 class="sec">흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>tool_result는 Claude의 응답이니 assistant role로 보낸다.</div><div class="f"><span class="k">사실</span>tool_result는 <strong>user role</strong> 메시지의 내용으로 보낸다 (API 사양).</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>툴을 많이 붙일수록 에이전트가 똑똑해진다.</div><div class="f"><span class="k">사실</span>판단 부하로 정확도·지연이 나빠진다. 적정 개수 + 서브에이전트 분리.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>병렬 툴 호출은 항상 더 빠르고 좋다.</div><div class="f"><span class="k">사실</span>의존 관계가 있으면 잘못된 인자로 실행된다 → <code>disable_parallel_tool_use</code>.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 8</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">분업 모델</span></div>
+      <div class="qq">Claude가 "환율 API를 조회해 보니…"라고 답했다. 실제로 환율 API를 호출한 주체는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Claude가 직접 HTTP 요청을 보냈다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>앱(클라이언트 코드)이 tool_use 블록을 받아 실행했다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>Anthropic 서버가 대신 호출했다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>환율 API가 Claude에게 직접 데이터를 푸시했다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>Tool Use는 'Claude는 판단, 앱은 실행'의 분업이다. Claude는 어떤 툴을 어떤 인자로 부를지 결정할 뿐, 실행은 앱이 한다(Anthropic 서버 측에서 실행되는 일부 내장 툴은 예외).</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">tool_result</span></div>
+      <div class="qq">툴 실행 결과(tool_result 블록)를 담아 보내는 메시지의 role은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>system</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>assistant</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>user</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>tool</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>Anthropic API에서는 tool_result를 user role 메시지에 담는다. 별도의 tool role은 없다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">에이전트 루프</span></div>
+      <div class="qq">에이전트 루프에서 '툴을 실행할지, 최종 답변으로 끝낼지'를 판단하는 근거는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>response.stop_reason</code>이 <code>"tool_use"</code>인지 <code>"end_turn"</code>인지</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>응답 텍스트에 '툴'이라는 단어가 있는지</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>응답의 길이</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>tools 리스트가 비어 있는지</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>stop_reason이 루프 제어의 유일하게 신뢰할 수 있는 신호다. 텍스트 내용이나 길이로 추측하면 오작동한다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">병렬 호출</span></div>
+      <div class="qq"><span class="sc">'주문 조회' 툴의 결과로 얻은 송장 번호를 '배송 추적' 툴의 인자로 써야 한다. 가끔 두 툴이 동시에 호출돼 배송 추적이 빈 인자로 실패한다.</span>가장 적절한 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>max_tokens를 1로 줄인다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>두 툴을 하나의 만능 툴로 합친다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>tool_choice를 <code>{"type": "any"}</code>로 바꾼다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>tool_choice={"type": "auto", "disable_parallel_tool_use": True}</code>로 병렬 호출을 끈다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>순차 의존이 있는 툴은 병렬 실행을 막아야 한다. 만능 툴로 합치는 것은 단일 책무 원칙에 어긋나고, any는 '반드시 호출'일 뿐 병렬 여부와 무관하다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">툴 개수</span></div>
+      <div class="qq">고객 지원 에이전트에 툴 40개를 등록했더니 지연이 크게 늘고 엉뚱한 툴을 고르는 일이 잦다. 가장 적절한 대응은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모든 툴의 description을 한 줄로 줄인다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>기능별로 묶어 서브에이전트로 분리하고, 상위 에이전트는 소수의 위임 툴만 갖게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>툴을 더 추가해 선택지를 늘린다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>더 작은 모델로 바꿔 지연을 줄인다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>원인은 Claude가 한 번에 보는 툴의 '수'다. description을 깎으면 판단 재료가 사라져 정확도가 더 떨어진다. 서브에이전트화·계층화로 수 자체를 줄인다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">단일 책무</span></div>
+      <div class="qq"><code>manage_order(action: string, payload: object)</code> 하나로 생성·취소·조회·환불을 처리하는 툴이 있다. 가장 좋은 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>description을 훨씬 길게 써서 모든 action을 설명한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>현재 구조를 유지한다 — 툴 수가 적을수록 좋다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>create_order</code> · <code>cancel_order</code> · <code>get_order</code> · <code>refund_order</code>처럼 단일 책무 툴로 나눈다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>payload 타입을 string으로 바꾼다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>1툴 1역할로 나누면 각 툴의 스키마가 명확해지고 선택 정확도가 오른다. '툴 수가 적을수록 좋다'는 개수가 과도할 때의 이야기이며, 복합 책무 툴을 정당화하지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q7</span><span class="qt">에러 처리</span></div>
+      <div class="qq">툴이 호출한 외부 결제 API가 타임아웃됐다. Claude에게 어떻게 알리는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>is_error: true</code>인 tool_result에 "결제 API 타임아웃, 잠시 후 재시도 가능"처럼 원인과 대처를 담아 보낸다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>전체 스택 트레이스를 그대로 content에 넣는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>tool_result를 생략하고 다음 요청을 보낸다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>성공한 것처럼 빈 결과를 반환한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>is_error와 구조적인 메시지를 받으면 Claude가 복구(재시도 제안·대체 경로·사용자 안내)를 판단할 수 있다. 내부 정보 노출은 보안상 피하고, tool_result 누락은 tool_use_id 매칭 에러를 낸다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q8</span><span class="qt">tool_choice</span></div>
+      <div class="qq">워크플로 특성상 Claude가 매 턴 <strong>어떤 툴이든 하나는 반드시</strong> 호출해야 한다(어느 툴인지는 Claude가 판단). 알맞은 지정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>{"type": "auto"}</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>{"type": "none"}</code></span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>{"type": "tool", "name": "first_tool"}</code></span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>{"type": "any"}</code></span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>any는 '반드시 하나 이상 호출, 어느 것인지는 Claude가 선택'이다. auto는 호출하지 않을 수도 있고, tool은 특정 툴로 고정한다.</p></div>
+    </div>
+  </div>
+
+  <p class="cap" style="margin-top:40px">출처: 김재우, 『Claude Certified Architect – Foundations (CCA-F) 자격시험 교재』, <a href="https://koding.kr/ebooks/claude-certified-architect-foundations-cca-f-%EC%9E%90%EA%B2%A9%EC%8B%9C%ED%97%98-%EA%B5%90%EC%9E%AC-7oi2kh" target="_blank" rel="noopener">koding.kr 전자책</a>. 이 페이지는 원문을 학습용으로 요약·재구성한 것이며, 자가 점검 문항은 이 가이드에서 새로 작성했습니다. 시험 사양·모델 ID 등 변동 가능한 정보는 Anthropic 공식 자료로 최종 확인하세요.</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

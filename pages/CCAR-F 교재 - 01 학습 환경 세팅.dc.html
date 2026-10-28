@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 자격시험 교재 <span class="cat">· 제2장 / 자습 정리</span></div>
+    <h1>학습 환경 세팅</h1>
+    <p class="sub">Console·API 키 · Python SDK · Claude Code CLI · MCP SDK</p>
+    <p class="meta">원문 · <a href="https://koding.kr/ebooks/claude-certified-architect-foundations-cca-f-%EC%9E%90%EA%B2%A9%EC%8B%9C%ED%97%98-%EA%B5%90%EC%9E%AC-7oi2kh?ch=2" target="_blank" rel="noopener">koding.kr — 제2장</a> &nbsp;|&nbsp; 구분: 오리엔테이션</p>
+    <div class="secrow">
+      <span class="s">⓪ 시험 개요</span><span class="s on">① 환경</span><span class="s">② 모델</span><span class="s">③ API</span><span class="s">④ 프롬프트</span><span class="s">⑤ 구조화 출력</span><span class="s">⑥ Tool Use</span><span class="s">⑦ MCP</span><span class="s">⑧ 이후 장</span><span class="s">⑨ 자가진단</span>
+    </div>
+  </header>
+
+  <p class="lede">CCA-F는 지식 시험이지만, 그 지식은 <em>직접 Claude를 돌려 볼 때</em> 비로소 자리 잡는다. 이 장에서는 시험 범위를 손으로 확인하기 위한 <strong>4가지 학습 환경</strong>을 준비한다.</p>
+
+  <h2 class="sec">준비할 환경</h2>
+  <table class="t">
+    <thead><tr><th style="width:28%">환경</th><th>용도</th><th style="width:11%">구분</th><th style="width:15%">관련 도메인</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Anthropic Console</strong></td><td>Web UI(Workbench)에서 프롬프트를 시험하고 API 키를 발급</td><td>필수</td><td>전반</td></tr>
+      <tr><td><strong>Anthropic API</strong> (Python SDK)</td><td>코드에서 Claude를 프로그램적으로 호출</td><td>필수</td><td>도메인 2·4</td></tr>
+      <tr><td><strong>Claude Code CLI</strong></td><td>Anthropic 공식 터미널 코딩 에이전트</td><td>필수</td><td>도메인 3</td></tr>
+      <tr><td><strong>MCP SDK</strong> (Python)</td><td>MCP 서버/클라이언트 구현</td><td>권장</td><td>도메인 2</td></tr>
+    </tbody>
+  </table>
+
+  <div class="duo">
+    <div class="pane" style="border-top:3px solid var(--accent)">
+      <div class="pt2">필요한 도구</div>
+      <ul style="margin:6px 0 0;font-size:13.5px">
+        <li>Anthropic 계정 · 브라우저</li>
+        <li>Python <strong>3.10 이상</strong> (API·MCP SDK)</li>
+        <li>Node.js 18 이상 — <em>npm으로 Claude Code를 설치할 때만</em></li>
+        <li>curl · Git 2.x</li>
+      </ul>
+    </div>
+    <div class="pane" style="border-top:3px solid var(--teal)">
+      <div class="pt2">교재가 전제하는 버전</div>
+      <ul style="margin:6px 0 0;font-size:13.5px">
+        <li>Anthropic Python SDK 0.39 이상</li>
+        <li>Claude Code CLI 2.x 계열</li>
+        <li>MCP Python SDK 1.x 계열</li>
+        <li>절차대로 안 되면 <strong>버전부터 확인</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="sec">설치 절차</h2>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>계정 생성과 API 키 발급</h3><span class="unit-en">Console · API Keys</span></div>
+    <ol class="proc">
+      <li><code>console.anthropic.com</code>에 가입하고 이메일 인증을 마친다</li>
+      <li>왼쪽 메뉴 <strong>API Keys → Create Key</strong>, 알아보기 쉬운 이름(예: <code>cca-f-study</code>)을 붙인다</li>
+      <li>표시된 키(<code>sk-ant-…</code>)를 즉시 복사해 안전한 곳에 보관한다 — <strong>발급 시 한 번만 표시</strong>된다</li>
+    </ol>
+    <div class="note"><span class="lbl">API 키 = 비밀번호</span><p>저장소에 push하거나 메신저에 붙여 넣지 않는다. 유출이 의심되면 Console에서 <strong>즉시 폐기(revoke)</strong>하고 새 키를 발급한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>환경 변수 설정</h3><span class="unit-en">ANTHROPIC_API_KEY</span></div>
+    <div class="code"><span class="c"># ~/.zshrc (bash라면 ~/.bashrc)에 추가</span>
+export ANTHROPIC_API_KEY="sk-ant-xxxxxxxx"
+
+source ~/.zshrc            <span class="c"># 반영</span>
+echo $ANTHROPIC_API_KEY    <span class="c"># sk-ant-… 가 보이면 OK</span></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>curl로 첫 호출</h3><span class="unit-en">Messages API smoke test</span></div>
+    <div class="code">curl https://api.anthropic.com/v1/messages \
+  --header "x-api-key: $ANTHROPIC_API_KEY" \
+  --header "anthropic-version: 2023-06-01" \
+  --header "content-type: application/json" \
+  --data '{
+    "model": "claude-haiku-4-5",
+    "max_tokens": 256,
+    "messages": [
+      {"role": "user", "content": "Hello, Claude! 한 문장으로 자기소개해 주세요."}
+    ]
+  }'</div>
+    <p class="cap">응답 JSON의 <code>content[0].text</code>에 답변이 있으면 성공. 모델 ID는 예시이며, 실제 값은 Console의 Models 페이지·공식 문서에서 최신 ID를 확인한다.</p>
+    <div class="note tip"><span class="lbl">비용 감각</span><p>동작 확인에는 가장 저렴하고 빠른 <strong>Haiku</strong>가 정석이다. Hello World에 최상위 모델을 쓰는 것은 낭비 — 용도별로 모델을 나눠 쓰는 습관을 처음부터 들인다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>Python SDK</h3><span class="unit-en">pip install anthropic</span></div>
+    <div class="code">import anthropic
+
+client = anthropic.Anthropic()   <span class="c"># 환경 변수 ANTHROPIC_API_KEY를 자동으로 읽는다</span>
+
+message = client.messages.create(
+    model="claude-haiku-4-5",
+    max_tokens=256,
+    messages=[{"role": "user", "content": "Hello, Claude!"}],
+)
+print(message.content[0].text)</div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>Claude Code CLI</h3><span class="unit-en">도메인 3 (20%) 실습 환경</span></div>
+    <table class="t">
+      <thead><tr><th style="width:26%">설치 방식</th><th>명령</th><th style="width:30%">특징</th></tr></thead>
+      <tbody>
+        <tr><td><strong>네이티브 설치</strong> (권장)</td><td><code>curl -fsSL https://claude.ai/install.sh | bash</code></td><td>Node.js 불필요 · 백그라운드 자동 업데이트</td></tr>
+        <tr><td>npm</td><td><code>npm install -g @anthropic-ai/claude-code</code></td><td>버전 고정(pin)·팀 표준이 npm일 때</td></tr>
+      </tbody>
+    </table>
+    <div class="code">claude --version   <span class="c"># 2.x.x 가 나오면 OK</span>
+claude             <span class="c"># 첫 실행 시 브라우저로 계정 인증</span></div>
+    <p class="cap">인증은 API 키 또는 Pro/Max 구독 계정으로 할 수 있다(교재는 API 키 인증을 전제로 진행).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>MCP SDK와 샘플 서버</h3><span class="unit-en">pip install mcp</span></div>
+    <div class="code">from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("hello-server")
+
+@mcp.tool()
+def greet(name: str) -> str:
+    """이름을 받아 인사말을 돌려준다."""
+    return f"안녕하세요, {name}님!"
+
+if __name__ == "__main__":
+    mcp.run()</div>
+    <p class="cap"><code>python hello_mcp_server.py</code>로 실행해 '돌아가는 환경이 있다'는 것만 확인하면 충분하다. 상세는 ⑦ MCP 입문에서 다룬다.</p>
+  </div>
+
+  <div class="note tip">
+    <span class="lbl">한국 환경 팁 (교재 편집부 보완)</span>
+    <p>망분리된 SI·금융권 환경이라면 ① <code>api.anthropic.com</code>으로의 아웃바운드가 사내 프록시·방화벽에서 허용되는지 확인한다 — Claude Code와 Python SDK 모두 <code>HTTPS_PROXY</code> 환경 변수를 지원한다. ② 직접 호출이 어렵다면 AWS Bedrock의 Claude 모델을 실습 대안으로 검토한다(리전·모델 제공 여부는 시점별로 확인). 시험은 Anthropic API 기준으로 출제된다.</p>
+  </div>
+
+  <h2 class="sec">흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>Claude Code를 설치하면 API도 같이 쓸 수 있는 같은 제품이다.</div><div class="f"><span class="k">사실</span>별개 도구다. Claude Code는 CLI 코딩 에이전트, API는 HTTP 엔드포인트. Claude Code가 내부적으로 API를 호출하므로 API 키는 공용으로 쓸 수 있다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>MCP는 Anthropic만의 독자 사양이다.</div><div class="f"><span class="k">사실</span>MCP는 <strong>오픈 사양</strong>이다. 다른 모델 제공자와 IDE도 지원한다 (modelcontextprotocol.io).</div></div>
+
+  <h2 class="sec">흔한 에러와 대처</h2>
+  <table class="t">
+    <thead><tr><th style="width:34%">증상</th><th style="width:30%">원인</th><th>대처</th></tr></thead>
+    <tbody>
+      <tr><td><code>401 Unauthorized</code></td><td>키가 틀림 / 환경 변수 미반영</td><td><code>echo $ANTHROPIC_API_KEY</code>로 확인, 셸 설정 다시 로드</td></tr>
+      <tr><td><code>model: … is not found</code></td><td>존재하지 않는 ID / 권한 없음</td><td>Console Models 페이지에서 사용 가능한 ID 확인</td></tr>
+      <tr><td><code>claude: command not found</code></td><td>설치 경로가 PATH에 없음</td><td>(npm) <code>npm root -g</code>로 경로 확인 후 PATH에 bin 추가</td></tr>
+      <tr><td><code>No module named 'mcp'</code></td><td>미설치 / 다른 Python 환경</td><td><code>pip show mcp</code>, 가상 환경 안에서 재설치</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 5</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">도구 구분</span></div>
+      <div class="qq">Claude Code와 Anthropic API의 관계를 가장 정확히 설명한 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>같은 제품의 다른 이름이므로 하나만 설치하면 된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Claude Code는 로컬 모델로 동작하므로 API와 무관하다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>별개 도구다. Claude Code는 CLI 코딩 에이전트이고, API는 SDK·HTTP로 호출하는 엔드포인트다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>API는 Claude Code 안에서만 호출할 수 있다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>둘은 별개다. 다만 Claude Code가 내부에서 API를 호출하므로 같은 API 키로 인증할 수 있다. 각각 <code>claude --version</code>, <code>pip show anthropic</code>으로 따로 확인한다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">보안</span></div>
+      <div class="qq">실수로 API 키가 들어 있는 파일을 공개 저장소에 push했다. 가장 먼저 할 일은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>다음 커밋에서 파일을 지우고 그대로 사용한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Console에서 해당 키를 즉시 폐기(revoke)하고 새 키를 발급한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>저장소를 비공개로 바꾸면 충분하다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Console에서 키 이름만 바꾼다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>이미 노출된 키는 이력·캐시에 남을 수 있으므로 삭제나 비공개 전환으로는 부족하다. 즉시 폐기하고 재발급하는 것이 원칙이다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">모델 선택</span></div>
+      <div class="qq">설치 직후 'Hello' 수준의 동작 확인 요청을 보낼 때 가장 적절한 모델은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>가장 저렴하고 빠른 Haiku</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>가장 성능이 높은 Opus</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>컨텍스트 윈도우가 가장 큰 모델</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>어떤 모델이든 비용이 같으므로 상관없다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>요건을 충족하는 가장 저렴한 모델을 고르는 것이 원칙이다. 단순 동작 확인에 상위 모델을 쓰는 것은 비용 낭비다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">트러블슈팅</span></div>
+      <div class="qq"><code>401 authentication_error</code>가 반환됐다. 가장 가능성 높은 원인은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모델 ID 오타</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>레이트 리밋 초과</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>max_tokens 값이 너무 큼</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>API 키가 틀렸거나 환경 변수가 셸에 반영되지 않음</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>401은 인증 실패다. 모델 ID 문제는 404/not found, 레이트 리밋은 429, 파라미터 오류는 400으로 나타난다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">Claude Code 설치</span></div>
+      <div class="qq">Node.js가 없는 새 PC에 Claude Code를 설치하려 한다. 교재 보완 노트가 권하는 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Node.js를 먼저 설치한 뒤 npm으로만 설치할 수 있다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>pip install claude-code</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>네이티브 설치 프로그램을 쓴다 — Node.js가 필요 없고 자동 업데이트된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Claude Code는 웹 브라우저에서만 쓸 수 있다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>네이티브 설치 프로그램이 기본 권장 방식이다. npm 설치도 지원되며 버전을 고정하거나 팀 표준이 npm일 때 유용하다 — 이때만 Node.js 18 이상이 필요하다.</p></div>
+    </div>
+  </div>
+
+  <p class="cap" style="margin-top:40px">출처: 김재우, 『Claude Certified Architect – Foundations (CCA-F) 자격시험 교재』, <a href="https://koding.kr/ebooks/claude-certified-architect-foundations-cca-f-%EC%9E%90%EA%B2%A9%EC%8B%9C%ED%97%98-%EA%B5%90%EC%9E%AC-7oi2kh" target="_blank" rel="noopener">koding.kr 전자책</a>. 이 페이지는 원문을 학습용으로 요약·재구성한 것이며, 자가 점검 문항은 이 가이드에서 새로 작성했습니다. 시험 사양·모델 ID 등 변동 가능한 정보는 Anthropic 공식 자료로 최종 확인하세요.</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

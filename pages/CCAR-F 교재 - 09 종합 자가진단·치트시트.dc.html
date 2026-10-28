@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 자격시험 교재 <span class="cat">· 종합 복습 / 자습 정리</span></div>
+    <h1>종합 자가진단 & 치트시트</h1>
+    <p class="sub">기초·도메인 4·도메인 2 혼합 20문항 · 빠른 복습 치트시트</p>
+    <p class="meta">원문 · <a href="https://koding.kr/ebooks/claude-certified-architect-foundations-cca-f-%EC%9E%90%EA%B2%A9%EC%8B%9C%ED%97%98-%EA%B5%90%EC%9E%AC-7oi2kh" target="_blank" rel="noopener">koding.kr — CCA-F 자격시험 교재</a> &nbsp;|&nbsp; 범위: 공개 제1~8장</p>
+    <div class="secrow">
+      <span class="s">⓪ 시험 개요</span><span class="s">① 환경</span><span class="s">② 모델</span><span class="s">③ API</span><span class="s">④ 프롬프트</span><span class="s">⑤ 구조화 출력</span><span class="s">⑥ Tool Use</span><span class="s">⑦ MCP</span><span class="s">⑧ 이후 장</span><span class="s on">⑨ 자가진단</span>
+    </div>
+  </header>
+
+  <p class="lede">제1~8장 범위를 섞은 <strong>20문항 종합 자가진단</strong>과 <strong>빠른 복습 치트시트</strong>다. 실제 시험처럼 <em>시나리오를 읽고 4개 중 가장 적절한 것</em>을 고른다. 장별 퀴즈와 겹치지 않는 새 시나리오로 구성했다.</p>
+
+  <div class="note tip"><span class="lbl">진단 방법</span><p>먼저 해설을 보지 않고 20문항을 끝까지 푼다 → 점수 확인 → 틀린 문항의 태그(기초 · 도메인 4 · 도메인 2)를 보고 해당 장으로 돌아간다. 16문항(80%) 이상이면 공개 장 범위는 안정권으로 보고, ⑧ 로드맵의 다음 장으로 넘어간다.</p></div>
+
+  <h2 class="sec">종합 자가진단 20문항</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 20</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt qt-t">기초 · 모델</span></div>
+      <div class="qq"><span class="sc">법률 사무소가 판례 수백 건을 비교해 새 소송 전략의 논리적 허점을 찾는 에이전트를 만든다. 요청은 하루 수십 건이고, 답변 품질이 비용보다 훨씬 중요하다.</span>기본 모델로 가장 적절한 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Haiku — 가장 저렴하므로</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Opus — 복잡한 추론이 핵심이고 요청량이 적다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>모델은 무관하고 프롬프트만 중요하다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Message Batches API로 처리하면 모델은 자동 선택된다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>'요건을 충족하는 가장 저렴한 모델'에서 요건이 고난도 추론이다. 소량·고품질 요구라 Opus의 비용이 정당화된다. Batches는 모델을 고르지 않는다.</p></div>
+    </div>
+
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt qt-t">기초 · 모델</span></div>
+      <div class="qq">새 모델 버전이 나왔을 때 프로덕션을 안전하게 운영하는 방식으로 가장 적절한 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>프로덕션도 항상 최신 별칭을 써서 자동으로 따라간다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>한 번 고정한 ID는 영원히 바꾸지 않는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>요청마다 무작위로 새/구 버전을 섞어 쓴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>프로덕션은 고정 ID를 쓰고, 검증 환경에서 새 버전을 평가한 뒤 계획적으로 교체한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>고정은 재현성을, 정기 평가는 개선·수정 반영을 담보한다. 영구 고정은 개선을 놓치고, 최신 추종은 예기치 않은 동작 변화를 부른다.</p></div>
+    </div>
+
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt qt-t">기초 · API</span></div>
+      <div class="qq">다음 요청 중 Anthropic Messages API가 <strong>거부</strong>하는 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>messages 안에 <code>{"role": "system", …}</code>을 넣은 요청</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>최상위 <code>system</code> + user 메시지 1개</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>content를 <code>[{"type": "text", "text": "…"}]</code> 블록 리스트로 쓴 user 메시지</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>user → assistant → user 순서의 대화 이력</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>Messages API에는 system role 메시지가 없다 — system은 최상위 필드다. 블록 리스트 content와 교대 배치 이력은 모두 정상 요청이다.</p></div>
+    </div>
+
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt qt-t">기초 · API</span></div>
+      <div class="qq"><span class="sc">사용자가 채팅 화면에서 긴 보고서 생성을 요청한다. 완성까지 20초가 걸려 사용자가 '멈췄다'고 느끼고 이탈한다.</span>가장 적절한 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Message Batches API로 옮겨 비용을 낮춘다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>temperature를 0으로 낮춘다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>스트리밍으로 토큰을 받는 대로 표시해 체감 대기 시간을 줄인다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>max_tokens를 줄여 보고서를 짧게 자른다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>사람이 화면 앞에서 기다리는 상황이므로 Batches(최대 24시간)는 부적합하다. 스트리밍은 총 시간을 줄이지 않지만 첫 글자가 바로 보여 체감 대기를 크게 줄인다. 무리한 max_tokens 축소는 출력 잘림을 부른다.</p></div>
+    </div>
+
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt qt-t">기초 · 비용</span></div>
+      <div class="qq"><span class="sc">사내 문서 1,000페이지를 대상으로 하루 1만 건의 다양한 질문에 답한다. 질문마다 참조하는 부분이 다르다.</span>비용과 품질의 균형이 가장 좋은 설계는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>문서 전체를 매 요청 system에 넣고 최상위 모델로 처리</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>RAG로 관련 청크만 검색해 넣고 중간 등급 모델로 처리</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>문서 전체를 캐시에 올리고 최상위 모델로 처리</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>매 요청마다 문서 전체를 요약해 경량 모델로 처리</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>필요한 정보만 필요한 만큼 넣는 것이 원칙이다. 전량 투입은 캐시를 써도 과잉이고 Lost in the Middle 위험이 있으며, 매번 요약은 품질이 불안정하다. RAG는 검색 Recall 평가가 품질의 관건이다.</p></div>
+    </div>
+
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt qt-t">기초 · API</span></div>
+      <div class="qq">긴 답변의 끝이 문장 중간에서 끊겨 돌아왔다. 응답에서 가장 먼저 확인할 값은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>response.id</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>response.model</code></span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>response.role</code></span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>response.stop_reason</code> — <code>"max_tokens"</code>면 출력 상한에 걸린 것</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>stop_reason이 멈춘 이유를 알려 준다. max_tokens로 끝났다면 상한을 올리거나 이어받기 처리를 한다. <code>usage.output_tokens</code>가 max_tokens에 가까운지도 함께 본다.</p></div>
+    </div>
+
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q7</span><span class="qt">도메인 4 · 프롬프트</span></div>
+      <div class="qq"><span class="sc">상품 문의 분류 프롬프트에 Few-shot 예시 4개를 넣었는데, 모두 '배송 문의'였다. 이후 환불 문의까지 배송으로 분류되는 일이 잦다.</span>가장 직접적인 원인은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>예시가 한 클래스로 치우쳐 모델이 치우친 판단 패턴을 학습했다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>예시가 4개뿐이라 너무 적다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>temperature가 너무 낮다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>XML 태그를 쓰지 않아서다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>Few-shot은 개수보다 균형이 중요하다(3~5개면 대개 충분). 모든 카테고리의 전형 예와 경계 예를 고르게 넣는다.</p></div>
+    </div>
+
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q8</span><span class="qt">도메인 4 · 프롬프트</span></div>
+      <div class="qq">긴 계약서를 넣고 위험 조항을 찾게 하는 프롬프트다. 지시문과 계약서 본문이 섞여 Claude가 본문의 문장을 지시로 오해하는 일이 생긴다. 가장 효과적인 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>지시문을 대문자로 강조한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>계약서를 프롬프트 맨 앞에, 지시를 맨 뒤에 그냥 이어 붙인다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>본문을 <code>&lt;contract&gt;</code>, 지시를 <code>&lt;instructions&gt;</code> 태그로 감싸 경계를 분명히 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Few-shot 예시를 20개 추가한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>XML 태그는 지시와 데이터의 경계를 명확히 하는 Claude 권장 기법이다. 같은 원리가 프롬프트 인젝션 방어에도 쓰인다.</p></div>
+    </div>
+
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q9</span><span class="qt">도메인 4 · 프롬프트</span></div>
+      <div class="qq"><span class="sc">고객 리뷰 한 줄에 대해 '긍정/부정' 라벨만 붙이는 대량 처리에 Extended Thinking을 켜 두었다.</span>이 설정에 대한 평가로 옳은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>정확도가 크게 올라 반드시 유지해야 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>단순 태스크에는 과잉이라 비용과 지연만 늘어난다 — 끄는 것이 맞다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>Extended Thinking은 비용에 영향이 없다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Batches API와 함께 쓰면 필수 설정이다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>CoT/Extended Thinking은 다중 제약·복잡 추론에서 효과가 크고, 답이 바로 정해지는 단순 분류에는 토큰과 지연만 늘린다.</p></div>
+    </div>
+
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q10</span><span class="qt">도메인 4 · 프롬프트</span></div>
+      <div class="qq">팀원마다 "이렇게 바꿔 보니 좋아진 것 같다"며 프롬프트를 수정해, 무엇 때문에 좋아지고 나빠졌는지 아무도 모른다. 가장 먼저 도입할 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>더 큰 모델로 교체</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>temperature를 0.9로 고정</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트를 두 배로 길게 써서 모든 예외를 나열</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>기대 출력(합격 조건)과 실패 사례 세트를 정의하고, 수정마다 같은 세트로 재평가하며 이력을 버전 관리</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>반복 세련의 핵심은 '관찰하고 개선하는' 재현 가능한 구조다. TDD식 기대 출력 정의와 실패 예 축적, 버전 관리가 있어야 개선/개악을 판정할 수 있다.</p></div>
+    </div>
+
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q11</span><span class="qt">도메인 4 · 구조화 출력</span></div>
+      <div class="qq">영수증 이미지에서 금액·날짜·가맹점을 뽑아 DB에 넣는다. 가끔 JSON 앞에 "다음은 추출 결과입니다:" 같은 문장이 붙어 파싱이 실패한다. 근본적인 해결책은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>정규식으로 첫 <code>{</code>부터 마지막 <code>}</code>까지 잘라낸다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>프롬프트에 "설명 없이"를 세 번 반복한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>필드를 JSON 스키마로 정의한 툴을 만들고 <code>tool_choice</code>로 강제해 <code>tool_use.input</code>을 받는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>temperature를 1.0으로 올린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>프롬프트 지시만으로 강제하면 앞뒤 잡텍스트가 생길 수 있다. Tool Use 기반이면 스키마에 맞춘 input을 API가 파싱해 돌려준다. 정규식 절단은 증상 완화일 뿐이다.</p></div>
+    </div>
+
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q12</span><span class="qt">도메인 4 · 구조화 출력</span></div>
+      <div class="qq">스키마의 <code>amount</code> 필드에 어떤 때는 원 단위, 어떤 때는 천 원 단위 값이 들어온다. 가장 효과적인 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>description에 "결제 총액 · 원(KRW) 단위 정수 · 부가세 포함"처럼 단위와 의미를 명시한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>필드 이름을 <code>amt</code>로 줄인다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>타입을 string으로 바꾼다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>리트라이 횟수를 늘린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>description은 Claude에게 주는 필드 단위 지시다. 단위·형식·범위를 구체적으로 쓰면 해석 흔들림이 사라진다.</p></div>
+    </div>
+
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q13</span><span class="qt">도메인 4 · 구조화 출력</span></div>
+      <div class="qq"><span class="sc">하루 30만 건의 짧은 고객 메모를 태그로 분류하는 파이프라인에 draft→review→refine 3패스를 적용했더니 비용이 3배가 됐다.</span>가장 적절한 판단은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>품질이 오르니 비용과 무관하게 모든 처리에 유지한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>대량·경량 출력에는 1회 생성(+검증)으로 돌리고, 멀티패스는 계약서 같은 중요 출력에만 쓴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>패스를 5개로 늘려 품질을 더 올린다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Best of N으로 바꾸면 비용이 줄어든다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>멀티패스는 패스 수에 비례해 비용·지연이 늘어난다. '품질을 극대화할 중요 출력인가?'가 적용 기준이다. Best of N도 여러 안을 생성하므로 비용이 줄지 않는다.</p></div>
+    </div>
+
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q14</span><span class="qt qt-b">도메인 2 · Tool Use</span></div>
+      <div class="qq">에이전트 루프를 직접 구현했는데, 두 번째 요청에서 "tool_use 블록에 대응하는 tool_result가 없다"는 에러가 난다. 가장 가능성 높은 원인은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>tools 정의에 description이 없다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>temperature가 0이다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>max_iterations가 너무 크다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>tool_result의 <code>tool_use_id</code>가 해당 <code>tool_use.id</code>와 다르거나, 일부 tool_use에 대한 결과를 빠뜨렸다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>각 tool_use에는 같은 id를 가진 tool_result가 1:1로 대응해야 한다. 병렬 호출로 tool_use가 여러 개 왔다면 결과도 모두 돌려줘야 한다.</p></div>
+    </div>
+
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q15</span><span class="qt qt-b">도메인 2 · Tool Use</span></div>
+      <div class="qq"><span class="sc">여행 에이전트가 '항공권 검색'과 '호텔 검색'(서로 독립)을 매번 순서대로 한 턴씩 호출해 응답이 느리다.</span>가장 적절한 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>병렬 툴 호출을 허용해, 한 턴에 두 tool_use를 받아 동시에 실행하고 결과를 함께 돌려준다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>disable_parallel_tool_use</code>를 켠다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>두 툴을 하나의 만능 검색 툴로 합친다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>tool_choice를 none으로 바꾼다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>의존 관계가 없는 조회는 병렬 호출로 왕복 횟수를 줄인다. 병렬을 끄는 것은 순차 의존이 있을 때의 처방이다. none은 툴 호출 자체를 막는다.</p></div>
+    </div>
+
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q16</span><span class="qt qt-b">도메인 2 · Tool Use</span></div>
+      <div class="qq">에이전트가 같은 검색 툴을 결과도 없이 열 번 넘게 반복 호출하다 멈춘다. 가장 적절한 대응 조합은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>툴을 더 추가해 선택지를 넓힌다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>max_tokens를 늘린다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>결과 없음·실패를 <code>is_error</code>와 명확한 메시지로 돌려주고, description을 구체화하며, 반복 상한(max_iterations)을 둔다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>stop_reason 확인을 생략한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>반복 호출은 에러 처리 부족이나 모호한 description의 신호다. Claude가 상황을 이해하도록 구조적인 피드백을 주고, 루프 상한으로 종료를 보장한다.</p></div>
+    </div>
+
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q17</span><span class="qt qt-b">도메인 2 · MCP</span></div>
+      <div class="qq">사내 인사 시스템을 MCP로 연동한다. '직원 조직도 열람'과 '휴가 신청 제출'은 각각 어떻게 공개하는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>둘 다 Tool</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>조직도 열람은 Resource, 휴가 신청 제출은 Tool</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>조직도 열람은 Tool, 휴가 신청 제출은 Resource</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>둘 다 Prompt</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>'호출하면 외부 상태가 바뀌는가'로 나눈다. 열람은 읽기(Resource), 신청 제출은 부수 효과(Tool)다.</p></div>
+    </div>
+
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q18</span><span class="qt qt-b">도메인 2 · MCP</span></div>
+      <div class="qq">개발자 PC에서만 쓰는 작은 MCP 서버를 Claude Code에 붙인다. 가장 일반적인 구성은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>클라우드에 상시 가동 서버를 띄우고 Streamable HTTP로 연결</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>WebSocket 전용 서버를 직접 구현</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>MCP 대신 Anthropic API를 Claude Code에 직접 붙인다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>stdio 트랜스포트 — Claude Code가 서버를 자식 프로세스로 띄우고 표준 입출력으로 통신</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>로컬 서버는 stdio가 가장 단순하고 일반적이다. 상시 가동이 필요 없고, 원격 공유가 필요할 때 Streamable HTTP를 쓴다.</p></div>
+    </div>
+
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q19</span><span class="qt qt-b">도메인 2 · MCP</span></div>
+      <div class="qq">MCP 3요소의 '제어 주체'를 올바르게 짝지은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Tools = 모델 · Resources = 앱(호스트) · Prompts = 사용자</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Tools = 사용자 · Resources = 모델 · Prompts = 앱</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>세 요소 모두 모델이 제어한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>세 요소 모두 서버가 제어한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>모델이 판단해 호출하는 Tools, 앱이 가져와 컨텍스트에 공급하는 Resources, 사용자가 슬래시 커맨드 등으로 직접 고르는 Prompts.</p></div>
+    </div>
+
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q20</span><span class="qt qt-b">도메인 2 · MCP vs Tool Use</span></div>
+      <div class="qq"><span class="sc">사내 단일 웹앱 백엔드에서만, 환율 변환 함수 하나를 Claude가 호출하게 하고 싶다. 다른 클라이언트에서 재사용할 계획은 없다.</span>가장 합리적인 선택은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>원격 MCP 서버를 새로 구축해 연결한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>MCP Prompts로 환율표를 공개한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>앱 안에서 직접 Tool Use로 툴을 정의해 처리한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Claude Code의 project 스코프에 등록한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>단일 앱 안의 단순한 함수 호출이면 직접 Tool Use가 단순하고 충분하다. MCP는 여러 LLM·IDE에서 재사용하거나 Claude Code/Desktop에 붙일 때 가치가 커진다.</p></div>
+    </div>
+  </div>
+
+  <h2 class="sec">빠른 복습 치트시트</h2>
+  <div class="cheat">
+    <div class="cc"><h4>모델 선정</h4><ul>
+      <li><span class="kk">원칙</span><span class="vv">요건을 충족하는 가장 저렴한 모델</span></li>
+      <li><span class="kk">Haiku</span><span class="vv">대량 · 단순 분류/추출 · 최저 비용</span></li>
+      <li><span class="kk">Sonnet</span><span class="vv">일반 앱 · 균형</span></li>
+      <li><span class="kk">Opus</span><span class="vv">복잡 추론 · 코딩 · 에이전트</span></li>
+      <li><span class="kk">혼합</span><span class="vv">라우팅 + 임곗값 · 폴백</span></li>
+      <li><span class="kk">ID</span><span class="vv">프로덕션은 고정, 검증 환경에서 새 버전 평가</span></li>
+    </ul></div>
+    <div class="cc"><h4>Messages API</h4><ul>
+      <li><span class="kk">필수</span><span class="vv">model · max_tokens · messages</span></li>
+      <li><span class="kk">system</span><span class="vv">최상위 필드 (system role 없음)</span></li>
+      <li><span class="kk">temperature</span><span class="vv">0~1 · 구조화/분류는 0</span></li>
+      <li><span class="kk">max_tokens</span><span class="vv">출력 상한 · 생성분만 과금</span></li>
+      <li><span class="kk">content</span><span class="vv">문자열 = 블록 리스트 (혼합 시 리스트)</span></li>
+      <li><span class="kk">429</span><span class="vv">지수 백오프 + jitter</span></li>
+    </ul></div>
+    <div class="cc"><h4>stop_reason</h4><ul>
+      <li><span class="kk"><code>end_turn</code></span><span class="vv">정상 완료 → 최종 답변</span></li>
+      <li><span class="kk"><code>tool_use</code></span><span class="vv">툴 실행 → tool_result 반환</span></li>
+      <li><span class="kk"><code>max_tokens</code></span><span class="vv">잘림 → 이어받기 · 상한 조정</span></li>
+      <li><span class="kk"><code>stop_sequence</code></span><span class="vv">지정 문자열에서 중단</span></li>
+    </ul></div>
+    <div class="cc"><h4>비용 최적화</h4><ul>
+      <li><span class="kk">캐시</span><span class="vv">정적 앞 · 동적 뒤 · cache_control · 기본 TTL 5분</span></li>
+      <li><span class="kk">Batches</span><span class="vv">약 50% · 24시간 이내 · custom_id · 실시간/멀티턴 X</span></li>
+      <li><span class="kk">RAG</span><span class="vv">필요한 청크만 · 전량 투입 X</span></li>
+      <li><span class="kk">판단 축</span><span class="vv">"사용자를 기다리게 하는가?"</span></li>
+    </ul></div>
+    <div class="cc"><h4>프롬프트</h4><ul>
+      <li><span class="kk">6요소</span><span class="vv">역할 · 태스크 · 입력 · 예시 · 제약 · 출력 지정</span></li>
+      <li><span class="kk">XML</span><span class="vv">경계 · 중첩 · 파싱 (JSON 보장 X)</span></li>
+      <li><span class="kk">Few-shot</span><span class="vv">균형 + 전형 + 경계 · 3~5개</span></li>
+      <li><span class="kk">CoT</span><span class="vv">다중 제약·복잡 추론에만</span></li>
+      <li><span class="kk">인젝션</span><span class="vv">태그로 데이터 분리 + 다층 방어</span></li>
+      <li><span class="kk">반복 세련</span><span class="vv">실패 예 반영 · TDD식 · interview</span></li>
+    </ul></div>
+    <div class="cc"><h4>구조화 출력</h4><ul>
+      <li><span class="kk">최선</span><span class="vv">Tool Use + <code>tool_choice</code> 강제</span></li>
+      <li><span class="kk">description</span><span class="vv">= 필드 단위 프롬프트 (단위·형식·범위)</span></li>
+      <li><span class="kk">리트라이</span><span class="vv">에러 피드백 + 상한 → 설계 재검토 → HITL</span></li>
+      <li><span class="kk">enum</span><span class="vv">"그대로, 번역 금지" 명시</span></li>
+      <li><span class="kk">멀티패스</span><span class="vv">draft→review→refine · 중요 출력만</span></li>
+      <li><span class="kk">Best of N</span><span class="vv">여러 안 독립 생성 → 선택</span></li>
+    </ul></div>
+    <div class="cc"><h4>Tool Use</h4><ul>
+      <li><span class="kk">분업</span><span class="vv">Claude 판단 · 앱 실행</span></li>
+      <li><span class="kk">결과</span><span class="vv">tool_result는 user role · tool_use_id 1:1</span></li>
+      <li><span class="kk">에러</span><span class="vv"><code>is_error: true</code> + 원인·대처 (내부 정보 X)</span></li>
+      <li><span class="kk">병렬</span><span class="vv">독립 조회 O · 순차 의존이면 disable</span></li>
+      <li><span class="kk">tool_choice</span><span class="vv">auto · any · tool (+none)</span></li>
+      <li><span class="kk">설계</span><span class="vv">단일 책무 · 5~15개 · 과다 시 서브에이전트</span></li>
+    </ul></div>
+    <div class="cc"><h4>MCP</h4><ul>
+      <li><span class="kk">목적</span><span class="vv">N × M → N + M · 재사용</span></li>
+      <li><span class="kk">Tools</span><span class="vv">부수 효과 · 모델 제어</span></li>
+      <li><span class="kk">Resources</span><span class="vv">읽기 · URI · 앱 제어</span></li>
+      <li><span class="kk">Prompts</span><span class="vv">템플릿 · 사용자 제어 · 슬래시 커맨드</span></li>
+      <li><span class="kk">트랜스포트</span><span class="vv">로컬 stdio · 원격 Streamable HTTP</span></li>
+      <li><span class="kk">스코프</span><span class="vv">local · project(.mcp.json) · user · 비밀은 <code>${VAR}</code></span></li>
+    </ul></div>
+  </div>
+
+  <div class="note best" style="margin-top:28px"><span class="lbl">다음 단계</span><p>공개 장 범위를 마쳤다면 <a href="ccar-f.dc.html#beyond" target="_top">⑧ 이후 장 로드맵</a>에서 배점이 가장 큰 도메인 1(에이전트)부터 이어 가세요.</p></div>
+
+  <p class="cap" style="margin-top:40px">출처: 김재우, 『Claude Certified Architect – Foundations (CCA-F) 자격시험 교재』, <a href="https://koding.kr/ebooks/claude-certified-architect-foundations-cca-f-%EC%9E%90%EA%B2%A9%EC%8B%9C%ED%97%98-%EA%B5%90%EC%9E%AC-7oi2kh" target="_blank" rel="noopener">koding.kr 전자책</a>. 이 페이지는 원문을 학습용으로 요약·재구성한 것이며, 자가 점검 문항은 이 가이드에서 새로 작성했습니다. 시험 사양·모델 ID 등 변동 가능한 정보는 Anthropic 공식 자료로 최종 확인하세요.</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>
