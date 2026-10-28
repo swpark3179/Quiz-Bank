@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,12 @@ import Modal from 'react-native-modal';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { NordButton } from './ui/NordButton';
+import { NordSwitch } from './ui/NordSwitch';
 import { BottomActionBar } from './ui/BottomActionBar';
 import { SheetHandle, SheetHeader, sheetStyles } from './ui/SheetParts';
 import type { QuizFile } from '@/lib/local/categories';
+import { getPreference, setPreference } from '@/lib/local/preferences';
+import { useVocabIndex } from '@/hooks/use-vocab-index';
 
 export interface QuizSetupOptions {
   count: number | 'all';
@@ -50,6 +53,21 @@ export function QuizSetupModal({
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>(
     preSelectedFileId ? [preSelectedFileId] : []
   );
+  // 단어장 모드는 기기에 기억해 두고 퀴즈 화면이 같은 값으로 시작한다 (풀이 중 헤더에서도 바꿀 수 있다)
+  const [vocabMode, setVocabMode] = useState(() => getPreference('vocabMode'));
+  const vocabEntries = useVocabIndex();
+
+  // 시트는 화면에 남아 있다가 다시 열리므로, 열 때마다 저장된 값을 다시 읽는다
+  // (퀴즈 화면 헤더에서 바꾼 값을 반영)
+  useEffect(() => {
+    if (visible) setVocabMode(getPreference('vocabMode'));
+  }, [visible]);
+
+  const toggleVocabMode = () => {
+    const next = !vocabMode;
+    setVocabMode(next);
+    setPreference('vocabMode', next);
+  };
 
   // 무작위 모드: 선택된 파일들의 총 문제 수 합산
   const effectiveTotal = isRandom
@@ -236,6 +254,43 @@ export function QuizSetupModal({
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* 단어장 모드 — 등록된 단어가 하나도 없으면 감춘다 */}
+          {vocabEntries?.length !== 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>풀이 도우미</Text>
+              <TouchableOpacity
+                style={[styles.modeOption, styles.vocabOption, vocabMode && styles.modeOptionSelected]}
+                onPress={toggleVocabMode}
+                activeOpacity={0.8}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: vocabMode }}
+                accessibilityLabel="단어장 모드, 문제 속 등록된 영어 단어를 눌러 뜻 보기"
+              >
+                <View style={[styles.vocabIcon, vocabMode && styles.vocabIconOn]}>
+                  <Ionicons
+                    name={vocabMode ? 'book' : 'book-outline'}
+                    size={18}
+                    color={vocabMode ? Colors.text.inverse : Colors.accent.primary}
+                  />
+                </View>
+                <View style={styles.vocabText}>
+                  <View style={styles.vocabTitleRow}>
+                    <Text style={[styles.modeName, styles.vocabName, vocabMode && { color: Colors.accent.primary }]}>
+                      단어장 모드
+                    </Text>
+                    {vocabEntries && (
+                      <View style={styles.vocabCount}>
+                        <Text style={styles.vocabCountText}>{vocabEntries.length}단어</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.modeDesc}>등록된 단어를 누르면 뜻을 보여 줘요</Text>
+                </View>
+                <NordSwitch value={vocabMode} />
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
 
         {/* 시작 버튼 — 목록이 길어도 항상 보이도록 하단 고정 */}
@@ -392,6 +447,44 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: Radius.full,
     backgroundColor: Colors.accent.primary,
+  },
+  vocabOption: {
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  vocabIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.choice.selected,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vocabIconOn: {
+    backgroundColor: Colors.accent.primary,
+  },
+  vocabText: {
+    flex: 1,
+  },
+  vocabTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs + 2,
+    marginBottom: 2,
+  },
+  vocabName: {
+    marginBottom: 0,
+  },
+  vocabCount: {
+    backgroundColor: Colors.bg.secondary,
+    borderRadius: Radius.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  vocabCountText: {
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.secondary,
   },
   modeName: {
     fontSize: Typography.size.base,

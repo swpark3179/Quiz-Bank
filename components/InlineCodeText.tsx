@@ -1,6 +1,8 @@
 import React from 'react';
 import { Text, StyleSheet, StyleProp, TextStyle } from 'react-native';
 import { Colors, Typography } from '@/lib/theme';
+import { useVocabLookup } from '@/components/vocab/VocabContext';
+import { renderVocabText } from '@/components/vocab/VocabWord';
 
 interface InlineCodeTextProps {
   /** 백틱(`)으로 감싼 구간을 인라인 코드 블록으로 렌더할 텍스트 */
@@ -17,9 +19,14 @@ interface InlineCodeTextProps {
  * 백틱 구간을 분리해 중첩 <Text>로 렌더한다.
  */
 export function InlineCodeText({ text, style, codeStyle }: InlineCodeTextProps) {
+  // 단어장 모드 영역 안이면 코드가 아닌 구간의 등록 단어를 누를 수 있게 한다
+  const lookup = useVocabLookup();
+  const plain = (s: string, key: string) =>
+    lookup ? renderVocabText(s, lookup, (i) => `${key}-${i}`) : s;
+
   // 백틱이 없으면 일반 텍스트로 단순 렌더
   if (!text.includes('`')) {
-    return <Text style={style}>{text}</Text>;
+    return <Text style={style}>{plain(text, 'p')}</Text>;
   }
 
   // `code` 구간과 일반 구간을 번갈아 분리
@@ -36,7 +43,7 @@ export function InlineCodeText({ text, style, codeStyle }: InlineCodeTextProps) 
             </Text>
           );
         }
-        return <Text key={i}>{seg}</Text>;
+        return <Text key={i}>{plain(seg, `s${i}`)}</Text>;
       })}
     </Text>
   );

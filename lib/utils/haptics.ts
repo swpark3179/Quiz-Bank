@@ -13,3 +13,11 @@ export function hapticAnswerResult(correct: boolean): void {
     // 햅틱을 지원하지 않는 기기는 조용히 무시
   });
 }
+
+/** 가벼운 선택 햅틱 — 단어장 단어를 누르거나 토글을 바꿀 때 */
+export function hapticSelection(): void {
+  if (Platform.OS === 'web') return;
+  Haptics.selectionAsync().catch(() => {
+    // 햅틱을 지원하지 않는 기기는 조용히 무시
+  });
+}
