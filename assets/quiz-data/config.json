@@ -89,6 +89,18 @@
         "name": "샘플문제1-한글",
         "questionCount": 22,
         "order": 2
+      },
+      {
+        "id": "mock04",
+        "name": "실전모의고사4",
+        "questionCount": 60,
+        "order": 3
+      },
+      {
+        "id": "mock04-kor",
+        "name": "실전모의고사4-한글",
+        "questionCount": 60,
+        "order": 4
       }
     ]
   }
