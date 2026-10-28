@@ -1,0 +1,119 @@
+/* CCAR-F 자격시험 교재 — 자습 가이드 추가 스타일 (guide.css 위에 얹어 사용) */
+
+/* 원문 출처 박스 */
+.src{ display:flex; gap:14px; align-items:flex-start; background:var(--paper); border:1px solid var(--line);
+  border-radius:10px; padding:13px 17px; margin:18px 0; font-size:13.5px; color:var(--soft); break-inside:avoid; }
+.src .si{ flex:none; font-size:11px; font-weight:700; letter-spacing:.06em; color:#fff; background:var(--soft);
+  border-radius:6px; padding:3px 8px; margin-top:2px; }
+.src p{ margin:0; }
+.src a{ font-weight:600; }
+
+/* 시험 범위 밖 표시 */
+.oos{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.04em; padding:2px 8px;
+  border-radius:20px; background:#efe9e0; color:var(--faint); vertical-align:2px; margin-left:6px; }
+
+/* 도메인 배점 막대 */
+.dom{ margin:18px 0; break-inside:avoid; }
+.dom .row{ display:grid; grid-template-columns:minmax(0,1fr) 160px 46px; gap:12px; align-items:center;
+  padding:9px 0; border-bottom:1px solid var(--line); }
+.dom .row:last-child{ border-bottom:0; }
+.dom .dn{ font-size:14px; font-weight:600; }
+.dom .dn .dc{ display:block; font-size:12px; color:var(--faint); font-weight:500; margin-top:1px; }
+.dom .bar{ height:10px; background:var(--accent-tint); border-radius:6px; overflow:hidden; }
+.dom .bar i{ display:block; height:100%; background:var(--accent); border-radius:6px; }
+.dom .pct{ font-family:'Noto Serif KR',serif; font-weight:700; color:var(--accent); font-size:17px; text-align:right; }
+
+/* 판단 축(시험 포인트) 박스 */
+.axis{ border:1.5px solid var(--blue); border-radius:10px; padding:14px 18px; margin:18px 0; background:#fff; break-inside:avoid; }
+.axis .lbl{ display:block; font-size:11.5px; font-weight:700; letter-spacing:.07em; color:var(--blue-deep); margin-bottom:6px; }
+.axis ul{ margin:0; padding-left:20px; }
+.axis li{ margin:4px 0; }
+
+/* 오해 vs 사실 */
+.myth{ display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line); border-radius:10px;
+  overflow:hidden; margin:12px 0; break-inside:avoid; }
+.myth > div{ padding:12px 15px; font-size:13.5px; }
+.myth .m{ background:#FBF1EE; border-right:1px solid var(--line); }
+.myth .f{ background:var(--teal-tint); }
+.myth .k{ display:block; font-size:11px; font-weight:700; letter-spacing:.06em; margin-bottom:3px; }
+.myth .m .k{ color:var(--accent-deep); }
+.myth .f .k{ color:var(--teal-deep); }
+
+/* Bad / Good 대비 */
+.bg{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0; break-inside:avoid; }
+.bg .pane{ border:1px solid var(--line); border-radius:10px; padding:13px 15px; background:var(--card); min-width:0; }
+.bg .pane .bh{ font-size:12px; font-weight:700; letter-spacing:.05em; margin-bottom:6px; }
+.bg .pane.bad{ border-top:3px solid #B5543A; }
+.bg .pane.bad .bh{ color:#9A3F27; }
+.bg .pane.good{ border-top:3px solid var(--teal); }
+.bg .pane.good .bh{ color:var(--teal-deep); }
+.bg .pane .code{ margin:6px 0 0; font-size:12px; }
+.bg .pane p{ font-size:13.5px; margin:6px 0 0; color:var(--soft); }
+
+/* 자가 점검 퀴즈 */
+.quizhd{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:14px 0 4px; }
+.quizhd .qs{ font-size:13.5px; color:var(--soft); }
+.quizhd .qs b{ color:var(--accent-deep); font-size:15px; }
+.quizhd .sp{ flex:1; }
+.qbtn{ font:inherit; font-size:12.5px; font-weight:600; color:var(--accent-deep); background:#fff;
+  border:1px solid var(--line); border-radius:7px; padding:6px 12px; cursor:pointer; }
+.qbtn:hover{ background:var(--accent-tint); }
+
+.q{ border:1px solid var(--line); border-radius:12px; padding:16px 18px 14px; margin:14px 0; background:var(--card); break-inside:avoid; }
+.q .qh{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+.q .qn{ font-family:'Noto Serif KR',serif; font-weight:700; color:var(--accent); font-size:15px; }
+.q .qt{ font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 9px; border-radius:20px;
+  background:var(--accent-tint); color:var(--accent-deep); }
+.q .qt.qt-b{ background:var(--blue-tint); color:var(--blue-deep); }
+.q .qt.qt-t{ background:var(--teal-tint); color:var(--teal-deep); }
+.q .qq{ font-size:15px; font-weight:600; margin:2px 0 10px; line-height:1.6; }
+.q .qq .sc{ display:block; font-weight:400; color:var(--soft); font-size:14px; margin-bottom:6px; }
+.q .opts{ display:flex; flex-direction:column; gap:7px; }
+.q .opt{ font:inherit; font-size:14px; text-align:left; line-height:1.55; display:flex; gap:10px; align-items:baseline;
+  width:100%; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:9px;
+  padding:9px 13px; cursor:pointer; transition:background .12s, border-color .12s; }
+.q .opt:hover{ background:#F3EBE1; }
+.q .opt .ok{ flex:none; font-weight:700; color:var(--accent); min-width:22px; }
+.q.done .opt{ cursor:default; }
+.q.done .opt:hover{ background:var(--paper); }
+.q .opt.correct{ background:var(--teal-tint) !important; border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+.q .opt.correct .ok{ color:var(--teal-deep); }
+.q .opt.wrong{ background:#FBEDE8 !important; border-color:#C8664A; box-shadow:inset 0 0 0 1px #C8664A; }
+.q .opt.wrong .ok{ color:#9A3F27; }
+.q .opt.correct::after, .q .opt.wrong::after{ margin-left:auto; flex:none; align-self:center; font-size:11px; font-weight:700;
+  letter-spacing:.03em; padding:2px 9px; border-radius:20px; color:#fff; }
+.q .opt.correct::after{ content:"정답"; background:var(--teal); }
+.q .opt.wrong::after{ content:"내 선택"; background:#C8664A; }
+.q .exp{ display:none; margin-top:12px; border-left:4px solid var(--teal); background:var(--teal-tint);
+  padding:11px 15px; border-radius:0 8px 8px 0; font-size:13.8px; }
+.q .exp .verdict{ display:block; font-weight:700; font-size:12.5px; letter-spacing:.04em; margin-bottom:3px; color:var(--teal-deep); }
+.q.miss .exp{ border-left-color:#C8664A; background:#FBF1EE; }
+.q.miss .exp .verdict{ color:#9A3F27; }
+.q .exp p{ margin:4px 0 0; }
+.q.done .exp, .quiz.reveal .q .exp{ display:block; }
+.quiz.reveal .q .opt.is-answer{ background:var(--teal-tint); border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+
+/* 회원 전용 장 목록 */
+.lock{ list-style:none; padding:0; margin:12px 0; }
+.lock li{ display:flex; gap:12px; align-items:baseline; padding:9px 0; border-bottom:1px dashed var(--line); margin:0; }
+.lock li:last-child{ border-bottom:0; }
+.lock .cn{ flex:none; font-family:'Noto Serif KR',serif; font-weight:700; color:var(--faint); min-width:52px; font-size:13.5px; }
+.lock .ct{ flex:1; font-size:14px; }
+.lock .ct small{ display:block; color:var(--faint); font-size:12px; margin-top:1px; }
+.lock .go{ flex:none; font-size:12.5px; white-space:nowrap; }
+
+@media (max-width:640px){
+  .dom .row{ grid-template-columns:minmax(0,1fr) 70px 40px; }
+  .myth,.bg{ grid-template-columns:1fr; }
+  .myth .m{ border-right:0; border-bottom:1px solid var(--line); }
+  .q{ padding:14px 14px 12px; }
+  .lock li{ flex-wrap:wrap; }
+  .arch .box{ box-sizing:border-box; }
+}
+
+@media print{
+  .q .exp{ display:block !important; }
+  .q .opt.is-answer{ border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
+  .quizhd .qbtn{ display:none; }
+  .src,.axis,.myth,.bg,.dom,.q{ break-inside:avoid; }
+}
