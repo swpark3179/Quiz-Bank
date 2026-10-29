@@ -147,150 +147,17 @@
   <div class="myth"><div class="m"><span class="k">오해</span>자동 승인된 건은 다시 볼 필요가 없다.</div><div class="f"><span class="k">사실</span>보지 않으면 오류율 변화와 새 패턴을 놓친다. 층화 무작위 표본으로 계속 측정한다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>서류끼리 값이 다르면 신뢰도가 높은 쪽을 채택하면 된다.</div><div class="f"><span class="k">사실</span>원문 간 모순은 추출 품질이 아니라 사실관계의 문제일 수 있다. 두 값과 출처를 붙여 사람에게 보낸다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">집계 정확도</span></div>
-      <div class="qq"><span class="sc">서류 추출 시스템의 전체 필드 정확도가 97.5%로 나오자, 팀이 사람 검토를 전면 중단하자고 제안했다.</span>먼저 해야 할 일은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>문서 유형·필드별로 정확도를 나눠 보고 기준에 못 미치는 세그먼트가 있는지 확인한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>정확도가 95%를 넘었으므로 바로 중단한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>모델에 신뢰도를 출력하게 하고 평균 신뢰도가 높으면 중단한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>다른 모델로 바꿔 전체 정확도가 더 오르는지 본다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>집계 수치는 드문 유형이나 특정 필드의 실패를 가린다. 검토 축소는 세그먼트별로 검증한 뒤 범위를 정해 결정한다. C의 평균 신뢰도는 보정되지 않은 값이고, D도 여전히 집계 수치만 본다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">신뢰도 보정</span></div>
-      <div class="qq"><span class="sc">소유자 필드에서 모델 신뢰도 0.9 이상인 추출 200건을 라벨과 대조했더니 실제 정확도가 88%였다.</span>올바른 해석과 조치는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>모델이 0.9라고 했으므로 라벨이 틀렸을 가능성이 높다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>신뢰도는 쓸모없으므로 버리고 모든 건을 사람이 본다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트에 "정확한 신뢰도를 출력하라"고 추가한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>표현된 신뢰도와 실제 정확도가 어긋나 있다. 라벨 세트로 구간별 정확도를 재서 이 필드의 임계값을 다시 정한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>자기보고 신뢰도는 보정이 느슨하다는 전제로 다루고, 라벨된 데이터로 숫자의 의미를 측정한다. B는 순위 신호로서의 가치까지 버리고, C는 지시만으로 보정 문제를 해결하지 못한다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">층화 표본</span></div>
-      <div class="qq"><span class="sc">자동 승인 구간의 품질을 계속 재려 한다. 서류의 70%는 임대차계약서이고 건축물대장은 5%다. 신규 양식도 가끔 들어온다.</span>가장 좋은 표본 설계는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>자동 승인분 전체에서 단순 무작위로 1%를 뽑는다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>유형·필드·신뢰도 구간으로 층을 나눠 뽑고, 드문 층과 신규 양식에는 최소 건수를 보장한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>검토자가 의심스러워 보이는 건만 골라 본다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>검토는 비용이므로 자동 승인분은 표본 검토하지 않는다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>층화하면 드문 세그먼트에서도 오류율을 측정할 수 있고 새 패턴을 일찍 잡는다. A는 표본 대부분이 큰 층에서 나와 작은 층을 놓치고, C는 무작위가 아니라 편향된 추정을 낳는다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">모순된 원문</span></div>
-      <div class="qq"><span class="sc">임대차계약서의 임대인은 "박○○", 같은 주소의 등기부등본 소유자는 "박△△"다. 모델은 두 값을 각각 신뢰도 0.98로 추출했다.</span>어떻게 라우팅하는가?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>두 값 모두 신뢰도가 높으므로 자동 승인한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>등기부가 공적 장부이므로 계약서 값을 등기부 값으로 덮어쓴다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>서류 간 모순이므로 신뢰도와 무관하게 두 값과 출처를 붙여 검토 큐 앞쪽으로 보낸다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>신뢰도가 조금이라도 높은 쪽을 채택한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>추출이 정확해도 원문끼리 어긋나면 사실관계 판단이 필요하고, 대출 심사에 영향이 큰 필드라 우선순위도 높다. B·D는 모델이나 파이프라인이 사람의 판단을 대신하는 것이다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">스키마 제약</span></div>
-      <div class="qq"><code>confidence</code> 필드에 <code>"minimum": 0, "maximum": 1</code>을 넣은 원시 JSON 스키마를 <code>output_config.format</code>으로 보냈다. 현재 문서 기준으로 옳은 설명은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>숫자 범위 제약은 지원되지 않아 원시 스키마면 400 오류가 난다. SDK 헬퍼는 제약을 설명으로 옮기고 응답을 검증하므로 범위는 코드에서 확인한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>constrained decoding이 범위를 완벽하게 강제한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>제약은 경고 없이 조용히 무시된다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>structured outputs는 number 타입을 지원하지 않는다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>structured outputs 문서는 <code>minimum</code>·<code>maximum</code> 같은 숫자 제약을 지원하지 않는 기능으로 나열하고, 지원하지 않는 기능을 쓰면 400 오류가 난다고 한다. number 타입 자체는 지원된다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">판독 불가 필드</span></div>
-      <div class="qq">스캔 상태가 나빠 일부 필드를 읽을 수 없을 때 가장 바람직한 설계는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>가장 그럴듯한 값을 채우고 신뢰도를 낮게 준다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>null이 나오면 같은 요청을 성공할 때까지 반복한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>null은 false와 같은 뜻으로 처리한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>필드를 nullable로 두고 null은 "판단 불가"로 검토에 보내며, 필드별 null 비율을 모니터링한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>"모른다"를 정당한 출력으로 허용해야 추측값이 자동 승인되는 일을 막는다. null 비율이 오르면 필드 설명 개선 신호다. A는 환각을 유도하고, C는 "확인 안 됨"을 "없음"으로 바꿔 버린다.</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D5</strong>(한글)과 <strong>레슨문제 D5</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 5.5</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" target="_blank" rel="noopener">Define success criteria and build evaluations</a> · <a href="https://platform.claude.com/cookbook/capabilities-classification-guide" target="_blank" rel="noopener">Classification with Claude (cookbook)</a> · <a href="https://platform.claude.com/cookbook/capabilities-content-moderation-guide" target="_blank" rel="noopener">Content policy enforcement with Claude (cookbook)</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Structured outputs</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools</a> · <a href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" target="_blank" rel="noopener">Reduce hallucinations</a> · <a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents" target="_blank" rel="noopener">Demystifying evals for AI agents</a> · <a href="https://academy.claude.com/courses/ai-capabilities-and-limitations/how-ai-gets-its-character" target="_blank" rel="noopener">Claude Academy — How AI Gets Its Character</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>

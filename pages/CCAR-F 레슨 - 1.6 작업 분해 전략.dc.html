@@ -153,150 +153,17 @@ memo = call_claude(MEMO_PROMPT, {"clauses": clauses, "risks": risks})   <span cl
   <div class="myth"><div class="m"><span class="k">오해</span>시스템 프롬프트에 "1단계… 2단계…"를 적으면 프롬프트 체이닝이다.</div><div class="f"><span class="k">사실</span>체이닝은 단계마다 별도 API 호출이고 코드가 순서를 정한다. 그래야 중간 출력을 로그·평가하고 게이트에서 분기할 수 있다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>적응형 계획이란 처음 세운 조사 계획을 끝까지 충실히 따르는 것이다.</div><div class="f"><span class="k">사실</span>새 발견이 하위 작업을 추가·삭제·재정렬한다. 대신 멈춤 조건과 노력 상한이 있어야 비용과 오류 누적을 막는다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">체이닝 선택</span></div>
-      <div class="qq"><span class="sc">보험사가 매일 접수되는 자동차 사고 청구서를 처리한다. 모든 청구서는 "사고 사실 추출 → 필수 서류 누락 확인 → 보상 항목 분류 → 심사 메모 작성" 순서를 똑같이 거친다.</span>가장 알맞은 분해 방식은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>청구서마다 오케스트레이터가 필요한 하위 작업을 새로 계획하게 한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>네 단계를 시스템 프롬프트에 번호로 적고 한 번의 호출로 처리한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>단계마다 별도 호출을 두고, 서류 누락 확인은 코드 게이트로 처리하는 체이닝을 쓴다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>자율 에이전트에게 청구서와 모든 도구를 주고 알아서 처리하게 한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>단계가 입력과 무관하게 고정되어 있으므로 코드가 순서를 쥐는 체이닝이 맞고, 규칙이 명확한 누락 확인은 코드 게이트가 맡는다. A는 매번 같은 계획을 다시 세우는 호출만 늘리고, B는 중간 산출물이 없어 검사·분기가 불가능하며, D는 예측 가능한 작업에 불필요한 자율성과 비용을 더한다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">대형 리뷰</span></div>
-      <div class="qq"><span class="sc">보안 감사 에이전트에게 인증 관련 모듈 25개를 한 번의 요청으로 검토시켰더니 파일마다 지적이 한두 줄로 얕아졌고, 토큰 발급 모듈(초 단위)과 검증 모듈(밀리초 단위) 사이의 만료 시간 단위 불일치를 놓쳤다.</span>가장 효과적인 개선은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>모듈마다 로컬 검토 패스를 돌린 뒤, 모듈별 발견과 공개 인터페이스 요약을 받아 교차 모듈 통합 패스를 한 번 더 돌린다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>컨텍스트 창이 더 큰 모델로 바꿔 같은 방식으로 다시 돌린다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트에 "꼼꼼하게, 모듈 간 관계도 확인하라"를 추가한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>모듈별 검토만 돌리고 결과를 이어 붙인다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>모듈별 패스로 주의를 집중하고, 통합 패스로 모듈 사이의 불일치를 잡는다. B는 창 크기와 무관하게 나타나는 context rot을 해결하지 못하고, C는 같은 희석 상태에서 지시만 늘린다. D는 각 모듈 안에서는 드러나지 않는 단위 불일치 같은 교차 결함을 놓친다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">패턴 구분</span></div>
-      <div class="qq"><em>Building effective agents</em>에서 orchestrator-workers가 병렬화(sectioning)와 구별되는 핵심은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>워커들이 반드시 동시에 실행된다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>워커마다 다른 모델을 써야 한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>워커 결과를 사람이 직접 합친다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>하위 작업이 미리 정의되지 않고, 오케스트레이터가 입력에 따라 정한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>두 패턴은 모양이 비슷하지만, orchestrator-workers는 하위 작업을 실행 시점에 입력을 보고 정한다는 유연성이 다르다. A의 동시 실행은 병렬화도 마찬가지이고, B와 C는 정의와 관계가 없다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">적응형 조사</span></div>
-      <div class="qq"><span class="sc">지난주부터 사내 검색 결과의 품질이 떨어졌다는 불만이 늘었다. 원인이 색인 파이프라인인지, 랭킹 모델 배포인지, 데이터 소스 변경인지 아직 모른다.</span>조사 에이전트 설계로 가장 알맞은 것은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>색인·랭킹·데이터 소스·인프라를 각각 같은 깊이로 조사하는 고정 4단계 파이프라인을 만든다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>첫 관찰 결과로 다음 하위 작업을 만들고 계획을 갱신하되, 완료·정지 조건과 노력 상한을 둔다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>반복 횟수 제한 없이 에이전트가 만족할 때까지 조사하게 한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>떠오르는 모든 가설에 서브에이전트를 하나씩 미리 배정해 한꺼번에 띄운다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>무엇을 볼지가 중간 결과에 달린 열린 조사이므로 동적 분해가 맞고, 정지 조건과 상한이 함께 있어야 한다. A는 발견을 반영하지 못하고 무관한 단계에도 같은 비용을 쓴다. C는 정지 조건이 없어 비용과 오류가 쌓이고, D는 단서가 나오기 전에 과투자해 노력을 복잡도에 맞추라는 권고에 어긋난다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">열린 과제</span></div>
-      <div class="qq"><span class="sc">테스트가 거의 없는 8년 된 사내 재고 관리 시스템(약 400개 파일)에 "포괄적인 테스트를 추가하라"는 과제를 Claude Code에 맡긴다.</span>첫 지시로 가장 알맞은 것은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>진입점·모듈 경계·외부 의존과 기존 테스트 현황을 파악하고, 위험이 큰 영역부터 우선순위 계획을 세우게 한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>파일을 알파벳 순서로 돌며 각 파일에 단위 테스트를 작성하게 한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>커버리지 100%를 목표로 하는 고정 체크리스트를 먼저 만들고 그대로 따르게 한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>가장 큰 파일부터 테스트를 작성하게 한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>열린 과제는 구조 파악 → 고영향 영역 선정 → 의존성 발견에 맞춰 바뀌는 계획 순으로 분해한다. B와 D는 영향도와 무관한 순서이고, C는 의존성을 알기 전에 만든 고정 목록이라 곧 현실과 어긋난다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">현재 문서</span></div>
-      <div class="qq">현재 Prompting best practices가 최신 모델에서도 명시적 프롬프트 체이닝이 여전히 유용하다고 보는 상황은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>최신 모델은 다단계 추론을 하지 못하므로 모든 작업에서</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>출력 토큰 수를 줄이고 싶을 때</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>도구 정의가 다섯 개를 넘을 때</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>중간 출력을 검사해야 하거나 특정 파이프라인 구조를 강제해야 할 때</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>문서는 최신 모델이 다단계 추론 대부분을 내부에서 처리한다고 하면서, 중간 출력 검사나 파이프라인 강제가 필요할 때는 명시적 체이닝을 권한다. A는 문서 내용과 반대이고, B와 C는 체이닝을 고르는 기준이 아니다.</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D1</strong>(한글)과 <strong>레슨문제 D1</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 1.6</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices</a> · <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a> · <a href="https://platform.claude.com/cookbook/patterns-agents-orchestrator-workers" target="_blank" rel="noopener">Orchestrator workers (Cookbook)</a> · <a href="https://code.claude.com/docs/en/workflows" target="_blank" rel="noopener">Claude Code: Dynamic workflows</a> · <a href="https://code.claude.com/docs/en/common-workflows" target="_blank" rel="noopener">Claude Code: Common workflows</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>

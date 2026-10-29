@@ -148,150 +148,17 @@ r2 = client.messages.create(model=MODEL, max_tokens=1024, tools=TOOLS, messages=
   <div class="myth"><div class="m"><span class="k">오해</span>강제 호출은 모든 모델과 설정에서 동작한다.</div><div class="f"><span class="k">사실</span>현재 Opus 5.5·Sonnet 5.5·Fable 5.1·Mythos 5.1과 수동 extended thinking 요청은 <code>any</code>·<code>tool</code>에 400 오류를 낸다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>강제 호출을 해도 Claude가 먼저 이유를 설명한 뒤 도구를 부른다.</div><div class="f"><span class="k">사실</span>API가 응답을 미리 채워 텍스트 없이 <code>tool_use</code>부터 시작하고 thinking도 건너뛴다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">역할 밖 도구</span></div>
-      <div class="qq"><span class="sc">고객 상담 시스템에서 상담 기록을 요약해 CRM에 남기는 요약 에이전트가 모든 에이전트와 같은 도구 세트를 받았다. 어느 날 요약 도중 이 에이전트가 <code>cancel_order</code>를 실행했다. 다만 요약 중에 주문 상태를 확인할 일은 자주 있다.</span>가장 알맞은 설계 변경은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>시스템 프롬프트에 "요약 중에는 주문을 변경하지 마라"를 추가한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>cancel_order에 확인 메시지를 붙이고 도구 세트는 그대로 둔다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>요약 에이전트에서 주문 변경 도구를 빼고 읽기 전용의 좁은 get_order_status만 주며, 주문 처리가 필요하면 코디네이터로 돌려보내게 한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>요약 에이전트의 tool_choice를 none으로 고정한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>역할 밖 도구는 범위에서 빼고, 잦은 단순 필요만 좁은 교차 역할 도구로 연다. 실제 처리는 코디네이터를 거친다. A는 확률적 억제일 뿐 도구는 여전히 손에 있고, B는 오용 가능성을 그대로 둔다. D는 상태 확인과 CRM 기록 도구까지 막는다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">tool_choice 의미</span></div>
-      <div class="qq"><code>tool_choice: {"type": "any"}</code>의 의미는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>제공된 도구 중 하나는 반드시 호출하되, 어느 것인지는 Claude가 고른다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>지정한 도구 하나를 반드시 호출한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>도구를 부를지 말지 Claude가 판단한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>도구 호출을 금지한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p><code>any</code>는 "반드시 도구를 쓰되 선택은 자유"다. B는 <code>tool</code>, C는 <code>auto</code>, D는 <code>none</code>의 설명이다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">첫 호출 강제</span></div>
-      <div class="qq"><span class="sc">의료비 영수증 처리 에이전트는 먼저 <code>detect_document_type</code>으로 문서 종류를 판별하고, 그 결과에 따라 <code>parse_pharmacy_receipt</code>나 <code>parse_hospital_bill</code> 중 하나를 써야 한다. 사용하는 모델은 강제 호출을 지원한다.</span>가장 알맞은 방법은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>모든 요청의 tool_choice를 detect_document_type으로 고정한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>시스템 프롬프트에 "가장 먼저 문서 종류를 판별하라"만 적는다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>모든 턴에 tool_choice any를 건다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>첫 요청에만 <code>{"type": "tool", "name": "detect_document_type"}</code>을 주고, 결과를 돌려준 뒤 후속 요청은 auto로 되돌린다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>첫 단계만 강제하고 이후 선택은 Claude에게 맡긴다. A는 매 턴 같은 도구만 불러 파싱 단계로 넘어가지 못하고, B는 순서를 보장하지 않는다. C는 어떤 도구든 부르게 할 뿐 판별을 먼저 하도록 정하지 못한다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">강제 호출 제약</span></div>
-      <div class="qq"><span class="sc">팀이 분류 파이프라인의 모델을 Claude Sonnet 5.5로 바꾼 뒤, <code>tool_choice: {"type": "any"}</code>를 쓰던 요청이 모두 400 오류를 낸다.</span>올바른 진단과 대응은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>max_tokens가 부족해서이므로 늘린다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>이 모델은 any·tool을 지원하지 않으므로, auto와 strict tool use·명시적 지시를 쓰거나 고정 JSON 응답이 필요하면 structured outputs로 바꾼다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>disable_parallel_tool_use를 true로 설정하면 해결된다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>any 대신 <code>{"type": "tool", "name": …}</code>로 바꾸면 된다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>현재 문서상 Sonnet 5.5는 강제 도구 호출을 받지 않으며, 문서가 제시하는 대안은 auto + strict + 지시, 또는 structured outputs다. A와 C는 원인과 무관하고, D의 <code>tool</code>도 같은 이유로 거부된다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">가용성 vs 권한</span></div>
-      <div class="qq"><span class="sc">Agent SDK에서 코드 리뷰 서브에이전트를 읽기 전용으로 만들려고 상위 옵션에 <code>allowed_tools=["Read", "Grep", "Glob", "Agent"]</code>만 넣었다. 그런데 리뷰 중 서브에이전트가 Edit을 시도했다.</span>올바른 조치는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>allowed_tools는 자동 승인 목록일 뿐이므로, 서브에이전트의 AgentDefinition에 <code>tools=["Read", "Grep", "Glob"]</code>을 지정한다(또는 Edit·Write를 disallowedTools로 뺀다)</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>allowed_tools에 Edit을 추가해 권한 프롬프트를 없앤다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>서브에이전트 프롬프트에 "파일을 고치지 마라"만 쓴다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>서브에이전트의 tool_choice를 none으로 둔다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>도구를 세션에서 없애는 것은 가용성 층(<code>tools</code>, 맨 이름의 <code>disallowedTools</code>)이다. B는 편집을 오히려 자동 승인하고, C는 확률적 지시일 뿐이다. D는 읽기 도구까지 막아 리뷰를 할 수 없게 한다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">병렬 호출 제어</span></div>
-      <div class="qq"><code>tool_choice</code>가 <code>{"type": "tool", "name": "…"}</code>이고 <code>disable_parallel_tool_use: true</code>일 때(강제 호출을 지원하는 모델) Claude의 응답은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>도구를 최대 하나 호출하거나 텍스트로만 답할 수 있다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>같은 도구를 여러 번 병렬로 호출한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>정확히 하나의 도구 호출을 한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>설명 텍스트를 먼저 쓰고 도구를 호출한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p><code>any</code>·<code>tool</code>과 함께 쓰면 정확히 하나다. A는 <code>auto</code>와 조합했을 때의 동작이고, B는 병렬을 끈 설정과 모순된다. D: 강제 호출에서는 도구 호출 앞에 텍스트가 나오지 않는다.</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D2</strong>(한글)과 <strong>레슨문제 D2</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 2.3</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/agent-sdk/subagents" target="_blank" rel="noopener">Agent SDK: Subagents</a> · <a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener">Claude Code: Create custom subagents</a> · <a href="https://code.claude.com/docs/en/agent-sdk/custom-tools" target="_blank" rel="noopener">Agent SDK: Give Claude custom tools</a> · <a href="https://code.claude.com/docs/en/agent-sdk/python" target="_blank" rel="noopener">Agent SDK Python reference</a> · <a href="https://code.claude.com/docs/en/agent-sdk/tool-search" target="_blank" rel="noopener">Agent SDK: Tool search</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools (Forcing tool use)</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/parallel-tool-use" target="_blank" rel="noopener">Parallel tool use</a> · <a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">API errors (Forced tool use not supported)</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" target="_blank" rel="noopener">Strict tool use</a> · <a href="https://platform.claude.com/cookbook/tool-use-tool-choice" target="_blank" rel="noopener">Tool choice (Cookbook)</a> · <a href="https://www.anthropic.com/engineering/writing-tools-for-agents" target="_blank" rel="noopener">Writing effective tools for agents</a> · <a href="https://www.anthropic.com/engineering/advanced-tool-use" target="_blank" rel="noopener">Advanced tool use</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>

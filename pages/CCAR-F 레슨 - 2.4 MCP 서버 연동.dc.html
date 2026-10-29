@@ -158,150 +158,17 @@ schema://warehouse/orders
   <div class="myth"><div class="m"><span class="k">오해</span>프로젝트 MCP 서버는 <code>.claude/settings.json</code>의 <code>mcpServers</code>나 <code>.claude/mcp.json</code>에 넣으면 된다.</div><div class="f"><span class="k">사실</span><code>settings.json</code>은 <code>mcpServers</code> 키를 읽지 않는다. 프로젝트 서버는 저장소 루트의 <code>.mcp.json</code>, 그 안의 <code>mcpServers</code> 키에 둔다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>MCP 서버를 연결하면 에이전트가 그 도구를 내장 도구보다 먼저 쓴다.</div><div class="f"><span class="k">사실</span>모든 도구가 같은 후보일 뿐이다. 선택을 가르는 것은 도구 설명(과 tool search에서는 설명 앞부분의 검색어)이다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">기본 스코프</span></div>
-      <div class="qq"><span class="sc">개발자가 저장소 A에서 <code>claude mcp add --transport http tracker https://tracker.example.com/mcp</code>를 실행했다. 저장소 B로 옮겨 <code>/mcp</code>를 보니 tracker가 없다.</span>가장 그럴듯한 원인은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>HTTP 서버는 세션마다 다시 추가해야 한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>스코프를 생략해 local로 등록되었고, 저장소 A의 항목 아래에만 저장되었다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>저장소 B의 <code>.mcp.json</code>이 저장소 A의 설정을 덮어썼다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>user 스코프 서버는 승인 프롬프트를 통과해야 보인다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>기본 스코프는 local이며 <code>~/.claude.json</code>의 해당 프로젝트 항목에 기록된다. 모든 저장소에서 쓰려면 <code>--scope user</code>로 다시 추가한다. 승인 프롬프트(D)는 project 스코프 서버에 대한 것이고, 스코프 간에는 덮어쓰기가 아니라 우선순위로 하나를 고른다(C).</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">비밀값 공유</span></div>
-      <div class="qq"><span class="sc">팀이 사내 티켓 서버를 모든 팀원에게 배포하려 한다. 서버는 Bearer 토큰 인증을 요구하고, 토큰은 사람마다 다르다.</span>가장 알맞은 구성은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>대표 토큰 하나를 <code>.mcp.json</code>에 적고 저장소를 비공개로 유지한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>각자 <code>.claude/settings.json</code>의 <code>mcpServers</code>에 서버와 토큰을 적는다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>헤더에 <code>Bearer ${ANTHROPIC_AUTH_TOKEN}</code>을 넣어 기존 자격 증명을 재사용한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>project 스코프 <code>.mcp.json</code>에 <code>"Authorization": "Bearer ${TICKET_TOKEN}"</code>을 쓰고 각자 환경 변수를 설정한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>파일은 커밋해 공유하고 값은 환경 변수 확장으로 채우는 것이 문서가 설명하는 방식이다. A는 비밀값이 이력에 남는다. B는 <code>settings.json</code>이 <code>mcpServers</code>를 읽지 않아 동작하지 않는다. C의 <code>ANTHROPIC_AUTH_TOKEN</code>은 원격 서버의 <code>headers</code>에서 빈 값으로 읽혀 401이 난다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">우선순위</span></div>
-      <div class="qq"><code>metrics</code>라는 서버가 user 스코프(<code>~/.claude.json</code> 최상위, URL X, 추가 헤더 포함)와 프로젝트 <code>.mcp.json</code>(URL Y)에 모두 정의되어 있고 local 정의는 없다. Claude Code는 어떻게 연결하는가?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>project 정의 전체를 써서 URL Y에 한 번 연결한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>URL Y에 user 정의의 헤더를 합쳐 연결한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>두 정의에 각각 연결해 도구가 두 벌 생긴다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>개인 설정이 팀 설정을 덮어쓰므로 user 정의를 쓴다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>우선순위는 local → project → user이므로 local이 없으면 project가 이긴다. 이긴 출처의 항목 전체가 쓰이고 필드는 병합되지 않는다(B 오답). 세 스코프 간 중복은 이름으로 판단하므로 연결은 한 번이다(C 오답). "개인 것이 이긴다"(D)는 local에만 해당한다. 엔드포인트가 다르면 경고가 표시된다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">도구 설명</span></div>
-      <div class="qq"><span class="sc">장애 분석 에이전트에 <code>search_incidents</code> MCP 도구(설명: "Search incidents.")를 붙였다. 그런데 에이전트는 계속 Bash로 로컬 로그 파일만 grep한다.</span>먼저 해야 할 조치는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>Bash 도구를 세션에서 제거해 MCP 도구만 남긴다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>서버 이름을 바꿔 도구 목록에서 앞쪽에 오게 한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>어떤 데이터를 검색해 무엇을 반환하는지, 로컬 로그 검색 대신 언제 써야 하는지를 설명에 구체적으로 적는다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>설명을 더 짧게 줄여 매칭이 쉬워지게 한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>모델이 도구를 고르는 근거는 설명이다. 범위·반환값·사용 시점·한계를 적으면 내장 도구와의 차이가 드러난다. A는 다른 정당한 용도까지 막는 우회책이고, B처럼 순서를 바꾸는 것은 선택 근거가 되지 않는다. D는 판단 재료를 더 줄인다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">리소스</span></div>
-      <div class="qq"><span class="sc">데이터 분석 에이전트가 어떤 테이블이 있는지 몰라 <code>run_query</code>로 이름을 추측하며 오류를 여러 번 낸다.</span>탐색성 호출을 줄이는 MCP 설계는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span><code>run_query</code>의 타임아웃을 늘린다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>시스템 프롬프트에 "추측하지 말라"고 적는다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>테이블마다 별도의 조회 도구를 만든다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>테이블 목록과 스키마를 MCP 리소스(예: <code>schema://warehouse/...</code>)로 노출한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>"무엇이 있는지"를 보여 주는 카탈로그는 리소스가 맞는 자리다. 에이전트가 목록을 먼저 보고 필요한 것만 질의할 수 있다. C는 도구 수만 늘려 선택을 어렵게 하고, B는 없는 정보를 만들어 주지 못한다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">tool search</span></div>
-      <div class="qq">기본 설정의 Claude Code(tool search 지원 모델)에서 MCP 서버 5개를 연결했다. 세션 시작 시 이 서버들로부터 컨텍스트에 들어가는 것은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>도구 이름과 서버 instructions — 전체 스키마는 필요할 때 로드</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>모든 도구의 전체 JSON 스키마</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>아무것도 없음 — 사용자가 <code>@</code>로 부를 때까지</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>각 서버의 리소스 본문 전체</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>tool search가 기본으로 켜져 있어 이름과 서버 instructions만 먼저 실리고, 스키마는 <code>ToolSearch</code>로 찾을 때 로드된다. B는 <code>ENABLE_TOOL_SEARCH=false</code>일 때의 동작이다. 리소스는 참조하거나 읽을 때 가져온다(D 오답).</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D2</strong>(한글)과 <strong>레슨문제 D2</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 2.4</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/mcp" target="_blank" rel="noopener">Connect Claude Code to tools via MCP</a> · <a href="https://code.claude.com/docs/en/mcp-quickstart" target="_blank" rel="noopener">Connect to MCP servers (quickstart)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/mcp" target="_blank" rel="noopener">Agent SDK: Connect to external tools with MCP</a> · <a href="https://code.claude.com/docs/en/debug-your-config" target="_blank" rel="noopener">Debug your configuration</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools" target="_blank" rel="noopener">MCP spec: Tools</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/resources" target="_blank" rel="noopener">MCP spec: Resources</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>

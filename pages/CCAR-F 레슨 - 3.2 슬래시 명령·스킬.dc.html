@@ -138,150 +138,17 @@ $since 태그 이후 병합된 PR을 모아 $audience 독자용 CHANGELOG 초안
   <div class="myth"><div class="m"><span class="k">오해</span>스킬 도입으로 <code>.claude/commands/</code>는 더 이상 동작하지 않는다.</div><div class="f"><span class="k">사실</span>계속 동작한다. 같은 메커니즘의 이전 형식이며, 같은 이름의 스킬이 있으면 스킬이 우선한다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>팀 스킬과 같은 이름으로 개인 스킬을 만들면 팀원들의 <code>/triage-bug</code>가 바뀐다.</div><div class="f"><span class="k">사실</span>개인 스킬은 내 머신에만 있다. 대신 personal이 project보다 우선하므로 <strong>내</strong> 세션에서 팀 버전이 가려진다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">팀 공유</span></div>
-      <div class="qq"><span class="sc">QA 리드가 회귀 테스트 데이터 초기화 절차를 <code>/reset-fixtures</code>로 만들어, 저장소를 쓰는 모든 개발자가 같은 명령을 쓰게 하려 한다.</span>어디에 두어야 하는가?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>저장소의 <code>.claude/skills/reset-fixtures/SKILL.md</code>에 두고 커밋한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>QA 리드의 <code>~/.claude/skills/reset-fixtures/</code></span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>절차 전체를 루트 CLAUDE.md에 적는다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span><code>~/.claude.json</code>의 프로젝트 항목</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>프로젝트 스킬(또는 <code>.claude/commands/</code> 파일)을 커밋하면 버전 관리로 팀 전체가 받는다. B는 리드 혼자만 쓰고, C는 매 세션 로드되어 절차가 컨텍스트를 상시 차지하며 <code>/reset-fixtures</code> 명령도 생기지 않는다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">context: fork</span></div>
-      <div class="qq"><span class="sc"><code>/dep-audit</code> 스킬을 실행할 때마다 수백 줄의 조사 출력이 메인 대화에 쌓여, 이어지는 구현 작업에서 Claude가 앞선 지시를 놓친다.</span>가장 알맞은 변경은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span><code>disable-model-invocation: true</code>를 추가한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>스킬 내용을 CLAUDE.md로 옮긴다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span><code>context: fork</code>(필요하면 <code>agent: Explore</code>)를 추가해 서브에이전트에서 실행하고 요약만 받는다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span><code>allowed-tools</code>에서 Read를 뺀다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>장황한 출력을 격리하는 것이 <code>context: fork</code>의 용도다. A는 누가 호출하느냐만 바꾸고, B는 오히려 매 세션 로드량을 늘린다. D는 사전 승인을 뺄 뿐 출력량과 무관하다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">allowed-tools</span></div>
-      <div class="qq">SKILL.md에 <code>allowed-tools: Bash(git status *) Bash(git diff *)</code>를 적었다. 이 스킬을 호출한 턴의 동작으로 옳은 것은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>나열한 두 명령 외의 모든 도구가 그 턴 동안 차단된다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>나열한 명령은 승인 프롬프트 없이 실행되고, 다른 도구는 평소 권한 설정대로 동작한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>나열한 명령이 세션이 끝날 때까지 영구 승인된다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>나열한 명령이 사용 가능 목록에서 제거된다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p><code>allowed-tools</code>는 호출한 턴 동안의 사전 승인이며 다음 메시지를 보내면 해제된다(C 오답). 도구를 막지 않으므로 A도 틀리고, 목록에서 제거하는 것은 <code>disallowed-tools</code>다(D).</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">개인 변형</span></div>
-      <div class="qq"><span class="sc">팀이 <code>.claude/skills/triage-bug/</code>를 커밋해 쓰고 있다. 한 개발자가 로그를 더 많이 모으는 버전을 원해 <code>~/.claude/skills/triage-bug/</code>를 만들었다.</span>무슨 일이 생기는가?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>팀원 전원의 <code>/triage-bug</code>가 개인 버전으로 바뀐다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>두 스킬이 합쳐져 한 번에 실행된다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>프로젝트 스킬이 항상 우선하므로 개인 버전은 무시된다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>그 개발자의 세션에서만 개인 버전이 실행되어 팀 버전이 가려진다 — 다른 이름으로 만드는 편이 낫다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>같은 이름이면 personal이 project보다 우선한다. 개인 폴더는 그 사람 머신에만 있으므로 팀원에게는 영향이 없다(A 오답). 팀 버전 갱신을 계속 받으려면 <code>triage-bug-deep</code>처럼 이름을 달리한다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">호출 제어</span></div>
-      <div class="qq"><span class="sc">스테이징 DB를 초기화하는 <code>/wipe-staging</code> 스킬이 있다. 대화 중 "스테이징 데이터가 꼬였네"라는 말만으로 Claude가 이 스킬을 실행할까 걱정된다.</span>알맞은 설정은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span><code>user-invocable: false</code></span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span><code>context: fork</code></span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span><code>disable-model-invocation: true</code></span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span><code>argument-hint: [confirm]</code></span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>Claude의 자동 호출을 막고 사용자가 <code>/wipe-staging</code>을 칠 때만 실행되게 한다. A는 정반대로 사용자 호출을 막는다. B는 실행 위치만 바꾸고, D는 자동완성 힌트일 뿐이다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">스킬 vs CLAUDE.md</span></div>
-      <div class="qq">다음 중 CLAUDE.md보다 스킬에 두는 것이 알맞은 것은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>"커밋 제목은 Conventional Commits 형식으로 쓴다"</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>분기마다 한 번 수행하는 15단계 접근 권한 점검 절차</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>단일 테스트 파일 실행 명령</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>"<code>src/legacy/</code>는 살아 있으니 지우지 말 것"</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>가끔 필요한 여러 단계 절차는 스킬이 맞다. 평소에는 이름·설명만 로드되어 컨텍스트를 아낀다. A·C·D는 모든 작업에 적용되는 짧은 사실이라 CLAUDE.md에 어울린다.</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D3</strong>(한글)과 <strong>레슨문제 D3</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 3.2</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/skills" target="_blank" rel="noopener">Extend Claude with skills</a> · <a href="https://code.claude.com/docs/en/features-overview" target="_blank" rel="noopener">Extend Claude Code</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://code.claude.com/docs/en/claude-directory" target="_blank" rel="noopener">Explore the .claude directory</a> · <a href="https://code.claude.com/docs/en/agent-sdk/skills" target="_blank" rel="noopener">Agent SDK: Extend agents with skills</a> · <a href="https://code.claude.com/docs/en/debug-your-config" target="_blank" rel="noopener">Debug your configuration</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>

@@ -54,49 +54,6 @@
 .bg .pane .code{ margin:6px 0 0; font-size:12px; }
 .bg .pane p{ font-size:13.5px; margin:6px 0 0; color:var(--soft); }
 
-/* 자가 점검 퀴즈 */
-.quizhd{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:14px 0 4px; }
-.quizhd .qs{ font-size:13.5px; color:var(--soft); }
-.quizhd .qs b{ color:var(--accent-deep); font-size:15px; }
-.quizhd .sp{ flex:1; }
-.qbtn{ font:inherit; font-size:12.5px; font-weight:600; color:var(--accent-deep); background:#fff;
-  border:1px solid var(--line); border-radius:7px; padding:6px 12px; cursor:pointer; }
-.qbtn:hover{ background:var(--accent-tint); }
-
-.q{ border:1px solid var(--line); border-radius:12px; padding:16px 18px 14px; margin:14px 0; background:var(--card); break-inside:avoid; }
-.q .qh{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
-.q .qn{ font-family:'Noto Serif KR',serif; font-weight:700; color:var(--accent); font-size:15px; }
-.q .qt{ font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 9px; border-radius:20px;
-  background:var(--accent-tint); color:var(--accent-deep); }
-.q .qt.qt-b{ background:var(--blue-tint); color:var(--blue-deep); }
-.q .qt.qt-t{ background:var(--teal-tint); color:var(--teal-deep); }
-.q .qq{ font-size:15px; font-weight:600; margin:2px 0 10px; line-height:1.6; }
-.q .qq .sc{ display:block; font-weight:400; color:var(--soft); font-size:14px; margin-bottom:6px; }
-.q .opts{ display:flex; flex-direction:column; gap:7px; }
-.q .opt{ font:inherit; font-size:14px; text-align:left; line-height:1.55; display:flex; gap:10px; align-items:baseline;
-  width:100%; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:9px;
-  padding:9px 13px; cursor:pointer; transition:background .12s, border-color .12s; }
-.q .opt:hover{ background:#F3EBE1; }
-.q .opt .ok{ flex:none; font-weight:700; color:var(--accent); min-width:22px; }
-.q.done .opt{ cursor:default; }
-.q.done .opt:hover{ background:var(--paper); }
-.q .opt.correct{ background:var(--teal-tint) !important; border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
-.q .opt.correct .ok{ color:var(--teal-deep); }
-.q .opt.wrong{ background:#FBEDE8 !important; border-color:#C8664A; box-shadow:inset 0 0 0 1px #C8664A; }
-.q .opt.wrong .ok{ color:#9A3F27; }
-.q .opt.correct::after, .q .opt.wrong::after{ margin-left:auto; flex:none; align-self:center; font-size:11px; font-weight:700;
-  letter-spacing:.03em; padding:2px 9px; border-radius:20px; color:#fff; }
-.q .opt.correct::after{ content:"정답"; background:var(--teal); }
-.q .opt.wrong::after{ content:"내 선택"; background:#C8664A; }
-.q .exp{ display:none; margin-top:12px; border-left:4px solid var(--teal); background:var(--teal-tint);
-  padding:11px 15px; border-radius:0 8px 8px 0; font-size:13.8px; }
-.q .exp .verdict{ display:block; font-weight:700; font-size:12.5px; letter-spacing:.04em; margin-bottom:3px; color:var(--teal-deep); }
-.q.miss .exp{ border-left-color:#C8664A; background:#FBF1EE; }
-.q.miss .exp .verdict{ color:#9A3F27; }
-.q .exp p{ margin:4px 0 0; }
-.q.done .exp, .quiz.reveal .q .exp{ display:block; }
-.quiz.reveal .q .opt.is-answer{ background:var(--teal-tint); border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
-
 /* 회원 전용 장 목록 */
 .lock{ list-style:none; padding:0; margin:12px 0; }
 .lock li{ display:flex; gap:12px; align-items:baseline; padding:9px 0; border-bottom:1px dashed var(--line); margin:0; }
@@ -111,14 +68,10 @@
   .dom .row{ grid-template-columns:minmax(0,1fr) 70px 40px; }
   .myth,.bg{ grid-template-columns:1fr; }
   .myth .m{ border-right:0; border-bottom:1px solid var(--line); }
-  .q{ padding:14px 14px 12px; }
   .lock li{ flex-wrap:wrap; }
   .arch .box{ box-sizing:border-box; }
 }
 
 @media print{
-  .q .exp{ display:block !important; }
-  .q .opt.is-answer{ border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); }
-  .quizhd .qbtn{ display:none; }
-  .src,.axis,.myth,.bg,.dom,.q{ break-inside:avoid; }
+  .src,.axis,.myth,.bg,.dom{ break-inside:avoid; }
 }

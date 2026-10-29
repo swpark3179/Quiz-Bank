@@ -138,150 +138,17 @@ return res.ok()</div></td></tr>
   <div class="myth"><div class="m"><span class="k">오해</span>심각도는 critical·major·minor라는 이름만 주면 일관되게 분류된다.</div><div class="f"><span class="k">사실</span>질적 이름은 해석 폭이 넓다. 등급마다 정의와 구체적 코드 예시를 붙인다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>기준을 IMPORTANT·대문자로 강조할수록 잘 지켜진다.</div><div class="f"><span class="k">사실</span>best practices 문서는 현행 모델이 평이한 문장을 잘 따르며 과도한 강조는 오히려 규칙을 과잉 적용하게 만든다고 설명한다. 강조보다 구체성이다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">명시적 기준</span></div>
-      <div class="qq"><span class="sc">"주석이 정확한지 확인하라"는 리뷰 지시가 맞춤법, 오래된 작성자 이름, 짧은 주석까지 지적해 개발자들이 무시하기 시작했다.</span>가장 알맞은 수정은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>"정말 중요한 것만 신중하게 지적하라"를 추가한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>"주석이 말하는 동작(반환값·부수 효과·오류 조건)이 실제 코드와 모순될 때만 지적하고, 문체·맞춤법·작성자 정보는 건너뛴다"로 바꾼다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>지적 개수를 PR당 3개로 제한한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>주석 리뷰를 영구히 없앤다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>보고할 범주와 건너뛸 범주, 경계 조건을 명시한 기준이 정밀도를 높인다. A는 정의를 바꾸지 않는 태도 지시이고, C는 어떤 지적이 남을지 통제하지 못하며, D는 가치 있는 범주까지 버린다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">태도 지시의 효과</span></div>
-      <div class="qq"><span class="sc">오탐을 줄이려고 리뷰 프롬프트에 "be conservative, only report high-confidence findings"를 넣었다. 오탐은 조금 줄었지만, 나중에 장애로 이어진 off-by-one 버그를 리뷰가 놓쳤다.</span>현재 문서 기준으로 가장 그럴듯한 설명과 대응은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>모델의 버그 탐지 능력이 떨어졌다 → 더 큰 모델로 바꾼다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>지시가 너무 약했다 → "extremely conservative"로 강화한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트가 너무 길다 → 기준을 모두 지운다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>모델이 지시를 충실히 따라 문턱 아래 발견을 보고하지 않았다 → 구체적 보고 조건을 쓰거나, 찾기 단계는 모두 보고하고 거르기를 분리한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>모델 가이드는 이런 지시가 조사 깊이는 그대로 둔 채 보고량을 줄여 재현율을 떨어뜨릴 수 있다고 설명한다(능력 저하가 아닌 하네스 효과). 대응은 구체적 조건이나 찾기/거르기 분리다. B는 같은 문제를 키운다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">심각도 일관성</span></div>
-      <div class="qq">같은 종류의 문제(예외를 삼키는 빈 catch 블록)가 어떤 실행에서는 major, 다른 실행에서는 minor로 분류된다. 가장 효과적인 개선은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>등급마다 정의와 대표 코드 예시를 붙여, 빈 catch가 어느 등급의 앵커와 비슷한지 판단하게 한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>등급 이름을 critical/high/medium/low로 늘린다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>같은 프롬프트로 세 번 돌려 다수결로 등급을 정한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>심각도 필드를 출력에서 빼 버린다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>질적 이름은 해석 폭이 넓어 분류가 흔들린다. 등급별 정의와 구체적 코드 예시가 비교 기준이 된다. 등급 수만 늘리면(B) 경계가 더 늘어날 뿐이고, C는 흔들림을 평균낼 뿐 판단 기준을 주지 않으며, D는 분류 자체를 포기한다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">신뢰 회복</span></div>
-      <div class="qq"><span class="sc">리뷰 봇의 "성능 개선 제안" 범주는 지적 대부분이 무시되고, 최근에는 정확도가 높은 "권한 검사 누락" 지적까지 그냥 닫히고 있다.</span>가장 알맞은 단기 조치는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>봇 전체를 끄고 사람 리뷰로 돌아간다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>모든 범주에 "확실한 것만"을 추가한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>성능 범주를 일시 중지하고 그 범주의 기준을 다시 쓴 뒤 평가 사례로 확인하고 재개한다. 나머지 범주는 유지한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>권한 검사 범주의 지적을 더 길게 설명하게 한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>오탐이 높은 범주가 정확한 범주의 신뢰까지 깎고 있다. 문제 범주만 잠시 꺼서 신뢰를 회복하고, 기준을 개선해 평가로 확인한 뒤 되돌린다. A는 가치 있는 범주까지 버리고, B는 모든 범주의 재현율을 떨어뜨릴 수 있다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">찾기/거르기 분리</span></div>
-      <div class="qq"><span class="sc">리뷰 파이프라인에 이미 별도의 검증·중복 제거 단계가 있다. 그런데 앞단의 찾기 프롬프트에도 "중요한 것만 보고"가 들어 있어 검증 단계로 넘어오는 후보 자체가 적다.</span>찾기 프롬프트를 어떻게 바꾸는가?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>찾기 단계에도 검증 단계와 같은 엄격한 기준을 복사해 넣는다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>불확실하거나 사소해 보이는 것까지 모두 보고하되 지적마다 확신 수준과 추정 심각도를 붙이게 하고, 이 단계의 목표가 커버리지라고 명시한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>찾기 단계를 없애고 검증 단계만 둔다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>찾기 단계에서 지적 수를 5개로 제한한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>모델 가이드가 권하는 구성이다. 확신 기반 필터링을 찾기 단계에서 빼고, 별도 단계가 순위를 매기고 거르게 한다. A·D는 후보를 줄여 뒷단 검증이 할 일을 앞에서 미리 버리게 만든다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">제외 범주</span></div>
-      <div class="qq">관리형 Code Review가 lockfile, <code>src/gen/</code>의 생성 코드, 이미 CI 린터가 잡는 포맷 문제까지 지적해 소음이 크다. 가장 알맞은 조치는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>리뷰 수준(review level)을 Deep으로 올린다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>PR 본문에 "사소한 것은 무시해 주세요"라고 쓴다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>로컬 <code>/code-review</code>용 설정만 바꾼다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>저장소 루트 <code>REVIEW.md</code>의 "보고하지 말 것"에 해당 경로와 CI가 강제하는 범주를 적는다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>REVIEW.md는 관리형 Code Review의 리뷰 전용 지침으로, 건너뛸 경로·범주를 명시하는 곳이다. A는 더 철저하게(그리고 비싸게) 볼 뿐 범주를 바꾸지 않고, C의 로컬 <code>/code-review</code>는 REVIEW.md를 읽지 않는 별개 도구다.</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D4</strong>(한글)과 <strong>레슨문제 D4</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 4.1</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-4-8" target="_blank" rel="noopener">Prompting Claude Opus 4.8</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5" target="_blank" rel="noopener">Prompting Claude Sonnet 5</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5" target="_blank" rel="noopener">Prompting Claude Opus 5</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices</a> · <a href="https://code.claude.com/docs/en/code-review" target="_blank" rel="noopener">Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-customize" target="_blank" rel="noopener">Customize Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-pull-requests" target="_blank" rel="noopener">Read and request reviews on a pull request</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener">How Claude remembers your project</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>
