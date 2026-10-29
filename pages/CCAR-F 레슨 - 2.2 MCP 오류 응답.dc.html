@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 2 · 서브도메인 2.2</span></div>
+    <h1>MCP 도구의 구조화된 오류 응답</h1>
+    <p class="sub">isError · 프로토콜 오류 vs 도구 실행 오류 · 오류 분류 · 재시도 가능 여부 · 빈 결과 · 부분 결과 전파</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/mcp-tool-errors-iserror-vs-protocol-errors" target="_blank" rel="noopener">CertSafari 2.2</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 · Tool Design &amp; MCP Integration (18%)</p>
+    <div class="secrow">
+      <span class="s">2.1 도구 설명</span><span class="s on">2.2 오류 응답</span><span class="s">2.3 도구 범위</span><span class="s">2.4 MCP 서버</span><span class="s">2.5 내장 도구</span>
+    </div>
+  </header>
+
+  <p class="lede">도구는 실패한다. 중요한 것은 실패한 뒤 에이전트가 <em>다음에 무엇을 할지</em> 고를 수 있느냐다. 잠시 뒤 다시 하면 되는 실패, 입력을 고쳐야 하는 실패, 규정상 불가능해 사용자에게 설명해야 하는 실패, 권한이 없어 사람에게 넘겨야 하는 실패는 대응이 모두 다르다. <strong>오류 응답은 에이전트의 복구 결정에 들어가는 입력이므로 종류·재시도 가능 여부·읽을 수 있는 설명을 구조적으로 담아야 한다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>MCP의 두 오류 채널: JSON-RPC 프로토콜 오류와 <code>isError: true</code> 도구 실행 오류</li>
+      <li>일률적인 "작업 실패" 응답이 복구를 막는 이유</li>
+      <li>일시적(transient)·검증(validation)·비즈니스(business)·권한(permission) 오류와 재시도 판단</li>
+      <li><code>errorCategory</code> · <code>isRetryable</code> · 설명 문구를 담은 오류 페이로드 설계</li>
+      <li>서브에이전트의 로컬 복구와, 풀지 못한 오류만 부분 결과와 함께 올리기</li>
+      <li>접근 실패와 "결과 0건"이라는 정상 응답의 구분</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>MCP의 두 오류 채널</h3><span class="unit-en">Protocol errors vs tool execution errors</span></div>
+    <p>MCP 명세(현재 latest인 2026-07-28 개정판, 2025-11-25판도 같은 구분)는 도구 오류를 두 갈래로 보고한다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">프로토콜 오류 · JSON-RPC <code>error</code></div><div class="code">{"jsonrpc": "2.0", "id": 7,
+ "error": {"code": -32602,
+   "message": "Unknown tool: book_flihgt"}}</div><p>알 수 없는 도구, <code>CallToolRequest</code> 스키마를 어긴 요청, 서버 오류. 요청 구조 자체의 문제라 모델이 고쳐 내기 어렵다. 클라이언트는 이를 모델에 전달해도 된다(MAY).</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">도구 실행 오류 · <code>isError: true</code></div><div class="code">{"jsonrpc": "2.0", "id": 8,
+ "result": {"resultType": "complete",
+   "content": [{"type": "text", "text":
+     "체크아웃은 체크인 이후여야 합니다 (받은 값: 11-03 → 11-01)"}],
+   "isError": true}}</div><p>API 실패, 입력 검증 오류, 비즈니스 로직 오류. 모델이 읽고 인자를 고쳐 다시 시도할 수 있는 피드백이다. 클라이언트는 이를 모델에 전달해야 한다(SHOULD).</p></div>
+    </div>
+    <table class="t">
+      <caption>계층마다 다른 필드 이름</caption>
+      <thead><tr><th style="width:40%">계층</th><th>실패 표시</th></tr></thead>
+      <tbody>
+        <tr><td>MCP 서버의 <code>tools/call</code> 결과</td><td><code>isError: true</code></td></tr>
+        <tr><td>Claude API의 <code>tool_result</code> 블록</td><td><code>is_error: true</code></td></tr>
+        <tr><td>Agent SDK 커스텀 도구 핸들러</td><td>TypeScript <code>isError: true</code> / Python 반환 dict의 <code>"is_error": True</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드의 <code>errorCategory</code>, <code>isRetryable</code>(또는 <code>retriable</code>)은 MCP 명세가 정한 필드가 아니다. 명세가 정하는 것은 <code>isError</code> 플래그와 결과 내용(<code>content</code>, 선택적 <code>structuredContent</code>)까지이고, 분류 필드는 서버 설계자가 결과 내용 안에 넣는 <strong>자체 규약</strong>이다. 또 최신 명세의 결과에는 <code>resultType</code>이 붙는다. 사용자에게 추가 입력을 받아야 하는 경우는 오류가 아니라 <code>"input_required"</code> 결과(elicitation 요청 포함)로 표현할 수 있다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>"작업 실패"가 에이전트를 눈멀게 한다</h3><span class="unit-en">Why generic errors break recovery</span></div>
+    <p>모든 실패를 <code>"Operation failed"</code>로 돌려주면 에이전트가 아는 것은 "안 됐다" 하나뿐이다. 재시도할지, 인자를 고칠지, 사용자에게 뭐라고 할지 추측해야 하고, 그 추측은 흔히 같은 호출의 반복으로 끝난다. Handle tool calls 문서는 <code>"failed"</code> 같은 일반 오류 대신 무엇이 잘못됐고 Claude가 다음에 무엇을 시도해야 하는지 적으라고 권한다(예: "Rate limit exceeded. Retry after 60 seconds."). 또 요청이 잘못됐거나 파라미터가 빠진 경우 Claude는 보통 2~3회 고쳐서 다시 시도한 뒤에야 사용자에게 사과한다고 설명한다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 단서 없는 실패</div><div class="code">{"isError": true,
+ "content": [{"type": "text",
+   "text": "Operation failed"}]}</div><p>다시 해도 되는지, 무엇을 고칠지, 고객에게 뭐라고 할지 알 수 없다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 회의실 예약 도구의 검증 오류</div><div class="code">{"isError": true,
+ "content": [{"type": "text", "text": "&lt;아래 JSON 문자열&gt;"}]}
+
+{"errorCategory": "validation",
+ "isRetryable": false,
+ "message": "start_time은 15분 단위여야 합니다 (받은 값 10:07)",
+ "fix": "10:00 또는 10:15로 다시 요청"}</div><p>에이전트는 사용자에게 되묻지 않고 시각을 고쳐 다시 호출한다.</p></div>
+    </div>
+    <div class="note tip"><span class="lbl">무엇을 빼야 하나</span><p><em>Writing tools for agents</em>는 불투명한 오류 코드나 트레이스백 대신 구체적이고 실행 가능한 개선점을 전하도록 오류 응답을 프롬프트처럼 설계하라고 한다. 내부 스택 트레이스·호스트명은 빼고, 다음 행동을 고를 만큼만 담는다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>네 가지 오류와 재시도 판단</h3><span class="unit-en">Classify, then decide</span></div>
+    <table class="t">
+      <thead><tr><th style="width:15%">분류</th><th style="width:21%">예</th><th style="width:13%">isRetryable</th><th style="width:27%">에이전트의 다음 행동</th><th>페이로드에 넣을 것</th></tr></thead>
+      <tbody>
+        <tr><td>transient<br>일시적</td><td>타임아웃, 503, 속도 제한</td><td><code>true</code></td><td>같은 입력으로 잠시 뒤 재시도 (횟수 상한·백오프)</td><td><code>retryAfterSeconds</code>, 지금까지 시도 횟수</td></tr>
+        <tr><td>validation<br>검증</td><td>날짜 형식 오류, 범위 밖 값</td><td><code>false</code> (그대로는)</td><td>입력을 고쳐 새로 호출. 고칠 정보가 없으면 사용자에게 질문</td><td>어느 필드가 왜 틀렸는지, 허용 형식</td></tr>
+        <tr><td>business<br>비즈니스 규칙</td><td>1회 한정 쿠폰 재사용, 한도 초과</td><td><code>false</code></td><td>재시도·우회 금지. 사용자에게 사유를 설명하고 대안 제시</td><td>고객에게 보여 줄 설명, 가능한 대안</td></tr>
+        <tr><td>permission<br>권한</td><td>토큰 만료, 역할 부족</td><td><code>false</code></td><td>재시도 금지. 인증 갱신 요청이나 사람에게 이관</td><td>필요한 권한, 이관 경로</td></tr>
+      </tbody>
+    </table>
+    <div class="code"><span class="c"># 비즈니스 규칙 위반: 재시도하지 말고 설명하라는 신호</span>
+{"errorCategory": "business",
+ "isRetryable": false,
+ "message": "쿠폰 WELCOME10은 계정당 1회 한정이며 2026-08-14에 이미 사용됨",
+ "customerMessage": "이 쿠폰은 계정당 한 번만 쓸 수 있어 이미 사용 처리되었습니다. 지금 쓸 수 있는 다른 쿠폰을 찾아 드릴까요?",
+ "alternatives": ["list_available_coupons"]}</div>
+    <p><code>isRetryable: false</code>가 있으면 에이전트는 같은 호출을 반복하는 대신 <code>customerMessage</code>를 바탕으로 사정을 설명하고 대안을 제시한다. 이 신호가 없으면 "다시 시도해 보겠습니다"가 루프가 된다.</p>
+    <div class="note best"><span class="lbl">실제 사례 — Claude Code의 MCP 클라이언트</span><p>Claude Code 자신도 이 구분대로 움직인다. HTTP·SSE 서버의 첫 연결이 5xx·연결 거부·타임아웃 같은 일시적 오류로 실패하면 최대 세 번 재시도하지만, 인증 오류나 not-found는 설정을 바꿔야 풀리므로 재시도하지 않는다. 연결 뒤 <code>tools/list</code> 같은 탐색 요청도 일시적 오류는 짧은 백오프로 세 번까지 재시도하고, 인증 오류·4xx·요청 타임아웃은 재시도하지 않는다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>빈 결과는 실패가 아니다</h3><span class="unit-en">Empty is a valid answer</span></div>
+    <p>"조건에 맞는 고객 없음"은 질의가 성공했고 답이 0건이라는 뜻이다. "고객 DB에 접속하지 못함"은 질의 자체가 실패했다는 뜻이다. 둘을 섞으면 양쪽으로 틀린다. 접근 실패를 빈 결과처럼 돌려주면 에이전트는 "그런 고객은 없다"고 단정하고, 빈 결과를 오류로 돌려주면 있지도 않은 장애를 풀려고 재시도를 거듭한다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">정상 응답 · 결과 0건</div><div class="code">isError: false
+{"query": {"email": "kim@example.com"},
+ "matches": [],
+ "total": 0}</div><p>어떤 조건으로 찾았는지 함께 돌려주면, 에이전트가 조건을 바꿔(예: 이메일 대신 전화번호) 다시 찾을지 스스로 판단한다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">접근 실패</div><div class="code">isError: true
+{"errorCategory": "transient",
+ "isRetryable": true,
+ "message": "고객 DB 응답 없음 (5초 타임아웃)",
+ "retryAfterSeconds": 10}</div><p>실패를 실패로 알려야 에이전트가 "없음"이라는 잘못된 결론을 내리지 않는다.</p></div>
+    </div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>서브에이전트의 로컬 복구와 전파</h3><span class="unit-en">Recover locally, escalate with context</span></div>
+    <p>멀티에이전트 시스템에서 모든 오류를 코디네이터로 올리면 코디네이터의 컨텍스트가 잡음으로 차고, 서브에이전트가 오류를 삼키면 코디네이터는 결과가 불완전하다는 사실을 모른다. 원칙은 이렇다. 서브에이전트가 풀 수 있는 일시적 오류는 그 안에서 상한을 두고 재시도하고, 풀지 못한 오류만 무엇을 시도했고 무엇을 얻었는지와 함께 올린다.</p>
+    <ol class="proc teal">
+      <li><strong>transient</strong> → 서브에이전트 안에서 백오프 재시도 (예: 최대 3회)</li>
+      <li><strong>validation</strong> → 서브에이전트가 입력을 고쳐 다시 호출</li>
+      <li><strong>business · permission</strong>, 또는 재시도 소진 → 코디네이터에 보고</li>
+      <li><strong>코디네이터</strong> → 다른 출처로 재위임, 범위 축소, 사람에게 이관 중에서 결정</li>
+    </ol>
+    <div class="code"><span class="c"># 서브에이전트의 최종 보고 예시</span>
+{"status": "partial",
+ "completed": ["2024·2025 연간 보고서에서 매출 수치 추출"],
+ "failed": [{"source": "IR 포털 2026 분기 보고서",
+             "errorCategory": "permission",
+             "isRetryable": false,
+             "attempted": ["공개 URL 조회", "검색 캐시 조회"]}],
+ "partialResults": {"revenue_2024": "…", "revenue_2025": "…"},
+ "suggestion": "2026 수치는 담당자에게 자료 요청이 필요"}</div>
+    <p>Anthropic의 멀티에이전트 리서치 시스템 글은 도구가 실패하고 있다는 사실을 에이전트에게 알리고 적응하게 하는 방식이 의외로 잘 통했다고 하며, 이를 재시도 로직·정기 체크포인트 같은 결정론적 안전장치와 함께 쓴다고 설명한다.</p>
+    <div class="note tip"><span class="lbl">Agent SDK 커스텀 도구에서</span><p>핸들러가 예외를 잡지 않으면 SDK의 in-process MCP 서버가 원래 예외 메시지를 담은 오류 결과로 바꾸고, 에이전트 루프는 계속된다. 예외를 직접 잡아 <code>isError</code>와 함께 메시지를 만들면 어느 요청이 왜 실패했고 무엇을 대신 해 볼지를 덧붙일 수 있다. Python <code>@tool</code> 데코레이터는 반환 dict에서 <code>content</code>와 <code>is_error</code>만 전달하므로, 분류 필드는 텍스트 content 안의 JSON으로 넣는다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>도구 안에서 난 오류는 JSON-RPC error로 던지는 것이 정석이다.</div><div class="f"><span class="k">사실</span>API 실패·입력 검증·비즈니스 규칙 오류는 <code>isError: true</code> 결과로 돌려줘야 모델이 읽고 고칠 수 있다. 프로토콜 오류는 알 수 없는 도구나 잘못된 요청 구조용이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>errorCategory</code>와 <code>isRetryable</code>은 MCP 표준 필드다.</div><div class="f"><span class="k">사실</span>명세는 <code>isError</code>와 결과 내용까지 정한다. 분류 필드는 결과 내용에 넣는 자체 규약이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>검색 결과가 하나도 없으면 <code>isError: true</code>로 알린다.</div><div class="f"><span class="k">사실</span>0건은 성공한 질의다. 빈 목록과 사용한 조건을 정상 결과로 돌려주고, 접근 실패만 오류로 보고한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>원인을 자세히 알리려면 스택 트레이스를 그대로 넘기는 게 낫다.</div><div class="f"><span class="k">사실</span>필요한 것은 실행 가능한 설명이다. 트레이스는 판단에 도움이 적고 내부 정보를 노출한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>투명성을 위해 서브에이전트는 모든 오류를 즉시 코디네이터로 올린다.</div><div class="f"><span class="k">사실</span>일시적 오류는 로컬에서 복구하고, 풀지 못한 오류만 시도 내역·부분 결과와 함께 올린다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">오류 채널</span></div>
+      <div class="qq">MCP 명세에서 <code>isError: true</code>인 도구 결과(도구 실행 오류)로 보고해야 하는 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>존재하지 않는 도구 이름으로 들어온 호출</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>형식이 틀린 날짜 입력값</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>CallToolRequest</code> 스키마를 어긴 요청</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>JSON-RPC 메시지 자체가 파싱되지 않는 경우</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>입력 검증 오류는 모델이 고쳐 재시도할 수 있으므로 도구 실행 오류로 돌려준다. A와 C는 명세가 프로토콜 오류로 분류하는 예이고, D도 요청 구조 단계의 문제다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">비즈니스 오류</span></div>
+      <div class="qq"><span class="sc">항공권 변경 도구가 "특가 운임은 날짜 변경 불가" 규정에 걸린 요청을 받으면 <code>isError: true</code>와 "Error"만 돌려준다. 에이전트는 같은 요청을 세 번 보낸 뒤 고객에게 "시스템 점검 중이니 나중에 다시 시도해 달라"고 안내했다.</span>가장 알맞은 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>오류를 JSON-RPC 프로토콜 오류로 바꿔 에이전트가 보지 못하게 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>isError</code>를 false로 바꾸고 "변경 불가"라는 텍스트만 돌려준다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>에이전트의 최대 재시도 횟수를 1로 줄인다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>errorCategory "business", isRetryable false, 고객용 설명(운임 규정)과 가능한 대안(취소 후 재구매 등)을 담아 돌려준다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>운임 규정 위반은 다시 보내도 결과가 같으므로 재시도 불가임을 밝히고, 고객에게 전할 설명과 대안을 준다. A는 모델이 복구할 기회를 없애고, B는 실패를 성공처럼 보이게 한다. C는 횟수만 줄일 뿐 고객 안내가 여전히 틀린다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">일시적 오류</span></div>
+      <div class="qq"><span class="sc">재고 조회 서브에이전트가 공급사 API에서 간헐적으로 503을 받는다. 대개 몇 초 뒤 다시 하면 성공한다.</span>가장 알맞은 처리는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>서브에이전트 안에서 상한과 백오프를 둔 재시도로 처리하고, 끝내 실패할 때만 시도 내역과 함께 코디네이터에 알린다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>503이 올 때마다 즉시 코디네이터로 올려 판단을 맡긴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>503을 "재고 0"으로 바꿔 돌려준다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>실패한 상품을 기록 없이 결과에서 뺀다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>스스로 풀 수 있는 일시적 오류는 로컬에서 복구한다. B는 코디네이터를 잡음으로 채우고, C는 접근 실패를 잘못된 정상 값으로 바꾼다. D는 결과가 불완전하다는 사실을 숨긴다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">빈 결과</span></div>
+      <div class="qq"><span class="sc"><code>find_customer</code> 도구는 일치하는 고객이 없을 때 <code>isError: true</code>와 "not found"를 돌려준다. 에이전트는 이를 장애로 보고 같은 조회를 반복하다가 사람에게 이관한다.</span>가장 알맞은 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>오류 메시지를 더 길고 자세하게 쓴다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>일치하는 고객이 없으면 content를 비운 채 돌려준다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>0건을 정상 결과(isError false, 빈 목록과 사용한 조건)로 돌려주고, 접속 실패만 오류로 보고한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>시스템 프롬프트에 "not found는 무시하라"를 추가한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>결과 0건은 질의 성공이다. A는 여전히 성공을 실패로 알리고, B는 무엇을 찾았는지 정보가 없어 해석이 모호하다. D는 진짜 접근 실패까지 무시하게 만들 수 있다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">부분 결과 전파</span></div>
+      <div class="qq"><span class="sc">번역 서브에이전트가 매뉴얼 12개 장 중 9개를 번역했다. 나머지 3개 장은 외부 용어집 API가 계속 타임아웃되어, 정해 둔 재시도 3회를 모두 썼다.</span>코디네이터에 무엇을 돌려줘야 하나?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>번역된 9개 장, 실패한 3개 장과 오류 분류(transient), 이미 쓴 재시도 횟수와 시도 내용</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>"작업 실패"만 알리고 번역된 9개 장은 버린다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>실패를 숨기고 9개 장만 완성본처럼 보낸다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>상한을 무시하고 성공할 때까지 계속 재시도한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>로컬 복구를 다 쓴 뒤에는, 코디네이터가 나중에 재위임할지·용어집 없이 진행할지·사람에게 넘길지 고를 수 있게 얻은 것과 실패한 것, 시도 내역을 함께 올린다. B는 쓸 수 있는 결과를 버리고, C는 불완전함을 숨긴다. D는 상한을 둔 이유를 무시해 비용과 지연을 키운다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">SDK 핸들러</span></div>
+      <div class="qq">Agent SDK 커스텀 도구 핸들러에서 예외를 잡지 않으면 어떻게 되나?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>query()</code> 전체가 즉시 중단된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Claude는 아무것도 받지 못하고 다음 턴으로 넘어간다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>in-process MCP 서버가 원래 예외 메시지를 담은 오류 결과로 바꿔 Claude에게 주고, 에이전트 루프는 계속된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>SDK가 같은 호출을 자동으로 세 번 재시도한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>문서에 따르면 잡히지 않은 예외도 오류 결과가 되어 Claude가 읽고, 루프는 멈추지 않는다. 다만 원래 예외 문자열만 전달되므로, 맥락을 더하려면 직접 잡아 <code>isError</code>와 함께 메시지를 만든다. A, B, D는 문서의 동작과 다르다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://modelcontextprotocol.io/specification/2026-07-28/server/tools" target="_blank" rel="noopener">MCP Specification: Tools (2026-07-28)</a> · <a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools" target="_blank" rel="noopener">MCP Specification: Tools (2025-11-25)</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/build-a-tool-using-agent" target="_blank" rel="noopener">Tutorial: Build a tool-using agent</a> · <a href="https://code.claude.com/docs/en/agent-sdk/custom-tools" target="_blank" rel="noopener">Agent SDK: Give Claude custom tools</a> · <a href="https://code.claude.com/docs/en/mcp" target="_blank" rel="noopener">Claude Code: MCP</a> · <a href="https://www.anthropic.com/engineering/writing-tools-for-agents" target="_blank" rel="noopener">Writing effective tools for agents</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

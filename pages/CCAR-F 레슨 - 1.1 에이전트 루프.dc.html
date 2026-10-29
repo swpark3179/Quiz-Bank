@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.1</span></div>
+    <h1>에이전트 루프와 stop_reason 제어</h1>
+    <p class="sub">stop_reason 분기 · tool_use / tool_result · 대화 이력 누적 · 모델 주도 결정 · 종료 안티패턴</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/agentic-loop-lifecycle-stop-reason-control-flow-and-tool-results" target="_blank" rel="noopener">CertSafari 1.1 (1부)</a> · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/model-driven-agent-loops-and-termination-anti-patterns" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agentic Architecture &amp; Orchestration (27%)</p>
+    <div class="secrow">
+      <span class="s on">1.1 에이전트 루프</span><span class="s">1.2 코디네이터</span><span class="s">1.3 서브에이전트 생성</span><span class="s">1.4 게이트·핸드오프</span><span class="s">1.5 SDK 훅</span><span class="s">1.6 작업 분해</span><span class="s">1.7 세션 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">에이전트의 뼈대는 단순하다. 도구를 쓸 수 있는 모델을 루프 안에서 돌리고, 매 바퀴 도구 실행 결과라는 '환경의 피드백'을 다시 넣어 준다. 그래서 시험은 거창한 아키텍처보다 이 루프의 기본기를 집요하게 묻는다. 언제 계속하고 언제 멈추는지, 결과를 어떤 모양으로 돌려주는지, 다음 행동을 누가 정하는지. <strong>루프를 계속할지 멈출지는 응답 텍스트가 아니라 <code>stop_reason</code> 필드로 판단한다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>요청 → <code>stop_reason</code> 확인 → 도구 실행 → <code>tool_result</code> 반환 → 재요청으로 이어지는 한 바퀴를 직접 구현한다</li>
+      <li><code>"tool_use"</code>면 계속하고, 그 밖의 값(<code>"end_turn"</code> 등)이면 루프를 빠져나와 값별로 처리한다</li>
+      <li>도구 결과를 정해진 형식(user 메시지, <code>tool_result</code> 먼저, <code>tool_use_id</code> 짝 맞춤)으로 이력에 붙여 다음 추론의 재료로 만든다</li>
+      <li>모델 주도 결정(model-driven)과 미리 짜 둔 결정 트리·도구 순서의 차이를 구분한다</li>
+      <li>종료 안티패턴 세 가지(자연어 신호 파싱, 반복 상한을 주 종료 장치로 사용, 텍스트 유무로 완료 판단)를 알아본다</li>
+          </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>한 바퀴의 해부</h3><span class="unit-en">Anatomy of one iteration</span></div>
+    <p>Claude는 도구를 직접 실행하지 않는다. 응답에 '이 도구를 이 인자로 불러 달라'는 구조화된 요청(<code>tool_use</code> 블록)을 담아 보낼 뿐이고, 실행은 애플리케이션이 맡는다. <code>web_search</code> 같은 서버 실행 도구는 예외지만, 직접 정의한 클라이언트 도구를 쓰는 한 루프를 돌리는 주체는 내 코드다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① REQUEST</div><div class="ft">messages + tools 전송</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② RESPONSE</div><div class="ft">stop_reason 확인</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ EXECUTE</div><div class="ft">앱이 tool_use 실행</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ RETURN</div><div class="ft">tool_result를 user 메시지로 → ①</div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:16%">단계</th><th style="width:40%">내 코드가 할 일</th><th>놓치기 쉬운 점</th></tr></thead>
+      <tbody>
+        <tr><td>요청</td><td>원래 메시지, 직전 assistant 응답, 도구 결과를 모두 담아 다시 보낸다</td><td>이력 전체가 곧 에이전트의 작업 기억이다</td></tr>
+        <tr><td>판정</td><td><code>stop_reason</code>을 읽는다</td><td>텍스트 블록과 <code>tool_use</code> 블록이 한 응답에 함께 올 수 있다</td></tr>
+        <tr><td>실행</td><td>블록의 <code>name</code>·<code>input</code>으로 내 함수를 호출한다</td><td>실패도 결과다 — <code>is_error: true</code>와 원인·대처를 담아 돌려준다</td></tr>
+        <tr><td>반환</td><td>assistant 응답을 이력에 넣고, 이어서 <code>tool_result</code>를 담은 user 메시지를 붙인다</td><td>결과와 호출은 순서가 아니라 <code>tool_use_id</code>로 짝이 맞는다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>stop_reason으로 분기하기</h3><span class="unit-en">Branch on the field, not the prose</span></div>
+    <p>공식 문서가 제시하는 정석은 "<code>stop_reason</code>이 <code>"tool_use"</code>인 동안 도구를 실행하고 대화를 이어 간다"이다. 다른 값이 오면 루프를 빠져나오되, 값마다 뜻이 달라 후처리도 다르다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">값</th><th style="width:30%">의미</th><th>루프에서의 처리</th></tr></thead>
+      <tbody>
+        <tr><td><code>tool_use</code></td><td>클라이언트 도구 호출 요청</td><td>실행 → 결과 반환 → <strong>계속</strong></td></tr>
+        <tr><td><code>end_turn</code></td><td>응답이 자연스럽게 끝남</td><td>최종 답으로 쓰고 <strong>종료</strong></td></tr>
+        <tr><td><code>max_tokens</code></td><td><code>max_tokens</code> 한도에서 잘림</td><td>잘린 응답으로 취급. 마지막 블록이 미완성 <code>tool_use</code>면 한도를 올려 다시 요청</td></tr>
+        <tr><td><code>stop_sequence</code></td><td>지정한 정지 시퀀스를 출력</td><td>어떤 시퀀스였는지 확인하고 처리</td></tr>
+        <tr><td><code>pause_turn</code></td><td>서버 도구 루프가 반복 한도(기본 10회)에 도달</td><td>받은 응답을 이력에 그대로 붙여 다시 보내 이어 가게 한다</td></tr>
+        <tr><td><code>refusal</code></td><td>응답을 거절</td><td><code>stop_details</code>를 확인하고 필요하면 대체 모델 등으로 폴백</td></tr>
+        <tr><td><code>model_context_window_exceeded</code></td><td>모델 컨텍스트 창이 가득 참</td><td>잘린 응답으로 취급</td></tr>
+      </tbody>
+    </table>
+    <p>회의실 예약 에이전트의 최소 루프다. 분기 근거는 <code>stop_reason</code>뿐이다.</p>
+    <div class="code">def run_agent(client, user_text, tools, handlers):
+    messages = [{"role": "user", "content": user_text}]
+    while True:
+        resp = client.messages.create(model=MODEL, max_tokens=4096,
+                                      tools=tools, messages=messages)
+        messages.append({"role": "assistant", "content": resp.content})
+
+        if resp.stop_reason == "tool_use":
+            results = [run_one(b, handlers) for b in resp.content
+                       if b.type == "tool_use"]
+            messages.append({"role": "user", "content": results})
+            continue                      <span class="c"># 결과를 들고 다음 바퀴로</span>
+
+        if resp.stop_reason == "pause_turn":
+            continue                      <span class="c"># 서버 도구 진행 중 — 붙여 둔 응답째 재전송</span>
+
+        return resp                       <span class="c"># end_turn·max_tokens·refusal 등은 호출한 쪽에서 값별 처리</span>
+
+def run_one(block, handlers):
+    try:
+        out = handlers[block.name](**block.input)
+        return {"type": "tool_result", "tool_use_id": block.id,
+                "content": json.dumps(out, ensure_ascii=False)}
+    except Exception as e:                <span class="c"># 실패도 결과로 돌려준다</span>
+        return {"type": "tool_result", "tool_use_id": block.id, "is_error": True,
+                "content": f"{type(e).__name__}: {e}"}</div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 분기를 "<code>tool_use</code>면 계속, <code>end_turn</code>이면 종료"의 두 갈래로 설명한다. 현재 문서는 위 표처럼 일곱 가지 값을 정의하고, <code>tool_use</code>가 아니면 루프를 빠져나오되 값마다 다르게 처리하라고 안내한다. 시험에서는 두 갈래를 기본으로 답하되, <code>max_tokens</code>·<code>refusal</code> 같은 값을 '정상 완료'로 간주하는 보기는 오답으로 본다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>결과를 이력에 붙이는 규칙</h3><span class="unit-en">Tool results become context</span></div>
+    <p>결과를 돌려주는 목적은 Claude가 새 정보를 근거로 다음 행동을 추론하게 하는 것이다. 그래서 결과는 따로 요약하거나 시스템 프롬프트에 끼우지 않고, 직전 <code>tool_use</code>에 대응하는 <code>tool_result</code> 자리에 넣는다.</p>
+    <ul>
+      <li>직전 assistant 응답은 <code>content</code> 전체를 그대로 이력에 넣고, 바로 다음 user 메시지에 <code>tool_result</code>를 담는다. 사이에 다른 메시지를 끼울 수 없다.</li>
+      <li>한 응답에 <code>tool_use</code>가 여럿이면 결과도 전부 <strong>하나의</strong> user 메시지에 모은다. 실행하지 않기로 한 호출에도 <code>is_error: true</code>와 짧은 이유를 담은 결과를 돌려준다.</li>
+      <li><code>tool_result</code> 블록은 <code>content</code> 배열의 맨 앞에 와야 한다. 텍스트는 그 뒤에만 둘 수 있다.</li>
+    </ul>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 결과를 메시지마다 쪼갬</div><div class="code">{"role": "assistant", "content": [tu_room, tu_cal]}
+{"role": "user", "content": [res_room]}
+{"role": "user", "content": [res_cal]}</div><p>이력이 '한 번에 하나씩'을 가르쳐 이후 병렬 호출이 줄어든다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 한 메시지에 모음</div><div class="code">{"role": "assistant", "content": [tu_room, tu_cal]}
+{"role": "user", "content": [res_room, res_cal]}</div><p>각 결과의 <code>tool_use_id</code>가 해당 호출의 <code>id</code>와 같으면 순서는 상관없다.</p></div>
+    </div>
+    <div class="note tip"><span class="lbl">작지만 자주 나는 문제</span><p>결과 뒤에 습관처럼 "다음엔 뭘 할까요?" 같은 텍스트를 덧붙이면, Claude가 '도구 결과 뒤에는 사용자 입력이 온다'는 패턴을 따라 내용 없는 <code>end_turn</code> 응답을 내는 원인이 될 수 있다. 또 웹 페이지·메일처럼 외부에서 온 내용은 신뢰할 수 없으므로 시스템 프롬프트나 일반 텍스트가 아니라 <code>tool_result</code> 안에 둔다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>모델 주도 결정 vs 미리 짠 순서</h3><span class="unit-en">Model-driven vs scripted</span></div>
+    <p>Anthropic은 에이전트형 시스템을 둘로 나눈다. <strong>워크플로(workflow)</strong>는 LLM과 도구가 미리 정의된 코드 경로를 따라 움직이고, <strong>에이전트(agent)</strong>는 LLM이 스스로 다음 단계와 도구 사용을 정한다. 1.1의 에이전트 루프는 후자다. 매 바퀴 Claude가 쌓인 결과를 보고 다음 도구를 고른다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--blue)"><div class="pt2">미리 짠 결정 트리</div><p>코드가 "예약 조회 → 대체 회의실 검색 → 알림 발송"을 고정한다. 예측·테스트가 쉽지만, 대체 회의실이 없는 것처럼 예상 경로를 벗어나면 막힌다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">모델 주도 루프</div><p>목표와 도구만 준다. 대체 회의실이 없으면 Claude가 시간대를 바꿔 다시 검색하거나 참석자 일정을 먼저 확인한다. 유연한 대신 비용·지연이 늘고 오류가 누적될 수 있어 가드레일이 필요하다.</p></div>
+    </div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>단계 수와 순서를 미리 알 수 있고 매번 같다 → 워크플로(코드로 순서 고정)가 더 예측 가능하다</li>
+      <li>다음 행동이 중간 결과에 따라 달라지는 개방형 문제 → 에이전트 루프</li>
+      <li>함정 보기: 에이전트 루프 안에서 "첫 바퀴엔 A 도구, 둘째 바퀴엔 B 도구"를 코드로 강제하는 설계는 모델 주도 결정의 장점을 버린다</li>
+      <li>단, 반드시 지켜야 하는 순서(본인 확인 후 환불)는 모델 판단에 맡기지 않고 코드로 강제한다 → 1.4</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>종료 안티패턴과 안전장치</h3><span class="unit-en">Stop on the signal, cap as a backstop</span></div>
+    <table class="t">
+      <thead><tr><th style="width:26%">안티패턴</th><th style="width:38%">왜 위험한가</th><th>대신</th></tr></thead>
+      <tbody>
+        <tr><td>응답 문구 파싱 ("완료", "Done"이 보이면 종료)</td><td>표현은 언어·맥락마다 달라지고 "완료하려면 먼저…" 같은 문장에서 오탐이 난다</td><td><code>stop_reason</code>. 모델 출력에서 정규식으로 결정을 뽑고 있다면 그 결정은 도구 호출로 설계했어야 한다는 신호다</td></tr>
+        <tr><td>반복 상한을 주된 종료 장치로</td><td>정상 작업이 상한에서 잘리면 미완성 결과가 완료처럼 나간다</td><td>정상 종료는 <code>end_turn</code>. 상한에 걸리면 '미완료'로 처리</td></tr>
+        <tr><td>텍스트 블록 유무로 완료 판단</td><td><code>tool_use</code> 응답에도 "확인해 볼게요" 같은 텍스트가 함께 온다</td><td>블록 종류가 아니라 <code>stop_reason</code></td></tr>
+      </tbody>
+    </table>
+    <p>안전장치 자체는 필요하다(Anthropic도 최대 반복 횟수 같은 정지 조건을 흔히 둔다고 설명한다). 요점은 우선순위다. <strong>1차 종료 신호는 <code>stop_reason</code>, 반복 상한과 예산은 폭주를 막는 2차 방어선</strong>이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>루프를 대신 돌려 주는 도구</h3><span class="unit-en">Tool Runner and the Agent SDK</span></div>
+    <table class="t">
+      <thead><tr><th style="width:22%">방식</th><th style="width:34%">루프를 누가 돌리나</th><th>종료와 상한</th></tr></thead>
+      <tbody>
+        <tr><td>직접 구현 (Messages API)</td><td>내 코드 (사람 승인·맞춤 로깅·조건부 실행이 필요할 때)</td><td><code>stop_reason</code> 분기 + 직접 둔 상한</td></tr>
+        <tr><td>Tool Runner (SDK, 베타)</td><td>SDK가 도구 실행·결과 포맷·대화 상태를 관리</td><td><code>tool_use</code>가 없는 메시지가 오면 끝나고, <code>max_iterations</code>를 주면 그 횟수에서 멈춘다. 도구 예외는 <code>is_error: true</code> 결과로 Claude에게 전달된다</td></tr>
+        <tr><td>Claude Agent SDK</td><td>Claude Code와 같은 루프. 내장 도구(Read·Bash 등)까지 SDK가 실행</td><td>도구 호출 없는 응답이 나오면 끝나고 <code>ResultMessage</code>를 낸다. <code>max_turns</code>·<code>max_budget_usd</code>에 걸리면 subtype이 <code>error_max_turns</code>·<code>error_max_budget_usd</code>이고 <code>result</code> 필드가 없다</td></tr>
+      </tbody>
+    </table>
+    <div class="note best"><span class="lbl">Agent SDK 턴 세기</span><p><code>max_turns</code>는 '도구를 부른 턴 + 마지막 텍스트 응답 1턴'으로 센다. 도구를 세 번 부르고 답하는 작업에 <code>max_turns=3</code>을 주면 최종 답 없이 <code>error_max_turns</code>로 끝난다. 결과를 읽기 전에 <code>subtype</code>부터 확인한다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>응답에 텍스트가 있으면 그게 최종 답이다.</div><div class="f"><span class="k">사실</span><code>tool_use</code> 응답에도 텍스트가 함께 올 수 있다. 계속할지는 <code>stop_reason</code>으로만 판단한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>반복 상한만 걸어 두면 종료 조건으로 충분하다.</div><div class="f"><span class="k">사실</span>상한은 안전망이다. 상한 도달은 정상 완료가 아니라 미완료로 다뤄야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>end_turn</code>이 아닌 값은 모두 오류다.</div><div class="f"><span class="k">사실</span><code>pause_turn</code>은 응답을 붙여 다시 보내면 이어지고, <code>max_tokens</code>는 한도를 올려 재요청하는 식으로 값마다 처리가 다르다. HTTP 오류와 <code>stop_reason</code>은 별개다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>병렬 호출 결과는 도착하는 대로 각각 user 메시지로 보내면 된다.</div><div class="f"><span class="k">사실</span>한 user 메시지에 모두 담고 <code>tool_use_id</code>로 짝을 맞춘다. 나눠 보내면 이후 병렬 호출이 줄어든다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">종료 판정</span></div>
+      <div class="qq"><span class="sc">회의실 예약 에이전트가 "빈 회의실을 찾아볼게요."라는 텍스트 블록과 함께 <code>tool_use</code> 블록을 돌려줬다. 그런데 루프 코드는 텍스트 블록이 있으면 사용자에게 출력하고 끝내도록 되어 있어 예약이 진행되지 않는다.</span>가장 알맞은 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>시스템 프롬프트에 "도구를 쓸 때는 텍스트를 쓰지 마라"를 추가한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>텍스트가 일정 길이 이하이면 루프를 계속하도록 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>stop_reason</code>이 <code>"tool_use"</code>이면 텍스트 유무와 관계없이 도구를 실행하고 루프를 이어 간다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>반복 상한을 늘린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>한 응답에 텍스트와 <code>tool_use</code>가 함께 오는 것은 정상이고, 분기 근거는 <code>stop_reason</code> 하나다. A는 증상을 프롬프트로 덮을 뿐이라 언제든 다시 깨진다. B는 텍스트 모양으로 추측하는 안티패턴이고, D는 원인(잘못된 종료 신호)과 무관하다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">max_tokens</span></div>
+      <div class="qq"><span class="sc">응답의 <code>stop_reason</code>이 <code>"max_tokens"</code>이고, <code>content</code>의 마지막 블록은 입력이 덜 채워진 <code>tool_use</code>다.</span>올바른 처리는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>max_tokens</code>를 높여 같은 요청을 다시 보낸다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>채워진 인자만으로 도구를 실행한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>end_turn</code>과 같다고 보고 텍스트를 사용자에게 보여 준다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>빈 <code>tool_result</code>를 돌려주고 계속한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>문서는 잘린 응답에 미완성 <code>tool_use</code>가 있으면 더 큰 <code>max_tokens</code>로 다시 요청해 완전한 호출을 받으라고 안내한다. B는 불완전한 인자로 부작용을 낼 수 있고, C는 미완성 작업을 완료로 착각한다. D는 완성되지 않은 호출에 결과를 붙이는 셈이다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">종료 설계</span></div>
+      <div class="qq">운영용 에이전트 루프의 종료 설계로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>응답에 "작업 완료"가 들어 있으면 종료한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>10회 반복하면 무조건 종료하고 마지막 응답을 결과로 쓴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>tool_use</code> 블록이 없고 텍스트가 50자 이상이면 종료한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>stop_reason</code>이 <code>"tool_use"</code>가 아니면 빠져나와 값별로 처리하고, 반복 상한·예산은 폭주를 막는 안전망으로 둔다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>1차 신호는 <code>stop_reason</code>, 상한은 2차 방어선이다. A는 자연어 신호 파싱, B는 상한을 주 종료 장치로 써서 미완료 결과를 완료로 내보낸다. C는 응답 내용의 모양으로 완료를 짐작한다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">병렬 결과 반환</span></div>
+      <div class="qq"><span class="sc">Claude가 한 응답에서 회의실 조회와 참석자 일정 조회를 동시에 요청했다. 개발자는 결과가 도착하는 대로 각각 별도 user 메시지로 보냈고, 이후 Claude가 병렬 호출을 거의 하지 않게 됐다.</span>올바른 반환 방식은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>두 결과를 하나의 문자열로 합쳐 시스템 프롬프트에 넣는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>두 <code>tool_result</code> 블록을 하나의 user 메시지 맨 앞에 함께 담고, 각각 <code>tool_use_id</code>로 짝을 맞춘다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>먼저 끝난 결과만 보내고 나머지는 다음 요청에 보낸다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>결과를 assistant 메시지로 보낸다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>결과를 메시지마다 나눠 보내면 '한 번에 하나'를 학습시켜 병렬 호출이 줄어든다고 문서가 경고한다. 모든 결과를 한 user 메시지에, 텍스트보다 앞에 둔다. C는 결과 없는 <code>tool_use</code>를 남겨 요청이 실패하고, D는 role이 틀렸다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">모델 주도 결정</span></div>
+      <div class="qq"><span class="sc">서비스 장애 원인을 찾는 에이전트를 만든다. 로그, 배포 이력, 지표 조회 도구가 있고, 무엇을 어떤 순서로 봐야 할지는 장애마다 다르다.</span>가장 알맞은 설계는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>도구와 목표를 주고, Claude가 매 바퀴 누적된 결과를 보고 다음 도구를 고르게 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>로그 → 배포 이력 → 지표 순서를 코드로 고정하고 단계별 결과만 요약시킨다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>모든 도구를 한 번씩 호출한 결과를 한꺼번에 넣고 한 번에 결론을 내게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>장애 유형별 if-else 트리를 코드로 만들어 도구 순서를 정한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>다음 행동이 중간 발견에 따라 달라지는 개방형 문제에는 모델 주도 루프가 맞다. B·D는 미리 정한 결정 트리라 예상 밖의 장애에서 막힌다. C는 불필요한 조회까지 하면서도 결과를 보고 추가 조사하는 반복이 없다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">Agent SDK 결과</span></div>
+      <div class="qq"><span class="sc">Agent SDK로 돌린 작업이 <code>ResultMessage</code> subtype <code>"error_max_turns"</code>로 끝났다.</span>가장 알맞은 후속 처리는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>result</code> 필드를 최종 답으로 사용자에게 보여 준다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>같은 프롬프트로 새 세션을 처음부터 다시 시작한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>미완료로 처리하고, 결과에 담긴 <code>session_id</code>로 세션을 재개하면서 상한을 높인다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>stop_reason</code>이 <code>end_turn</code>인지 확인해 그렇다면 성공으로 기록한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p><code>error_max_turns</code> 결과에는 <code>result</code> 필드가 없고, 모든 result subtype에 <code>session_id</code>가 있어 한도를 높여 재개할 수 있다. B는 이미 한 작업을 버린다. D의 <code>stop_reason</code>은 마지막 응답이 멈춘 이유일 뿐이며, 작업 완료 여부는 <code>subtype</code>으로 판단한다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works" target="_blank" rel="noopener">How tool use works</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons" target="_blank" rel="noopener">Stop reasons and fallback</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/parallel-tool-use" target="_blank" rel="noopener">Parallel tool use</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-runner" target="_blank" rel="noopener">Tool runner (SDK)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop" target="_blank" rel="noopener">How the agent loop works (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/sessions" target="_blank" rel="noopener">Session management (Agent SDK)</a> · <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

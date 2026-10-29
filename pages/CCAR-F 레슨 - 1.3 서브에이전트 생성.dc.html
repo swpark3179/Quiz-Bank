@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.3</span></div>
+    <h1>서브에이전트 생성과 컨텍스트 전달</h1>
+    <p class="sub">Agent 도구(구 Task) · AgentDefinition · 명시적 컨텍스트 전달 · 출처 메타데이터 · 병렬 생성 · 세션 포크</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/spawning-subagents-the-agent-task-tool-and-agentdefinition" target="_blank" rel="noopener">CertSafari 1.3</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agentic Architecture &amp; Orchestration (27%)</p>
+    <div class="secrow">
+      <span class="s">1.1 에이전트 루프</span><span class="s">1.2 코디네이터</span><span class="s on">1.3 서브에이전트 생성</span><span class="s">1.4 게이트·핸드오프</span><span class="s">1.5 SDK 훅</span><span class="s">1.6 작업 분해</span><span class="s">1.7 세션 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">1.2가 '무엇을 나눌까'였다면 1.3은 '어떻게 띄우고 무엇을 들려 보낼까'다. Agent SDK에서 서브에이전트는 Agent 도구 호출 한 번으로 생기고, 그때 건네는 프롬프트 문자열이 부모와 자식 사이의 유일한 통로다. 시험은 이 통로를 얼마나 잘 쓰는지 — 무엇을 넣고, 어떤 형식으로 넣고, 몇 개를 한꺼번에 띄우는지 — 를 묻는다. <strong>서브에이전트가 아는 것은 자기 정의(시스템 프롬프트·도구)와 위임 프롬프트에 적힌 것뿐이다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>Agent 도구(시험 가이드의 Task 도구)로 서브에이전트를 만드는 구조와 코디네이터 쪽 설정</li>
+      <li><code>AgentDefinition</code>의 <code>description</code>·<code>prompt</code>·<code>tools</code> 등 필드가 각각 정하는 것</li>
+      <li>앞 단계 결과를 요약이 아닌 완전한 형태로 위임 프롬프트에 넣고, 본문과 출처 메타데이터를 구조적으로 분리하기</li>
+      <li>한 응답에서 여러 Agent 호출을 내 서브에이전트를 병렬로 생성하기</li>
+      <li>절차 대신 목표와 품질 기준을 주는 위임 프롬프트</li>
+      <li>공통 분석 기준점에서 갈라져 대안을 탐색하는 포크(fork)</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>Agent 도구로 생성하기</h3><span class="unit-en">Spawning through the Agent tool</span></div>
+    <p>프로그램 방식에서는 <code>query()</code> 옵션의 <code>agents</code>에 서브에이전트 정의를 넣는다. 그러면 메인 에이전트(코디네이터)의 Claude가 Agent 도구를 호출해 그중 하나를 띄운다. 계약서 검토 시스템으로 예를 들면 다음과 같다.</p>
+    <div class="code">options = ClaudeAgentOptions(
+    allowed_tools=["Read", "Grep", "Glob", "Agent"],   <span class="c"># Agent = 서브에이전트 생성 도구(구 Task)</span>
+    agents={
+        "clause-finder": AgentDefinition(
+            description="계약서에서 해지·위약금·책임 제한 조항을 찾아 원문과 위치를 보고할 때 사용",
+            prompt="너는 계약 조항 탐색 담당이다. 조항마다 원문, 파일명, 조항 번호, 쪽을 그대로 적고 해석은 하지 않는다.",
+            tools=["Read", "Grep", "Glob"],            <span class="c"># 읽기 전용</span>
+            model="haiku",
+        ),
+        "risk-reviewer": AgentDefinition(
+            description="이미 찾아 둔 조항을 근거로 법적 위험도를 평가할 때 사용",
+            prompt="너는 계약 위험 검토자다. 주어진 조항 원문만 근거로 판단하고, 근거 조항의 id를 반드시 인용한다.",
+            tools=["Read"],
+        ),
+    },
+)</div>
+    <p>Claude가 내는 Agent 도구 호출의 입력에는 <code>prompt</code>(서브에이전트에게 건네는 위임 메시지)와 <code>subagent_type</code>(<code>agents</code>에 정의한 이름, 생략하면 내장 <code>general-purpose</code>)이 들어가고, <code>run_in_background</code>·<code>model</code>·<code>isolation</code> 같은 선택 필드도 있다. 실행 중 메시지 스트림에서 서브에이전트 생성은 <code>name</code>이 <code>"Agent"</code>인 <code>tool_use</code> 블록으로 보이고, 서브에이전트 안에서 나온 메시지에는 <code>parent_tool_use_id</code>가 붙는다.</p>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 'Task 도구'와 "코디네이터의 <code>allowedTools</code>에 <code>Task</code>가 있어야 한다"고 쓴다. 현재 문서에서 이 도구는 <strong><code>Agent</code></strong>다(Claude Code v2.1.63에서 이름 변경, <code>Task</code>는 별칭으로 계속 인식되고 <code>system:init</code>의 도구 목록에는 아직 <code>Task</code>로 표시). 또 현재 SDK의 <code>allowedTools</code>는 '사용 가능 목록'이 아니라 '자동 승인 목록'이며, Agent 도구는 원래 승인 없이 실행되는 도구로 분류된다. 서브에이전트 생성을 막으려면 <code>disallowedTools</code>에 <code>Agent</code>를 넣고, 에이전트 정의의 <code>tools</code> 목록을 직접 지정했다면 거기에 <code>Agent</code>가 있어야 그 에이전트가 생성할 수 있다. 시험에서는 "코디네이터 설정에 Task(Agent)를 포함한다"를 정답으로 고른다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>AgentDefinition 필드</h3><span class="unit-en">Configure each subagent type</span></div>
+    <table class="t">
+      <thead><tr><th style="width:20%">필드</th><th style="width:40%">정하는 것</th><th>메모</th></tr></thead>
+      <tbody>
+        <tr><td><code>description</code> (필수)</td><td>언제 이 서브에이전트를 쓸지. Claude가 작업과 맞춰 보는 기준</td><td>짧고 구체적으로. 상세 지침은 <code>prompt</code>로 보낸다</td></tr>
+        <tr><td><code>prompt</code> (필수)</td><td>서브에이전트의 시스템 프롬프트 — 역할, 규칙, 출력 형식</td><td>그 서브에이전트가 실행될 때만 컨텍스트에 들어간다</td></tr>
+        <tr><td><code>tools</code></td><td>허용 도구 목록</td><td>생략하면 서브에이전트가 쓸 수 있는 도구를 모두 상속. 목록에 없는 도구는 그 세션에 아예 없다</td></tr>
+        <tr><td><code>disallowedTools</code></td><td>상속 도구에서 뺄 목록</td><td><code>tools</code>와 함께 쓰면 <code>disallowedTools</code>가 우선</td></tr>
+        <tr><td><code>model</code></td><td>모델 별칭·ID, <code>'inherit'</code>는 메인과 동일</td><td>단순 탐색은 작은 모델로 비용을 줄인다</td></tr>
+        <tr><td><code>maxTurns</code></td><td>서브에이전트의 턴 상한</td><td>도달하면 결과가 '부분 결과'로 표시되고 재개할 수 있다</td></tr>
+        <tr><td><code>background</code>·<code>effort</code>·<code>skills</code>·<code>mcpServers</code>·<code>memory</code></td><td>실행 방식, 추론 강도, 미리 불러올 스킬, MCP 서버, 지속 메모리</td><td>필요할 때만 지정</td></tr>
+      </tbody>
+    </table>
+    <p>Claude는 <code>description</code>을 보고 자동으로 위임 대상을 고른다. 특정 서브에이전트를 확실히 쓰게 하려면 프롬프트에서 이름을 댄다("clause-finder 에이전트로 해지 조항을 찾아라"). 위임이 일어나지 않는다면 먼저 description이 '언제 쓰는지'를 분명히 말하는지 확인한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>맥락은 프롬프트로만 건너간다</h3><span class="unit-en">Pass complete findings, keep attribution</span></div>
+    <p>서브에이전트는 부모 대화를 보지 못하고, 같은 서브에이전트라도 호출할 때마다 새 인스턴스로 시작해 이전 호출을 기억하지 않는다. "앞에서 찾은 조항으로 위험도를 평가해 줘"라고만 쓰면 risk-reviewer는 '앞에서'가 무엇인지 모른다. 앞 단계 결과는 위임 프롬프트에 <strong>직접</strong>, 그리고 판단에 필요한 원문 그대로 넣는다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 참조만 던짐</div><div class="code">prompt: "clause-finder가 찾은 조항을
+         바탕으로 위험도를 평가하라"</div><p>서브에이전트에게는 그 결과가 없다. 추측하거나 파일을 처음부터 다시 뒤진다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 내용과 출처를 분리해 전달</div><div class="code">목표: 아래 조항의 위험도를 상·중·하로 평가
+&lt;findings&gt;
+[{"id": "F1",
+  "text": "갑은 30일 전 서면 통지로 …",
+  "source": {"file": "supply_2026.pdf",
+             "clause": "12.3", "page": 7}}, …]
+&lt;/findings&gt;
+평가마다 근거 id(F1 …)를 인용할 것</div><p>본문(<code>text</code>)과 출처(<code>source</code>)가 분리돼 있어 종합 단계를 거쳐도 어느 문서 몇 쪽인지가 남는다.</p></div>
+    </div>
+    <p>핵심은 <strong>내용과 메타데이터의 분리</strong>다. 출처를 문장 속에 섞어 쓰면("공급계약서 7쪽에 따르면…") 요약·재작성 과정에서 쉽게 떨어져 나간다. id로 참조하게 하면 최종 결과의 주장마다 출처를 역추적할 수 있다.</p>
+    <div class="note tip"><span class="lbl">무엇을 넣지 말까</span><p>필요 없는 대화 전체를 붙여 넣으면 컨텍스트 격리의 이점이 사라진다. 기준은 '이 과제를 처음 받는 유능한 동료가 알아야 할 것'이다. 같은 서브에이전트의 작업을 이어 가야 한다면 새로 띄우지 말고, Agent 도구 결과에 담긴 <code>agentId</code>로 재개(resume)한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>병렬 생성은 한 응답에서</h3><span class="unit-en">Fan out in a single response</span></div>
+    <p>병렬 도구 사용과 같은 원리다. Claude는 한 응답에 <code>tool_use</code> 블록을 여러 개 낼 수 있고 Agent 호출도 마찬가지다. 코디네이터가 한 응답에서 Agent를 세 번 부르면 세 서브에이전트가 함께 시작해, 전체 시간이 합이 아니라 가장 느린 하나의 시간에 가까워진다. 턴마다 하나씩 부르면 앞 결과를 기다리는 직렬 실행이 되기 쉽다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid #B5543A"><div class="pt2">턴마다 1개</div><div class="code">턴1: Agent(공급계약)  → 보고
+턴2: Agent(용역계약)  → 보고
+턴3: Agent(임대차계약) → 보고</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">한 응답에 3개</div><div class="code">턴1: Agent(공급계약)
+     Agent(용역계약)
+     Agent(임대차계약)  → 동시에 진행</div></div>
+    </div>
+    <p>병렬을 끌어내려면 코디네이터 프롬프트에 "서로 독립적인 조사는 한 번에 동시에 위임하라"고 적는다. 반대로 조항 탐색 → 위험 평가처럼 앞 결과가 뒤 프롬프트의 재료인 단계는 병렬로 낼 수 없다.</p>
+    <div class="note"><span class="lbl">현재 문서의 실행 방식</span><p>현재 Claude Code와 Agent SDK에서는 서브에이전트가 기본적으로 백그라운드로 실행된다. Agent 도구 결과가 먼저 <code>status: "async_launched"</code>로 돌아오고 보고는 이후 턴에 도착하며, 다음 행동에 보고가 필요하면 Claude가 기다린다. 동시 실행은 기본 20개까지다. 그래도 독립 과제를 한 응답에 함께 내는 것이 병렬화의 기본형이고, 시험은 이것을 정답으로 본다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>절차가 아니라 목표와 기준을 준다</h3><span class="unit-en">Goals and quality criteria over procedures</span></div>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 절차형</div><div class="code">1. "충전 요금 2026"으로 검색
+2. 상위 3개 결과를 연다
+3. 각 페이지에서 첫 번째 표를 찾는다
+4. 표의 첫 행을 복사한다</div><p>검색 결과가 예상과 다르면 막히거나, 맞지 않는 표를 그대로 가져온다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 목표형</div><div class="code">목표: 2026년 국내 급속 충전 요금 체계 파악
+범위: 공공 사업자 + 민간 상위 3사, 회원가
+출력: 사업자별 kWh당 요금 표 + 출처 URL·기준일
+품질: 공식 공지·정부 자료 우선, 기준일이
+      다른 수치는 섞지 말고 따로 표시</div><p>어떻게 찾을지는 서브에이전트가 상황을 보며 정한다.</p></div>
+    </div>
+    <p>Anthropic은 서브에이전트마다 목표, 출력 형식, 쓸 도구와 출처에 대한 안내, 명확한 과제 경계를 주라고 하고, 프롬프트에는 엄격한 규칙보다 좋은 휴리스틱을 담는 편이 낫다고 정리한다. 서브에이전트가 상황에 맞춰 방법을 바꿀 여지를 남겨야 개방형 과제에서 적응할 수 있다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>포크: 같은 출발점에서 갈라지기</h3><span class="unit-en">Fork from a shared baseline</span></div>
+    <p>한 번 분석해 둔 상태에서 서로 다른 두 접근을 비교하고 싶을 때, 접근마다 분석을 처음부터 반복하는 것은 낭비다. 포크는 지금까지의 대화를 복사한 새 갈래를 만들어 같은 기준점에서 각자 다른 방향으로 진행하게 한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:16%"></th><th style="width:30%">세션 포크 (Agent SDK)</th><th style="width:28%">포크 서브에이전트 (Claude Code)</th><th>일반 서브에이전트</th></tr></thead>
+      <tbody>
+        <tr><td>만드는 법</td><td><code>resume</code>에 원래 session ID + <code>fork_session=True</code> (TS: <code>forkSession: true</code>)</td><td>Agent 도구의 <code>subagent_type: "fork"</code>, 또는 <code>/subtask</code></td><td>Agent 도구 + 정의 이름</td></tr>
+        <tr><td>시작 맥락</td><td>원래 세션 이력의 복사본</td><td>부모 대화 전체</td><td>위임 프롬프트뿐</td></tr>
+        <tr><td>원본과의 관계</td><td>새 session ID. 원래 세션은 그대로라 둘 다 따로 재개 가능</td><td>최종 결과만 부모로 돌아옴</td><td>최종 결과만 부모로 돌아옴</td></tr>
+        <tr><td>쓰임</td><td>같은 분석에서 대안 A/B를 각각 이어 가기</td><td>배경 설명이 너무 많아 일반 서브에이전트로는 비효율일 때</td><td>범위가 분명한 독립 과제</td></tr>
+      </tbody>
+    </table>
+    <div class="note best"><span class="lbl">포크가 갈라 주지 않는 것</span><p>포크는 대화 이력만 갈라진다. 포크한 쪽이 파일을 고치면 같은 디렉터리의 다른 세션에도 그대로 보인다. 파일 변경까지 되돌리려면 file checkpointing을, 작업 공간을 분리하려면 worktree(<code>isolation: "worktree"</code>)를 쓴다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>서브에이전트는 부모의 시스템 프롬프트와 대화를 물려받는다.</div><div class="f"><span class="k">사실</span>포크가 아니면 자기 시스템 프롬프트, 위임 프롬프트, CLAUDE.md, 도구 정의만 갖고 시작한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>앞 단계 결과는 짧게 요약해 넘길수록 효율적이다.</div><div class="f"><span class="k">사실</span>판단에 필요한 원문과 출처 메타데이터가 사라지면 근거 없는 종합이 나온다. 완전한 결과를 구조화해 넘긴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>병렬로 돌리려면 턴마다 Agent를 하나씩 부르면 된다.</div><div class="f"><span class="k">사실</span>독립 과제는 한 응답에서 여러 Agent 호출로 함께 낸다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>포크하면 작업 파일도 함께 갈라진다.</div><div class="f"><span class="k">사실</span>대화 이력만 갈라진다. 파일은 checkpointing이나 worktree로 따로 관리한다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">생성 설정</span></div>
+      <div class="qq">시험 가이드 기준으로, Agent SDK의 코디네이터가 정의해 둔 서브에이전트를 생성할 수 있게 하는 설정으로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>agents</code>에 <code>AgentDefinition</code>을 정의하고, 코디네이터의 <code>allowedTools</code>에 Task(현재 이름 Agent)를 포함한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>각 서브에이전트의 <code>prompt</code>에 부모의 session ID를 적어 둔다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>시스템 프롬프트에 "필요하면 서브에이전트를 써라"만 추가한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>서브에이전트마다 애플리케이션 코드에서 별도 <code>query()</code>를 직접 실행한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>서브에이전트는 정의(<code>agents</code>)와 생성 도구(Task, 현재 Agent)로 만든다. 현재 문서에서는 Agent 도구가 승인 없이 실행되고 <code>allowedTools</code>가 자동 승인 목록이라는 차이가 있지만, 시험은 '도구 설정에 포함'을 기대한다. B의 session ID는 맥락을 전달하지 않고, C는 도구·정의 없이 문구만 더한다. D는 코디네이터가 아니라 앱 코드가 오케스트레이션하는 별개 구조다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">출처 보존</span></div>
+      <div class="qq"><span class="sc">코디네이터가 검색 서브에이전트들의 보고를 자기 말로 요약한 뒤 종합 서브에이전트에 넘겼다. 최종 보고서는 내용은 그럴듯하지만 어느 주장이 어느 문서에서 왔는지 알 수 없다.</span>가장 알맞은 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>종합 서브에이전트에 "출처를 꼭 달아라"라고 지시한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>종합 서브에이전트를 더 큰 모델로 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>앞 단계 결과를 요약하지 말고, 본문과 출처(URL·문서명·쪽)를 분리한 구조화 데이터로 위임 프롬프트에 넣는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>종합 서브에이전트가 검색 서브에이전트의 대화를 직접 읽게 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>출처 정보는 요약 단계에서 이미 떨어져 나갔으므로, 종합 서브에이전트는 지시를 받아도 달 출처가 없다(A·B로는 해결되지 않음). 내용과 메타데이터를 분리해 완전한 형태로 넘겨야 한다. D는 서브에이전트가 다른 에이전트의 대화를 보지 못하는 구조와 맞지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">병렬 생성</span></div>
+      <div class="qq"><span class="sc">서로 독립인 계약서 세 건을 검토하는데, 코디네이터가 한 턴에 서브에이전트 하나만 부르고 보고를 받은 뒤 다음 것을 불러 전체 시간이 길다.</span>가장 알맞은 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>세 계약서를 서브에이전트 하나에 몰아 준다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>코디네이터가 한 응답에서 Agent 도구를 세 번 호출해 세 서브에이전트를 함께 띄우게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>각 서브에이전트의 <code>maxTurns</code>를 낮춘다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>세 서브에이전트를 서로 다른 세션에서 차례로 실행한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>독립 과제는 한 응답에 여러 Agent 호출을 내 병렬로 시작한다. A는 병렬성과 컨텍스트 분리를 잃고, C는 작업을 덜 끝내게 할 뿐이며, D는 여전히 직렬이다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">AgentDefinition</span></div>
+      <div class="qq"><code>AgentDefinition</code>에서 Claude가 '이 작업을 어느 서브에이전트에 맡길지' 판단하는 데 주로 쓰는 필드는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>prompt</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>tools</code></span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>model</code></span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>description</code></span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p><code>description</code>은 '언제 이 에이전트를 쓰는가'를 적는 필드이고, Claude는 이를 작업과 맞춰 위임 대상을 고른다. <code>prompt</code>는 서브에이전트가 실행된 뒤 쓰는 시스템 프롬프트, <code>tools</code>·<code>model</code>은 실행 능력과 모델을 정한다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">위임 프롬프트</span></div>
+      <div class="qq"><span class="sc">코디네이터가 서브에이전트에게 검색어, 열 페이지 순서, 복사할 표 위치까지 12단계로 지시한다. 사이트 구조가 조금만 달라도 서브에이전트가 엉뚱한 값을 가져온다.</span>가장 알맞은 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>단계를 20개로 늘려 예외 상황까지 지시한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>서브에이전트의 도구를 줄여 실수할 여지를 없앤다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>달성할 목표, 범위, 출력 형식, 품질 기준(출처 우선순위·기준일 등)을 주고 방법은 서브에이전트가 정하게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>코디네이터가 직접 검색하고 서브에이전트는 쓰지 않는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>목표와 품질 기준을 주면 서브에이전트가 상황에 맞게 방법을 바꿀 수 있다. A는 경직성을 키우고, B는 적응에 필요한 수단을 빼앗는다. D는 병렬성과 컨텍스트 분리를 포기한다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">포크</span></div>
+      <div class="qq"><span class="sc">Agent SDK 세션에서 대규모 코드베이스 분석을 마쳤다. 이 분석을 바탕으로 '점진적 리팩터링'과 '모듈 재작성' 두 방안을 각각 끝까지 검토해 비교하고 싶다.</span>가장 알맞은 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>원래 session ID로 <code>resume</code>하면서 <code>fork_session=True</code>로 갈래를 만들어 한쪽은 포크에서, 다른 쪽은 원래 세션에서 진행한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>새 세션 두 개를 열어 각각 분석부터 다시 시킨다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>한 세션에서 두 방안을 번갈아 진행한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>분석 결과 요약만 일반 서브에이전트 두 개에 넘긴다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>포크는 원래 이력의 복사본으로 새 세션을 만들고 원본은 그대로 둔다. 같은 분석 기준점에서 두 방향을 독립적으로 이어 갈 수 있다. B는 분석 비용을 반복하고, C는 두 방안의 맥락이 서로 섞인다. D는 요약 과정에서 분석의 세부가 빠진다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/agent-sdk/subagents" target="_blank" rel="noopener">Subagents in the SDK</a> · <a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener">Create custom subagents (Claude Code)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/typescript" target="_blank" rel="noopener">Agent SDK reference – TypeScript</a> · <a href="https://code.claude.com/docs/en/agent-sdk/permissions" target="_blank" rel="noopener">Configure permissions (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/tools-reference" target="_blank" rel="noopener">Tools reference</a> · <a href="https://code.claude.com/docs/en/agent-sdk/sessions" target="_blank" rel="noopener">Session management (Agent SDK)</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/parallel-tool-use" target="_blank" rel="noopener">Parallel tool use</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

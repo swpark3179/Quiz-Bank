@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.5</span></div>
+    <h1>사람 검토 라우팅과 신뢰도 보정</h1>
+    <p class="sub">집계 정확도의 함정 · 세그먼트별 검증 · 필드 단위 신뢰도 · 라벨 세트 보정 · 층화 무작위 표본 · 검토 큐 우선순위</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/human-review-routing-and-confidence-calibration-for-extraction" target="_blank" rel="noopener">CertSafari 5.5</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Context Management &amp; Reliability (15%)</p>
+    <div class="secrow">
+      <span class="s">5.1 정보 보존</span><span class="s">5.2 에스컬레이션</span><span class="s">5.3 오류 전파</span><span class="s">5.4 코드베이스 탐색</span><span class="s on">5.5 사람 검토</span><span class="s">5.6 출처 보존</span>
+    </div>
+  </header>
+
+  <p class="lede">문서 추출 파이프라인이 안정되면 "이제 사람 검토를 줄이자"는 이야기가 나온다. 이때 근거가 전체 정확도 하나뿐이면, 비중은 작지만 중요한 문서 유형이나 필드의 실패가 평균 속에 묻힌다. 시험은 검토를 줄여도 되는 범위를 어떻게 확인하고, 줄인 뒤에는 무엇으로 감시하며, 한정된 검토자 시간을 어디에 쓰는지 묻는다. <strong>자동화 결정은 문서 유형×필드 세그먼트마다 내리고, 모델의 신뢰도는 라벨된 데이터로 보정한 뒤에만 라우팅에 쓰며, 자동 승인된 구간도 층화 표본으로 계속 잰다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>97% 같은 집계 정확도가 특정 문서 유형·필드의 낮은 성능을 가리는 구조</li>
+      <li>사람 검토를 줄이기 전에 문서 유형과 필드 세그먼트별로 정확도를 검증한다</li>
+      <li>모델이 필드 단위 신뢰도를 내게 하고, 라벨된 검증 세트로 검토 임계값을 보정한다</li>
+      <li>고신뢰 추출을 층화 무작위 표본으로 검토해 오류율을 계속 재고 새로운 오류 패턴을 찾는다</li>
+      <li>낮은 신뢰도, 모호하거나 서로 모순되는 원문은 사람 검토로 보내고 검토 용량을 우선순위대로 쓴다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>평균 대신 세그먼트 표부터</h3><span class="unit-en">Slice before you trust</span></div>
+    <p>예시 시스템: 전세 대출 심사를 돕는 서류 추출 파이프라인이다. 임대차계약서, 등기부등본, 건축물대장에서 보증금·당사자·소유자·주용도 같은 필드를 뽑는다. 월 1만 건, 전체 필드 정확도는 97%다. 그런데 유형×필드로 나누면 그림이 달라진다.</p>
+    <table class="t">
+      <caption>가상의 예시 수치</caption>
+      <thead><tr><th style="width:24%">문서 유형</th><th style="width:12%">비중</th><th style="width:30%">필드</th><th>정확도</th></tr></thead>
+      <tbody>
+        <tr><td>임대차계약서</td><td>70%</td><td>보증금 · 임대인 · 계약 시작일</td><td>99.2% · 98.5% · 98.9%</td></tr>
+        <tr><td>등기부등본</td><td>25%</td><td>소유자 · 근저당 채권최고액</td><td>97.6% · 95.8%</td></tr>
+        <tr><td>건축물대장</td><td>5%</td><td>주용도 · 위반건축물 표시</td><td><strong>82.0% · 79.5%</strong></td></tr>
+      </tbody>
+    </table>
+    <p>건축물대장은 비중이 5%라서 평균을 거의 움직이지 못한다. 하지만 "주용도가 주택인가", "위반건축물인가"는 보증보험 가입 여부를 가르는 핵심 필드다. 가장 중요한 필드가 가장 많이 틀리는데 전체 수치는 건강해 보인다.</p>
+    <div class="note"><span class="lbl">공식 근거</span><p>공식 분류 쿡북은 평가 프레임워크의 목적을 전체 정확도만이 아니라 <strong>어느 범주가 어려운지</strong>까지 이해하는 것으로 설명하고, 혼동 행렬(confusion matrix)로 범주별 오류를 본다. 평가 문서는 성공 기준에 드물거나 어려운 입력(엣지 케이스)에서의 성능을 포함하고, 평가가 실제 작업 분포를 반영하게 설계하라고 한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>신뢰도 숫자에 의미를 붙이는 법</h3><span class="unit-en">Turning scores into error rates</span></div>
+    <p>모델에게 필드마다 값과 함께 신뢰도와 근거 문구를 내게 한다. 판독할 수 없으면 값을 <code>null</code>로 두게 한다.</p>
+    <div class="code"><span class="c"># output_config.format 의 json_schema 일부</span>
+"main_use": {
+  "type": "object",
+  "properties": {
+    "value":      {"type": ["string", "null"]},
+    "confidence": {"type": "number"},
+    "evidence":   {"type": ["string", "null"]}
+  },
+  "required": ["value", "confidence", "evidence"],
+  "additionalProperties": false
+}</div>
+    <p>그런데 이 숫자를 그대로 믿으면 안 된다. Claude Academy는 미세조정이 남기는 흔적으로 <strong>표현된 확신과 실제 신뢰성 사이의 느슨한 보정</strong>을 든다. 그래서 라벨된 검증 세트에 대해 "신뢰도 구간별 실제 정확도"를 재고, 필드마다 임계값을 정한다.</p>
+    <table class="t">
+      <caption>건축물대장 · 주용도 필드의 보정표 (가상의 예시)</caption>
+      <thead><tr><th>모델 신뢰도 구간</th><th>검증 건수</th><th>실제 정확도</th><th>결정</th></tr></thead>
+      <tbody>
+        <tr><td>0.95 이상</td><td>310</td><td>98.4%</td><td>목표(99%) 미달 → 아직 자동 승인 불가</td></tr>
+        <tr><td>0.85 ~ 0.95</td><td>140</td><td>90.0%</td><td>사람 검토</td></tr>
+        <tr><td>0.85 미만</td><td>70</td><td>58.6%</td><td>사람 검토 (우선)</td></tr>
+      </tbody>
+    </table>
+    <p>같은 0.95라도 임대차계약서 보증금 필드에서는 99.6%일 수 있다. 필드마다 곡선이 다르므로 보정표도 필드마다 만든다. 이 예시라면 주용도 필드는 프롬프트나 필드 설명을 고친 뒤 다시 보정할 때까지 전량 검토가 맞다.</p>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>① 시험 가이드의 "모델이 필드 단위 신뢰도를 출력"은 그대로 유효하지만, structured outputs는 <code>minimum</code>·<code>maximum</code> 같은 숫자 범위 제약을 지원하지 않는다(원시 스키마에 넣으면 400). SDK 헬퍼는 이런 제약을 필드 설명으로 옮기고 응답을 원래 스키마로 검증하므로, 0~1 범위는 코드에서 확인한다. ② 특정 추출 도구를 <code>tool_choice</code>로 강제하는 예전 방식은 Claude Opus 5.5·Sonnet 5.5·Fable 5.1 등에서 400 오류다. 고정된 JSON 모양이 필요하면 <code>output_config.format</code>(structured outputs)을 쓴다. ③ 필드마다 <code>["string", "null"]</code> 같은 타입 배열을 두면 요청 하나의 strict 스키마 전체에서 union 타입 파라미터 16개라는 복잡도 한도에 걸릴 수 있다. 필드가 많으면 꼭 필요한 곳만 nullable로 둔다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>사람의 눈이 필요한 건 고르기</h3><span class="unit-en">What earns a human look</span></div>
+    <div class="tri">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt">낮은 보정 신뢰도</div><div class="pd">보정표에서 목표 정확도에 못 미치는 구간. 신뢰도 숫자 자체가 아니라 그 구간의 실제 정확도로 판단한다</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt">모호·모순된 원문</div><div class="pd">계약서의 임대인은 "박○○"인데 등기부 소유자는 "박△△"처럼 서류끼리 어긋나면, 각 값의 신뢰도가 높아도 사람에게 보낸다</div></div>
+      <div class="pane" style="border-top:3px solid var(--blue)"><div class="pt">판독 불가(null)</div><div class="pd">null은 "모른다"이지 false가 아니다. 결론을 내지 말고 검토로 보낸다</div></div>
+    </div>
+    <p>공식 콘텐츠 정책 쿡북은 필드를 일부러 nullable로 두고("판단할 수 없음"도 정당한 답), 값이 없으면 규칙을 unknown으로 평가해 확정 판정 대신 <code>needs_review</code>를 내는 3값 논리를 쓴다. 그리고 <code>needs_review</code>를 사람에게 보내되 그 비율을 지켜보라고 한다. 특정 필드의 null이 늘면 대개 그 필드 설명을 손봐야 한다는 신호다. 환각 줄이기 문서도 Claude가 불확실할 때 "모른다"고 말할 수 있게 명시적으로 허용하라고 권한다. 억지로 채운 값이 높은 신뢰도를 달고 자동 승인되는 것이 가장 나쁜 경우다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">1</div><div class="ft">추출<br>(값·신뢰도·근거)</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2</div><div class="ft">보정표·모순·null<br>검사</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">3a</div><div class="ft">자동 승인<br>+ 층화 표본 검토</div></div>
+      <div class="flow-arrow">·</div>
+      <div class="flow-step"><div class="fn">3b</div><div class="ft">검토 큐<br>(영향 × 불확실성 순)</div></div>
+    </div>
+    <p>검토 큐는 도착 순이 아니라 <strong>틀렸을 때의 영향(보증보험·대출 한도에 걸리는 필드인가)과 불확실성</strong>의 곱으로 정렬한다. 검토자는 위에서부터 처리하고, 그 결과는 다시 라벨 데이터가 되어 보정표를 갱신한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>자동화 범위는 세그먼트 단위로 넓힌다</h3><span class="unit-en">Expanding automation one segment at a time</span></div>
+    <p>"고신뢰 추출은 사람 검토 없이 통과" 같은 결정은 파이프라인 전체가 아니라 세그먼트마다 따로 내린다.</p>
+    <ol class="proc">
+      <li><strong>라벨된 검증 세트</strong>를 유형×필드별로 확보한다. 전체 분포대로만 뽑으면 건축물대장은 몇십 건뿐이므로 드문 유형은 일부러 더 모은다</li>
+      <li>세그먼트별 정확도와 오류 유형을 본다 (어떤 값과 혼동하는지)</li>
+      <li>목표를 넘은 세그먼트만 자동화 범위에 넣고, 미달 세그먼트는 사람 검토를 유지한다</li>
+      <li>새 서류 양식이나 새 발급 기관 양식이 들어오면 그 세그먼트는 다시 검증한다</li>
+    </ol>
+    <p>평가 문서가 권하는 성공 기준은 구체적이고 측정 가능해야 한다. "잘 추출한다"가 아니라 "건축물대장 주용도 필드, 라벨된 검증 세트 기준 정확도 99% 이상"처럼 쓴다. 세그먼트 기준은 이 원칙을 유형×필드 단위로 적용한 것이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>자동 승인 이후에도 점수를 잰다</h3><span class="unit-en">Keeping score after automation</span></div>
+    <p>자동 승인된 추출에는 사람 눈이 닿지 않는다. 오류율이 슬금슬금 올라도, 새 양식 때문에 새로운 오류가 생겨도 모른다. 그래서 자동 승인분에서 일부를 무작위로 뽑아 사람이 검토한다. 이때 전체에서 단순 무작위로 뽑으면 대부분 임대차계약서만 나온다. <strong>층(stratum)</strong>을 나눠 각 층에서 뽑는다: 문서 유형 × 필드 × 신뢰도 구간, 그리고 신규 양식·신규 발급 기관 같은 위험 층.</p>
+    <table class="t">
+      <caption>주간 표본 설계 예시</caption>
+      <thead><tr><th style="width:44%">층</th><th>주간 자동 승인</th><th>표본 비율</th><th>최소 건수</th></tr></thead>
+      <tbody>
+        <tr><td>임대차계약서 · 보증금 · 0.95 이상</td><td>1,700</td><td>2%</td><td>30</td></tr>
+        <tr><td>등기부등본 · 소유자 · 0.95 이상</td><td>550</td><td>5%</td><td>30</td></tr>
+        <tr><td>신규 양식 (유형 무관)</td><td>80</td><td>전수</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p>층별 오류율이 기준을 넘으면 그 층을 다시 사람 검토로 되돌린다. 표본에서 나온 오류는 사례로 모아 검증 세트에 추가한다. 이 흐름이 "새로운 오류 패턴 탐지"다.</p>
+    <div class="note tip"><span class="lbl">근거와 한계</span><p>Anthropic의 에이전트 평가 글은 사람 평가 방법으로 spot-check 표본 검토를 들고, 운영 모니터링(production monitoring)은 합성 평가가 놓치는 문제를 잡지만 사후적이라고 정리한다. 또 자동 평가, 운영 모니터링, 주기적인 사람 검토를 함께 쓰라고 한다. "층화" 자체는 공식 문서의 API 기능이 아니라 일반 통계 표본 설계 기법이며, 시험 가이드의 용어다.</p></div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"전체 정확도가 높으니 검토를 줄인다" → 오답. 세그먼트별 확인이 먼저다</li>
+      <li>"모델 신뢰도 0.9 이상은 자동 승인"을 보정 근거 없이 → 오답. 라벨 세트로 구간별 정확도를 잰다</li>
+      <li>자동 승인한 구간도 층화 표본으로 계속 측정한다</li>
+      <li>모호하거나 서로 모순되는 원문은 신뢰도와 무관하게 사람에게 보낸다</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>전체 정확도가 97%면 사람 검토를 크게 줄여도 된다.</div><div class="f"><span class="k">사실</span>비중이 작은 유형·필드의 실패는 평균에 묻힌다. 유형×필드별로 확인하고 기준을 넘은 세그먼트만 자동화한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>모델이 신뢰도 0.95라고 했으면 95% 맞는다.</div><div class="f"><span class="k">사실</span>표현된 확신과 실제 신뢰성은 느슨하게만 맞는다. 라벨된 검증 세트로 구간별 실제 정확도를 재서 임계값을 정한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>자동 승인된 건은 다시 볼 필요가 없다.</div><div class="f"><span class="k">사실</span>보지 않으면 오류율 변화와 새 패턴을 놓친다. 층화 무작위 표본으로 계속 측정한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>서류끼리 값이 다르면 신뢰도가 높은 쪽을 채택하면 된다.</div><div class="f"><span class="k">사실</span>원문 간 모순은 추출 품질이 아니라 사실관계의 문제일 수 있다. 두 값과 출처를 붙여 사람에게 보낸다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">집계 정확도</span></div>
+      <div class="qq"><span class="sc">서류 추출 시스템의 전체 필드 정확도가 97.5%로 나오자, 팀이 사람 검토를 전면 중단하자고 제안했다.</span>먼저 해야 할 일은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>문서 유형·필드별로 정확도를 나눠 보고 기준에 못 미치는 세그먼트가 있는지 확인한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>정확도가 95%를 넘었으므로 바로 중단한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>모델에 신뢰도를 출력하게 하고 평균 신뢰도가 높으면 중단한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>다른 모델로 바꿔 전체 정확도가 더 오르는지 본다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>집계 수치는 드문 유형이나 특정 필드의 실패를 가린다. 검토 축소는 세그먼트별로 검증한 뒤 범위를 정해 결정한다. C의 평균 신뢰도는 보정되지 않은 값이고, D도 여전히 집계 수치만 본다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">신뢰도 보정</span></div>
+      <div class="qq"><span class="sc">소유자 필드에서 모델 신뢰도 0.9 이상인 추출 200건을 라벨과 대조했더니 실제 정확도가 88%였다.</span>올바른 해석과 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모델이 0.9라고 했으므로 라벨이 틀렸을 가능성이 높다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>신뢰도는 쓸모없으므로 버리고 모든 건을 사람이 본다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트에 "정확한 신뢰도를 출력하라"고 추가한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>표현된 신뢰도와 실제 정확도가 어긋나 있다. 라벨 세트로 구간별 정확도를 재서 이 필드의 임계값을 다시 정한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>자기보고 신뢰도는 보정이 느슨하다는 전제로 다루고, 라벨된 데이터로 숫자의 의미를 측정한다. B는 순위 신호로서의 가치까지 버리고, C는 지시만으로 보정 문제를 해결하지 못한다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">층화 표본</span></div>
+      <div class="qq"><span class="sc">자동 승인 구간의 품질을 계속 재려 한다. 서류의 70%는 임대차계약서이고 건축물대장은 5%다. 신규 양식도 가끔 들어온다.</span>가장 좋은 표본 설계는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>자동 승인분 전체에서 단순 무작위로 1%를 뽑는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>유형·필드·신뢰도 구간으로 층을 나눠 뽑고, 드문 층과 신규 양식에는 최소 건수를 보장한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>검토자가 의심스러워 보이는 건만 골라 본다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>검토는 비용이므로 자동 승인분은 표본 검토하지 않는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>층화하면 드문 세그먼트에서도 오류율을 측정할 수 있고 새 패턴을 일찍 잡는다. A는 표본 대부분이 큰 층에서 나와 작은 층을 놓치고, C는 무작위가 아니라 편향된 추정을 낳는다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">모순된 원문</span></div>
+      <div class="qq"><span class="sc">임대차계약서의 임대인은 "박○○", 같은 주소의 등기부등본 소유자는 "박△△"다. 모델은 두 값을 각각 신뢰도 0.98로 추출했다.</span>어떻게 라우팅하는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>두 값 모두 신뢰도가 높으므로 자동 승인한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>등기부가 공적 장부이므로 계약서 값을 등기부 값으로 덮어쓴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>서류 간 모순이므로 신뢰도와 무관하게 두 값과 출처를 붙여 검토 큐 앞쪽으로 보낸다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>신뢰도가 조금이라도 높은 쪽을 채택한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>추출이 정확해도 원문끼리 어긋나면 사실관계 판단이 필요하고, 대출 심사에 영향이 큰 필드라 우선순위도 높다. B·D는 모델이나 파이프라인이 사람의 판단을 대신하는 것이다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">스키마 제약</span></div>
+      <div class="qq"><code>confidence</code> 필드에 <code>"minimum": 0, "maximum": 1</code>을 넣은 원시 JSON 스키마를 <code>output_config.format</code>으로 보냈다. 현재 문서 기준으로 옳은 설명은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>숫자 범위 제약은 지원되지 않아 원시 스키마면 400 오류가 난다. SDK 헬퍼는 제약을 설명으로 옮기고 응답을 검증하므로 범위는 코드에서 확인한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>constrained decoding이 범위를 완벽하게 강제한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>제약은 경고 없이 조용히 무시된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>structured outputs는 number 타입을 지원하지 않는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>structured outputs 문서는 <code>minimum</code>·<code>maximum</code> 같은 숫자 제약을 지원하지 않는 기능으로 나열하고, 지원하지 않는 기능을 쓰면 400 오류가 난다고 한다. number 타입 자체는 지원된다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">판독 불가 필드</span></div>
+      <div class="qq">스캔 상태가 나빠 일부 필드를 읽을 수 없을 때 가장 바람직한 설계는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>가장 그럴듯한 값을 채우고 신뢰도를 낮게 준다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>null이 나오면 같은 요청을 성공할 때까지 반복한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>null은 false와 같은 뜻으로 처리한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>필드를 nullable로 두고 null은 "판단 불가"로 검토에 보내며, 필드별 null 비율을 모니터링한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>"모른다"를 정당한 출력으로 허용해야 추측값이 자동 승인되는 일을 막는다. null 비율이 오르면 필드 설명 개선 신호다. A는 환각을 유도하고, C는 "확인 안 됨"을 "없음"으로 바꿔 버린다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" target="_blank" rel="noopener">Define success criteria and build evaluations</a> · <a href="https://platform.claude.com/cookbook/capabilities-classification-guide" target="_blank" rel="noopener">Classification with Claude (cookbook)</a> · <a href="https://platform.claude.com/cookbook/capabilities-content-moderation-guide" target="_blank" rel="noopener">Content policy enforcement with Claude (cookbook)</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Structured outputs</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools</a> · <a href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" target="_blank" rel="noopener">Reduce hallucinations</a> · <a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents" target="_blank" rel="noopener">Demystifying evals for AI agents</a> · <a href="https://academy.claude.com/courses/ai-capabilities-and-limitations/how-ai-gets-its-character" target="_blank" rel="noopener">Claude Academy — How AI Gets Its Character</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

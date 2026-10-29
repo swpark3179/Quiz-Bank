@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.5</span></div>
+    <h1>Agent SDK 훅: 도구 호출 차단과 결과 정규화</h1>
+    <p class="sub">PreToolUse · PostToolUse · permissionDecision · updatedToolOutput · 데이터 정규화 · 결정적 보장</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/agent-sdk-hooks-intercept-tool-calls-and-normalize-results" target="_blank" rel="noopener">CertSafari 1.5</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agentic Architecture &amp; Orchestration (27%)</p>
+    <div class="secrow">
+      <span class="s">1.1 에이전트 루프</span><span class="s">1.2 코디네이터</span><span class="s">1.3 서브에이전트 생성</span><span class="s">1.4 게이트·핸드오프</span><span class="s on">1.5 SDK 훅</span><span class="s">1.6 작업 분해</span><span class="s">1.7 세션 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">Agent SDK의 훅(hook)은 에이전트 루프의 정해진 지점에서 실행되는 내 코드(콜백)다. 1.4가 '어떤 순서를 강제할까'였다면 1.5는 훅이라는 장치 자체를 다룬다. 나가는 도구 호출을 가로채 정책을 집행하고, 들어오는 도구 결과를 Claude가 읽기 전에 다듬는 방법이다. <strong>PreToolUse는 실행 전에 막거나 고치는 자리, PostToolUse는 실행 뒤 Claude가 보기 전에 결과를 바꾸는 자리다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>도구 호출 경로에서 PreToolUse · PostToolUse · PostToolUseFailure가 끼어드는 위치와 각각 할 수 있는 일</li>
+      <li>콜백 등록(<code>HookMatcher</code>·matcher)과 입출력(<code>hookSpecificOutput</code>) 구조</li>
+      <li>정책을 어기는 호출(한도 초과 지급 등)을 막고 사람 에스컬레이션 같은 대체 경로로 돌리기</li>
+      <li>MCP 도구마다 다른 형식(Unix 타임스탬프, ISO 8601, 숫자 상태 코드)을 PostToolUse에서 하나로 정규화하기</li>
+      <li>보장이 필요한 규칙은 훅, 판단과 스타일은 프롬프트라는 선택 기준</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>훅이 끼어드는 자리</h3><span class="unit-en">Where hooks sit in the tool path</span></div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">CLAUDE</div><div class="ft">tool_use 생성</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">PreToolUse</div><div class="ft">허용·거부·확인·보류, 입력 수정</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">PERMISSIONS</div><div class="ft">deny·ask 규칙 → 모드 → allow 규칙</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">EXECUTE</div><div class="ft">도구 실행</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">PostToolUse</div><div class="ft">결과 교체·맥락 추가 → Claude</div></div>
+    </div>
+    <p>권한 평가에서 훅이 가장 먼저 돈다. 훅이 거부하면 거기서 끝나고, 훅이 <code>allow</code>를 돌려줘도 이후의 deny·ask 규칙은 그대로 평가된다. 훅은 컨텍스트 창이 아니라 애플리케이션 프로세스에서 실행되므로 토큰을 쓰지 않는다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">이벤트</th><th style="width:26%">시점</th><th>할 수 있는 일</th></tr></thead>
+      <tbody>
+        <tr><td><code>PreToolUse</code></td><td>도구 실행 직전</td><td><code>permissionDecision</code>(allow·deny·ask·defer), <code>updatedInput</code>, <code>additionalContext</code></td></tr>
+        <tr><td><code>PostToolUse</code></td><td>도구가 성공한 직후</td><td><code>updatedToolOutput</code>로 결과 교체, <code>additionalContext</code>, 최상위 <code>decision: "block"</code> + <code>reason</code></td></tr>
+        <tr><td><code>PostToolUseFailure</code></td><td>도구가 실패한 직후</td><td>오류 기록, 맥락 추가</td></tr>
+        <tr><td><code>PostToolBatch</code></td><td>병렬 호출 묶음이 모두 끝난 뒤 다음 모델 호출 전 1회</td><td>묶음 단위 맥락 주입 (TypeScript SDK만)</td></tr>
+        <tr><td><code>Stop</code> · <code>SubagentStop</code></td><td>에이전트·서브에이전트 종료</td><td>결과 검증, 상태 저장</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>콜백의 모양</h3><span class="unit-en">Callback anatomy</span></div>
+    <div class="code">async def my_hook(input_data, tool_use_id, context):
+    <span class="c"># input_data: hook_event_name, session_id, cwd, tool_name, tool_input,</span>
+    <span class="c">#   PostToolUse면 tool_response, 서브에이전트 안이면 agent_id·agent_type</span>
+    <span class="c"># tool_use_id: 같은 호출의 Pre/Post 이벤트를 짝짓는 값</span>
+    return {}                    <span class="c"># 빈 객체 = 아무것도 바꾸지 않고 통과</span>
+
+options = ClaudeAgentOptions(hooks={
+    "PreToolUse":  [HookMatcher(matcher="mcp__travel__issue_voucher", hooks=[my_hook])],
+    "PostToolUse": [HookMatcher(matcher="mcp__(booking|crm|loyalty)__.*",
+                                hooks=[my_hook], timeout=30)],   <span class="c"># timeout 단위는 초</span>
+})</div>
+    <table class="t">
+      <thead><tr><th style="width:28%">출력 위치</th><th style="width:36%">필드</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td>최상위 (모든 이벤트)</td><td><code>systemMessage</code></td><td>사용자에게 보여 줄 메시지. 모델에는 가지 않는다</td></tr>
+        <tr><td>최상위 (모든 이벤트)</td><td><code>continue</code> (Python: <code>continue_</code>)</td><td>이 훅 뒤에 에이전트를 계속 돌릴지</td></tr>
+        <tr><td><code>hookSpecificOutput</code> · PreToolUse</td><td><code>permissionDecision</code>, <code>permissionDecisionReason</code>, <code>updatedInput</code></td><td>결정과 이유(deny면 Claude에게 전달), 입력 통째 교체</td></tr>
+        <tr><td><code>hookSpecificOutput</code> · PostToolUse</td><td><code>updatedToolOutput</code>, <code>additionalContext</code></td><td>Claude가 볼 결과 교체, 결과 옆에 덧붙일 설명</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li><strong>matcher는 도구 이름만 본다.</strong> 금액·경로 같은 인자 조건은 콜백 안에서 <code>tool_input</code>으로 검사한다.</li>
+      <li>글자·숫자·<code>_</code>·<code>-</code>·<code>|</code>만 있으면 정확한 이름 비교, 다른 문자가 섞이면 부분 일치 정규식으로 평가한다. MCP 도구 이름은 <code>mcp__&lt;서버&gt;__&lt;도구&gt;</code>다.</li>
+      <li>PreToolUse 콜백이 timeout을 넘기면 그 호출은 막히고, PostToolUse가 넘기면 원래 결과가 그대로 쓰인다.</li>
+      <li>비동기 출력(<code>async_: True</code>)은 기다리지 않고 진행하므로 차단·수정·맥락 주입을 못 한다. 로깅·알림 전용이다.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>정책 위반 호출을 막고 다른 길로 돌리기</h3><span class="unit-en">Block and redirect</span></div>
+    <p>여행사 고객지원 에이전트의 규정: 일정 변경 보상 바우처는 건당 30만 원까지 에이전트가 발급하고, 그 이상은 상급자 승인을 받는다. 시험 가이드의 "500달러 초과 환불 차단 후 사람 에스컬레이션"과 같은 구조다.</p>
+    <div class="code">VOUCHER_LIMIT = 300_000
+
+async def cap_voucher(input_data, tool_use_id, context):
+    amount = input_data["tool_input"].get("amount_krw", 0)
+    if amount &lt;= VOUCHER_LIMIT:
+        return {}
+    return {
+        "systemMessage": f"바우처 {amount:,}원 요청이 한도를 넘어 차단됐습니다.",   <span class="c"># 사용자용</span>
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": (                                     <span class="c"># Claude용</span>
+                f"바우처는 건당 {VOUCHER_LIMIT:,}원까지만 발급할 수 있다. 발급하지 말고 "
+                "escalate_to_supervisor로 예약번호·요청 금액·사유를 넘겨라."),
+        },
+    }</div>
+    <p>거부 이유는 도구 결과로 Claude에게 전달되므로 '하지 마라'로 끝내지 말고 대체 경로(어떤 도구로 무엇을 넘길지)를 적는다. 그러면 Claude가 그 경로로 방향을 바꾼다. <code>systemMessage</code>는 사용자 쪽 표시용이라 모델은 보지 못한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">결정</th><th style="width:38%">효과</th><th>쓰는 경우</th></tr></thead>
+      <tbody>
+        <tr><td><code>deny</code></td><td>실행하지 않고 이유를 Claude에게 전달</td><td>정책 위반. 가장 흔한 선택</td></tr>
+        <tr><td><code>ask</code></td><td>사용자에게 승인 프롬프트를 띄운다</td><td>사람이 지켜보는 대화형 앱</td></tr>
+        <tr><td><code>defer</code></td><td>턴을 끝내고(<code>stop_reason: "tool_deferred"</code>) 나중에 재개</td><td><code>-p</code>·SDK 앱에서 외부 승인을 기다릴 때. 한 턴에 도구 호출이 하나일 때만 동작</td></tr>
+        <tr><td><code>allow</code> + <code>updatedInput</code></td><td>입력을 고쳐서 실행</td><td>경로 리다이렉트 같은 기술적 보정. 금액 삭감처럼 의미가 바뀌는 수정은 고객 의도와 달라지므로 거부 후 에스컬레이션이 낫다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">예전 형식 vs 현재 문서</span><p>예전 자료에는 PreToolUse가 최상위 <code>decision: "approve" | "block"</code>을 돌려주는 형태가 보인다. 현재 문서에서 이 형태는 PreToolUse에 대해 더 이상 권장되지 않고, <code>hookSpecificOutput.permissionDecision</code>의 <code>"allow"</code>·<code>"deny"</code>·<code>"ask"</code>·<code>"defer"</code>를 쓴다. 여러 훅의 결정이 엇갈리면 deny &gt; defer &gt; ask &gt; allow 순으로 우선한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>결과 정규화: 서로 다른 형식을 하나로</h3><span class="unit-en">Normalize heterogeneous results</span></div>
+    <p>MCP 서버 여러 개를 붙이면 같은 개념이 다른 모양으로 들어온다. 예약 서버는 <code>1767225600</code> 같은 Unix 초, CRM은 <code>2026-01-01T09:00:00+09:00</code> 같은 ISO 8601, 포인트 서버는 상태를 <code>0/1/2</code> 숫자 코드로 준다. 프롬프트에 "형식이 섞여 있으니 주의해서 읽어라"라고 맡기면 날짜 비교나 기한 계산에서 실수가 난다. PostToolUse 훅에서 한 형식으로 바꿔 Claude가 항상 같은 모양을 보게 한다.</p>
+    <div class="code">from datetime import datetime, timezone
+
+STATUS = {0: "pending", 1: "confirmed", 2: "cancelled"}     <span class="c"># 포인트 서버의 숫자 코드</span>
+
+def to_utc_iso(v):
+    if isinstance(v, (int, float)):                         <span class="c"># Unix epoch(초)</span>
+        return datetime.fromtimestamp(v, tz=timezone.utc).isoformat()
+    if isinstance(v, str):                                  <span class="c"># 오프셋이 붙은 ISO 8601</span>
+        return datetime.fromisoformat(v).astimezone(timezone.utc).isoformat()
+    return v
+
+def normalize(obj):
+    if isinstance(obj, list):
+        return [normalize(x) for x in obj]
+    if not isinstance(obj, dict):
+        return obj
+    out = {}
+    for k, v in obj.items():
+        if k.endswith("_at"):
+            out[k] = to_utc_iso(v)
+        elif k == "status" and isinstance(v, int):
+            out[k] = STATUS.get(v, f"unknown({v})")
+        else:
+            out[k] = normalize(v)
+    return out
+
+async def normalize_result(input_data, tool_use_id, context):
+    <span class="c"># 각 서버가 JSON 객체를 돌려준다고 가정한다. 실제 응답 구조를 확인하고 같은 구조로 되돌린다</span>
+    return {"hookSpecificOutput": {
+        "hookEventName": "PostToolUse",
+        "updatedToolOutput": normalize(input_data["tool_response"]),
+        "additionalContext": "모든 시각은 UTC ISO 8601, 상태는 문자열로 정규화됨",
+    }}
+<span class="c"># 등록: HookMatcher(matcher="mcp__(booking|crm|loyalty)__.*", hooks=[normalize_result])</span></div>
+    <ul>
+      <li><code>updatedToolOutput</code>은 <strong>Claude가 보는 값만</strong> 바꾼다. 도구는 이미 실행됐고, 텔레메트리 등에는 원본이 남는다.</li>
+      <li>내장 도구는 출력 모양이 정해져 있어 맞지 않는 값은 무시되고 원본이 쓰인다. MCP 도구 출력은 스키마 검증 없이 그대로 전달되므로 구조를 깨뜨리지 않게 주의한다.</li>
+      <li>오류 세부를 지우지 않는다. Claude가 필요한 오류 정보를 잃으면 잘못된 가정 위에서 진행한다.</li>
+      <li>원본은 두고 설명만 붙이면 될 때는 <code>additionalContext</code>만 쓴다.</li>
+    </ul>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 "PostToolUse로 도구 결과를 변환한다"고만 쓴다. 현재 문서의 교체 필드는 <code>updatedToolOutput</code>(모든 도구, Python·TypeScript SDK 모두)이고, 예전의 <code>updatedMCPToolOutput</code>은 MCP 도구 전용이라 <code>updatedToolOutput</code>을 권한다. PostToolUse의 최상위 <code>decision: "block"</code>은 결과를 숨기지 않는다. 이유를 결과 옆에 덧붙일 뿐이고 Claude는 원래 출력도 본다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>훅이냐 프롬프트냐</h3><span class="unit-en">Deterministic vs probabilistic</span></div>
+    <table class="t">
+      <thead><tr><th style="width:34%">요구</th><th style="width:24%">수단</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>"30만 원 초과 바우처 발급 금지"</td><td>PreToolUse 훅</td><td>위반 0건이 요구사항. 모델 판단과 무관하게 실행 전에 막는다</td></tr>
+        <tr><td>"날짜는 항상 같은 기준으로 해석"</td><td>PostToolUse 훅</td><td>입력 형식을 고정하면 해석 실수의 원인이 사라진다</td></tr>
+        <tr><td>모든 도구 호출 감사 로그</td><td>PostToolUse (async 가능)</td><td>항상 일어나야 하는 부수 작업</td></tr>
+        <tr><td>"사과는 짧고 정중하게"</td><td>시스템 프롬프트</td><td>어조는 판단 영역이고 어겨도 사고가 아니다</td></tr>
+        <tr><td>"화난 고객은 상급자 연결 고려"</td><td>프롬프트 (+ 사람 검토)</td><td>판단이 필요한 규칙</td></tr>
+      </tbody>
+    </table>
+    <p>Claude Code 설정 훅에는 <code>type: "prompt"</code>·<code>"agent"</code>처럼 모델이 조건을 평가하는 훅도 있다. 판단이 필요한 검사를 위한 것이며, 결정적 보장은 코드로 짠 조건(SDK 콜백, 명령 훅)에서 나온다.</p>
+    <div class="axis"><span class="lbl">시험 판단 기준</span><ul>
+      <li>문제에 '반드시', '절대', '규정상', '보장' 같은 요구가 있으면 → 훅(코드)</li>
+      <li>보기에 "프롬프트에 더 강하게", "few-shot 예시 추가"가 있으면 → 준수율 개선일 뿐 보장이 아니다</li>
+      <li>도구마다 결과 형식이 달라 생기는 오류 → PostToolUse 정규화 / 실행 자체를 막아야 하면 → PreToolUse</li>
+      <li>훅이 덮는 범위는 matcher에 걸린 도구뿐이다 → 같은 효과를 내는 다른 도구가 있으면 함께 지정한다(<code>Write|Edit</code> 훅은 Bash로 쓰는 파일을 막지 못한다)</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>PostToolUse 훅으로 위험한 도구 호출을 막을 수 있다.</div><div class="f"><span class="k">사실</span>PostToolUse가 돌 때는 이미 실행이 끝났다. 실행을 막는 자리는 PreToolUse다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>updatedToolOutput</code>으로 바꾸면 원본 데이터도 고쳐진다.</div><div class="f"><span class="k">사실</span>Claude에게 보이는 값만 바뀐다. 시스템의 실제 데이터와 텔레메트리의 원본은 그대로다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>matcher에 금액이나 파일 경로 조건을 걸 수 있다.</div><div class="f"><span class="k">사실</span>matcher는 도구 이름만 비교한다. 인자 조건은 콜백에서 <code>tool_input</code>을 보고 판단한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>비동기 훅으로 빠르게 차단할 수 있다.</div><div class="f"><span class="k">사실</span>async 출력은 에이전트가 기다리지 않으므로 차단·수정·맥락 주입이 불가능하다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">정책 집행</span></div>
+      <div class="qq"><span class="sc">시스템 프롬프트에 "보상 바우처는 30만 원을 넘기지 마라"를 적어 두었지만, 한 달 수천 건 중 몇 건이 한도를 넘겨 발급됐다. 규정상 초과 발급은 0건이어야 한다.</span>가장 알맞은 대책은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>한도 규칙을 시스템 프롬프트 여러 곳에 반복해 적는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>PostToolUse 훅으로 초과 발급을 감지해 로그를 남긴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>발급 도구에 PreToolUse 훅을 걸어 한도 초과 호출을 거부하고, 거부 이유에 상급자 에스컬레이션 경로를 적는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>한도 예시를 담은 few-shot 대화를 추가한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>보장이 필요한 규칙은 실행 전에 코드로 막고, 이유에 대체 경로를 적어 Claude가 에스컬레이션으로 방향을 바꾸게 한다. A·D는 확률적 준수를 높일 뿐이고, B는 이미 발급된 뒤에 알게 된다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">결과 정규화</span></div>
+      <div class="qq"><span class="sc">예약·CRM·포인트 MCP 서버가 각각 Unix 초, ISO 8601, 숫자 상태 코드로 응답한다. 에이전트가 환불 기한을 계산하다 자주 틀린다.</span>가장 알맞은 해결은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>세 서버 도구에 PostToolUse 훅을 걸어 <code>updatedToolOutput</code>으로 시각과 상태를 한 형식으로 바꿔 넘긴다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>시스템 프롬프트에 형식별 변환 규칙을 자세히 적는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>PreToolUse 훅에서 날짜 인자를 바꾼다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>더 큰 모델로 바꿔 변환 실수를 줄인다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>들어오는 결과의 형식 문제는 PostToolUse에서 Claude가 읽기 전에 정규화한다. B·D는 해석을 여전히 모델에 맡긴다. C는 나가는 입력을 바꾸는 자리라 응답 형식과 무관하다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">PostToolUse 출력</span></div>
+      <div class="qq">PostToolUse 훅이 최상위 <code>decision: "block"</code>과 <code>reason</code>을 돌려주면 어떻게 되는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>도구 실행이 취소되고 부작용이 되돌려진다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>도구 결과가 Claude에게서 완전히 숨겨진다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>세션이 오류로 종료된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>도구는 이미 실행됐고, <code>reason</code>이 결과 옆에 덧붙어 Claude는 원래 출력과 함께 본다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>PostToolUse의 <code>"block"</code>은 이유를 덧붙이는 피드백이다. 출력을 바꾸려면 <code>updatedToolOutput</code>을 쓴다. A는 불가능하다 — 실행을 막으려면 PreToolUse가 필요하다. B·C는 문서의 동작이 아니다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">결정 우선순위</span></div>
+      <div class="qq"><span class="sc">같은 도구 호출에 PreToolUse 훅 두 개가 걸려 있다. 하나는 읽기 전용 작업을 빠르게 하려고 <code>allow</code>를, 다른 하나는 한도 초과라서 <code>deny</code>를 돌려줬다.</span>결과는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>먼저 등록된 훅의 결정이 적용된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>deny</code>가 우선해 호출이 거부된다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>allow</code>가 우선해 실행된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>사용자에게 승인 프롬프트가 뜬다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>엇갈린 결정의 우선순위는 deny &gt; defer &gt; ask &gt; allow다. 등록 순서와 무관하므로, 자동 승인 훅이 있어도 정책 훅의 거부가 이긴다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">출력 필드</span></div>
+      <div class="qq"><span class="sc">개발자가 PreToolUse 훅에서 한도 초과를 감지하면 <code>systemMessage</code>에 "한도 초과"만 넣고 <code>hookSpecificOutput</code>은 비워 두었다. 그런데 바우처가 계속 발급된다.</span>원인은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>matcher가 정규식이어야 훅이 실행된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>훅은 MCP 도구 호출을 막을 수 없다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>systemMessage</code>는 사용자에게 보여 줄 뿐 결정을 내리지 않는다. <code>hookSpecificOutput.permissionDecision: "deny"</code>를 돌려줘야 막힌다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>PreToolUse 대신 Stop 훅을 써야 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>차단은 <code>hookSpecificOutput</code>의 <code>permissionDecision</code>으로만 이뤄진다. <code>systemMessage</code>는 사용자 표시용이라 모델도 보지 못한다. A·B는 사실이 아니고, D의 Stop은 도구 호출과 무관한 종료 시점이다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">훅 vs 프롬프트</span></div>
+      <div class="qq">다음 중 훅보다 프롬프트 지침으로 다루는 것이 알맞은 요구는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>고객에게 사과할 때는 짧고 정중한 어조를 쓴다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>한도를 넘는 금액은 어떤 경우에도 지급하지 않는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>모든 도구 호출을 감사 로그에 빠짐없이 남긴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>서버마다 다른 날짜 형식을 한 형식으로 통일한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>어조는 판단·스타일 영역이고 어겨도 정책 위반 사고가 아니므로 프롬프트가 맞다. B(실행 전 차단), C(항상 일어나야 하는 부수 작업), D(결과 정규화)는 보장이 필요한 요구라 훅으로 처리한다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/agent-sdk/hooks" target="_blank" rel="noopener">Intercept and control agent behavior with hooks (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener">Hooks reference</a> · <a href="https://code.claude.com/docs/en/hooks-guide" target="_blank" rel="noopener">Automate actions with hooks</a> · <a href="https://code.claude.com/docs/en/agent-sdk/python" target="_blank" rel="noopener">Agent SDK reference – Python</a> · <a href="https://code.claude.com/docs/en/agent-sdk/permissions" target="_blank" rel="noopener">Configure permissions (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop" target="_blank" rel="noopener">How the agent loop works</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

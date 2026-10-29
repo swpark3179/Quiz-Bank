@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.4</span></div>
+    <h1>선행 조건 게이트와 사람 핸드오프</h1>
+    <p class="sub">프롬프트 지침 vs 프로그램적 강제 · 선행 조건 게이트 · PreToolUse 차단 · 다중 문제 분해 · 구조화된 핸드오프</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/prerequisite-gates-enforcing-workflow-order-with-hooks" target="_blank" rel="noopener">CertSafari 1.4</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agentic Architecture &amp; Orchestration (27%)</p>
+    <div class="secrow">
+      <span class="s">1.1 에이전트 루프</span><span class="s">1.2 코디네이터</span><span class="s">1.3 서브에이전트 생성</span><span class="s on">1.4 게이트·핸드오프</span><span class="s">1.5 SDK 훅</span><span class="s">1.6 작업 분해</span><span class="s">1.7 세션 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">고객 응대 에이전트에는 '본인 확인 후 환불'처럼 순서 자체가 규정인 단계가 있다. 프롬프트에 순서를 적어 두면 대부분 지켜지지만, 수천 건 중 몇 건은 어긋난다. 그리고 그 몇 건이 금전 사고다. 시험은 이 '몇 건'을 어떻게 0으로 만드는지, 그리고 사람에게 일을 넘길 때 무엇을 함께 넘기는지를 묻는다. <strong>확률적으로 지켜지는 지침과 결정적으로 보장되는 강제를 구분하고, 반드시 지켜야 하는 순서는 코드로 막는다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>프로그램적 강제(훅, 선행 조건 게이트)와 프롬프트 기반 지침의 차이</li>
+      <li>결정적 준수가 필요한 상황(신원 확인 후 금융 처리 등)에서 프롬프트만으로는 실패율이 0이 되지 않는다는 점</li>
+      <li>선행 단계가 끝나기 전까지 하위 도구 호출을 막는 게이트 구현과 범위 설정</li>
+      <li>여러 문제가 섞인 요청을 항목으로 나눠 공유 맥락으로 병렬 조사한 뒤 하나의 답으로 통합</li>
+      <li>대화 기록을 볼 수 없는 사람 상담원을 위한 구조화된 핸드오프(고객 ID, 원인, 금액, 권장 조치)</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>지침은 확률, 강제는 결정</h3><span class="unit-en">Guidance vs enforcement</span></div>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">프롬프트 기반 지침</div><p>"크레딧을 주기 전에 반드시 <code>verify_subscriber</code>로 본인 확인을 하라." 대부분 지켜지지만 보장은 없다. 긴 대화, 재촉하는 고객, 모호한 요청 속에서 건너뛸 수 있다. 장점은 유연함과 낮은 구현 비용이다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">프로그램적 강제</div><p>하위 도구가 실행되기 직전에 코드가 상태를 검사해 막는다. 모델이 무엇을 '결정'하든 조건이 안 맞으면 실행되지 않는다. 훅은 애플리케이션 프로세스에서 돌기 때문에 컨텍스트도 쓰지 않는다.</p></div>
+    </div>
+    <p>Claude Code 문서는 훅이 주는 것을 "특정 동작이 LLM의 선택에 기대지 않고 항상 일어나게 하는 결정적 제어"로 설명한다. 선행 조건 게이트에 필요한 성질이 바로 이것이다.</p>
+    <div class="axis"><span class="lbl">무엇으로 지킬까</span><ul>
+      <li>어기면 금전·법적·보안 사고가 나고 되돌리기 어렵다 → <strong>코드로 강제</strong>(게이트·훅, 가능하면 백엔드 검증까지)</li>
+      <li>어겨도 품질만 떨어진다(어조, 답변 구성) → 프롬프트 지침</li>
+      <li>판단이 필요한 규칙("불만이 심하면 상위 상담원 연결 고려") → 프롬프트 + 모니터링·사람 검토</li>
+      <li>함정 보기: "시스템 프롬프트에 '반드시'를 대문자로 강조", "예시를 더 넣기" — 준수율을 올릴 뿐 실패 0건을 보장하지 않는다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>게이트 구현: 기록하고, 대조하고, 막는다</h3><span class="unit-en">Record, check, block</span></div>
+    <p>시험 가이드의 예는 "<code>get_customer</code>가 검증된 고객 ID를 돌려주기 전까지 <code>process_refund</code>를 막는다"이다. 같은 구조를 통신사 고객센터 에이전트에 적용해 보자. 본인 확인 도구는 <code>verify_subscriber</code>, 하위 도구는 요금 크레딧을 지급하는 <code>issue_credit</code>이다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① VERIFY</div><div class="ft">verify_subscriber 성공</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② RECORD</div><div class="ft">확인된 가입자 ID를 세션 상태에 기록</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ CHECK</div><div class="ft">issue_credit 직전 대상 ID 대조</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ BLOCK</div><div class="ft">불일치면 deny + 다음 행동 안내</div></div>
+    </div>
+    <div class="code">verified: dict[str, str] = {}     <span class="c"># session_id → 본인 확인을 통과한 가입자 ID</span>
+
+async def remember_verification(input_data, tool_use_id, context):
+    <span class="c"># PostToolUse: verify_subscriber가 성공적으로 실행된 직후</span>
+    res = input_data["tool_response"]          <span class="c"># 응답 구조는 도구마다 다르다. 여기선 dict로 가정</span>
+    if res.get("verified") is True:            <span class="c"># '호출 성공'과 '확인 통과'는 다르다</span>
+        verified[input_data["session_id"]] = res["subscriber_id"]
+    return {}
+
+async def require_verification(input_data, tool_use_id, context):
+    <span class="c"># PreToolUse: issue_credit 실행 직전</span>
+    target = input_data["tool_input"].get("subscriber_id")
+    if verified.get(input_data["session_id"]) != target:
+        return {"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason":
+                "이 가입자는 아직 본인 확인 전이다. verify_subscriber로 확인을 "
+                "마친 뒤 같은 subscriber_id로 다시 요청하라.",
+        }}
+    return {}                                  <span class="c"># 빈 객체 = 통과</span>
+
+options = ClaudeAgentOptions(
+    mcp_servers={"telco": telco_server},
+    hooks={
+        "PostToolUse": [HookMatcher(matcher="mcp__telco__verify_subscriber",
+                                    hooks=[remember_verification])],
+        "PreToolUse":  [HookMatcher(matcher="mcp__telco__issue_credit",
+                                    hooks=[require_verification])],
+    },
+)</div>
+    <ul>
+      <li><strong>'호출됐는가'가 아니라 '무엇이 확인됐는가'를 기록한다.</strong> 확인 도구가 정상 실행돼도 결과는 '불일치'일 수 있다.</li>
+      <li><strong>대상까지 대조한다.</strong> A 고객을 확인해 놓고 B 고객에게 크레딧을 주는 호출도 막혀야 한다.</li>
+      <li><strong>거부 이유에 다음 행동을 적는다.</strong> <code>permissionDecisionReason</code>은 도구 결과로 Claude에게 전달된다. Claude는 이를 읽고 선행 단계를 호출한 뒤 다시 시도한다.</li>
+    </ul>
+    <div class="note tip"><span class="lbl">게이트가 지키는 범위</span><p>훅 게이트는 '에이전트를 거치는 경로'를 지킨다. 크레딧 지급 API 쪽에서도 같은 조건을 검증해 두면 훅 설정 실수나 다른 호출 경로까지 막을 수 있다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>게이트의 범위를 정확히 겨눈다</h3><span class="unit-en">Scope the gate</span></div>
+    <table class="t">
+      <thead><tr><th style="width:30%">설계 실수</th><th style="width:36%">결과</th><th>바로잡기</th></tr></thead>
+      <tbody>
+        <tr><td>matcher 없이 모든 도구에 게이트 등록</td><td>확인 전에는 조회 도구까지 막혀 본인 확인 자체를 못 한다</td><td>막아야 할 하위 도구 이름만 matcher로 지정</td></tr>
+        <tr><td>matcher에 짧은 이름 <code>issue_credit</code>만 적음</td><td>MCP 도구의 실제 이름은 <code>mcp__telco__issue_credit</code>이라 매칭되지 않는다 — 게이트가 조용히 무력화</td><td>전체 도구 이름, 또는 정규식</td></tr>
+        <tr><td>같은 효과를 내는 도구 중 하나만 막음</td><td><code>adjust_bill</code> 같은 다른 도구로 우회된다</td><td>효과가 같은 도구를 모두 matcher에 포함</td></tr>
+        <tr><td>확인 상태를 모델 출력으로 판단("확인되면 VERIFIED라고 써라")</td><td>다시 모델의 선택에 기대는 확률적 장치가 된다</td><td>상태는 도구 결과(사실)에서 만든다</td></tr>
+      </tbody>
+    </table>
+    <p>SDK 훅은 서브에이전트 안에서 일어난 도구 호출에도 실행된다(입력에 <code>agent_id</code>·<code>agent_type</code>이 채워진다). 또 여러 PreToolUse 훅이 서로 다른 결정을 내면 <code>deny</code> &gt; <code>defer</code> &gt; <code>ask</code> &gt; <code>allow</code> 순으로 우선하므로, 다른 곳에 '자동 승인' 훅이 있어도 게이트의 거부가 이긴다.</p>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 '훅'을 한 가지로 말하지만 현재 문서에는 두 계열이 있다. Agent SDK의 콜백 훅(<code>options.hooks</code>)과 Claude Code 설정 파일(<code>.claude/settings.json</code> 등)의 명령 훅이다. 명령 훅은 종료 코드 2로 차단할 수 있고, SDK는 기본 설정에서 설정 파일의 훅도 함께 불러온다. 또 PreToolUse의 결정은 예전 최상위 <code>decision</code>(<code>"approve"</code>/<code>"block"</code>)에서 <code>hookSpecificOutput.permissionDecision</code>(<code>"allow"</code>/<code>"deny"</code>/<code>"ask"</code>/<code>"defer"</code>)으로 바뀌었다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>여러 문제가 섞인 요청</h3><span class="unit-en">Split, investigate in parallel, merge</span></div>
+    <p>고객: "이번 달 요금이 두 번 빠져나갔고, 해외 로밍 요금도 이상해요. 그리고 지금 해지하면 위약금이 얼마죠?" 한 문장에 성격이 다른 세 문제가 섞여 있다. 앞에서부터 하나씩 대화로 처리하면 뒤의 문제를 잊거나, 앞 문제의 결론이 뒤 문제에 끼치는 영향을 놓친다.</p>
+    <ol class="proc teal">
+      <li><strong>분해</strong>: 이중 결제 / 로밍 요금 이상 / 해지 위약금, 세 항목과 각각의 해결 조건을 정한다</li>
+      <li><strong>공유 맥락 확보</strong>: 본인 확인은 한 번만 한다. 확인된 가입자 ID, 요금제, 청구 기간을 모든 조사가 함께 쓴다</li>
+      <li><strong>병렬 조사</strong>: 서로 독립인 조회(결제 내역, 로밍 사용 기록, 약정 정보)는 한 응답에서 동시에 호출하거나 서브에이전트로 나눈다. 크레딧 지급처럼 부작용이 있는 처리는 조사 뒤에 순서대로 한다</li>
+      <li><strong>통합</strong>: 항목별 결론을 하나의 답으로 묶는다. 이중 결제 환급이 위약금 정산에 영향을 주는지 같은 항목 간 상호작용도 확인한다</li>
+    </ol>
+    <p>병렬 도구 사용 문서는 독립적인 읽기 작업은 병렬로, 부작용·공유 상태·순서 요구가 있는 작업은 순차로 돌리라고 안내한다. 어떤 방식이든 결과는 한 user 메시지에 모아 돌려준다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>사람에게 넘길 때: 구조화된 핸드오프</h3><span class="unit-en">Self-contained handoff</span></div>
+    <p>에스컬레이션을 받는 상담원은 대개 에이전트의 대화 기록을 볼 수 없거나, 볼 수 있어도 다 읽을 여유가 없다. 인계 요약만 읽고 바로 다음 행동을 정할 수 있어야 한다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 감정만 전달</div><div class="code">"고객이 요금 문제로 많이 화가 났습니다.
+ 확인 부탁드립니다."</div><p>누구인지, 무엇이 확인됐는지, 무엇을 결정해야 하는지 없다. 상담원이 처음부터 다시 묻는다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 자기완결 요약</div><div class="code">{"subscriber_id": "S-20931", "verified": true,
+ "issues": [
+  {"item": "이중 결제", "status": "확인됨",
+   "root_cause": "10/03 자동이체 재시도 중복",
+   "amount_krw": 55000,
+   "action_taken": "미지급 (에이전트 한도 초과)"},
+  {"item": "로밍 요금", "status": "정상",
+   "root_cause": "데이터 로밍 일일 요금 3일분"}],
+ "recommended_action": "55,000원 환급 승인",
+ "customer_expectation": "오늘 중 처리 희망"}</div><p>상담원이 바로 승인 여부를 판단할 수 있다.</p></div>
+    </div>
+    <p>이 양식을 지키게 하는 방법도 강제 쪽이 낫다. 핸드오프를 <code>escalate_to_human</code> 같은 도구로 정의하고 <code>input_schema</code>의 <code>required</code>에 필수 항목(고객 ID, 항목별 원인, 금액, 이미 한 조치, 권장 조치)을 넣으면 Claude는 그 모양으로 호출한다. 도구 정의에 <code>strict: true</code>를 켜면 입력이 스키마와 정확히 일치하는 것이 보장된다.</p>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>프롬프트에 순서를 강하게, 반복해서 쓰면 순서가 보장된다.</div><div class="f"><span class="k">사실</span>준수율이 오를 뿐 확률적이다. 실패 0건이 요구사항이면 하위 도구 앞에 코드 게이트를 둔다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>확인 도구가 한 번이라도 호출됐으면 게이트를 열어도 된다.</div><div class="f"><span class="k">사실</span>확인 결과가 통과인지, 하위 호출의 대상과 같은 고객인지까지 대조해야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>훅이 도구 호출을 거부하면 에이전트가 멈춘다.</div><div class="f"><span class="k">사실</span>거부 메시지가 도구 결과로 Claude에게 전달되고, Claude는 대개 다른 방법(선행 단계 호출 등)을 시도하거나 진행할 수 없다고 보고한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>사람에게 넘길 때는 대화 전문을 붙이면 충분하다.</div><div class="f"><span class="k">사실</span>상담원은 기록에 접근하지 못할 수 있다. 원인·금액·권장 조치를 담은 자기완결 요약을 구조화해 넘긴다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">강제 방식</span></div>
+      <div class="qq"><span class="sc">시스템 프롬프트에 "크레딧 지급 전 반드시 본인 확인"을 명시했는데, 운영 로그를 보니 약 0.5%의 지급이 본인 확인 없이 실행됐다.</span>가장 알맞은 대책은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>해당 문장을 시스템 프롬프트 맨 앞으로 옮기고 대문자로 강조한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>본인 확인을 먼저 하는 대화 예시를 여러 개 추가한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>지급 후 매일 감사 보고서를 만들어 사후에 검토한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>지급 도구에 PreToolUse 게이트를 걸어, 확인된 가입자 ID가 없으면 호출을 거부한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>결정적 준수가 필요한 순서는 프로그램으로 강제한다. A·B는 준수율을 높일 수는 있어도 실패율 0을 보장하지 못한다. C는 이미 나간 돈을 사후에 발견할 뿐이다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">게이트 조건</span></div>
+      <div class="qq"><span class="sc">팀이 만든 게이트는 "이 세션에서 <code>verify_subscriber</code>가 한 번이라도 호출됐으면 <code>issue_credit</code>을 허용"한다.</span>이 설계의 가장 큰 허점은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>PreToolUse 대신 PostToolUse에 등록해야 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>확인이 실패했거나 다른 가입자를 확인한 경우에도 지급이 통과된다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>훅은 MCP 도구에 쓸 수 없다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>세션마다 상태를 따로 두면 안 된다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>게이트는 '확인 결과가 통과'이고 '지급 대상과 같은 ID'인지까지 대조해야 한다. A는 반대다 — 실행을 막으려면 PreToolUse다. C는 사실이 아니며(<code>mcp__서버__도구</code> 이름으로 매칭), D의 세션별 상태는 오히려 필요하다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">거부 이후</span></div>
+      <div class="qq">PreToolUse 훅이 <code>permissionDecision: "deny"</code>와 함께 <code>permissionDecisionReason</code>을 돌려주면 무슨 일이 일어나는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>세션이 즉시 오류로 종료된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>도구는 실행되고, 이유만 로그에 남는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>도구는 실행되지 않고, 이유가 Claude에게 전달돼 Claude가 다음 행동을 정한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>사용자에게 승인 창이 뜬다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p><code>deny</code>는 실행을 막고, 이유는 Claude에게 보여진다. 그래서 이유에 "먼저 verify_subscriber를 호출하라" 같은 다음 행동을 적는 것이 좋다. D는 <code>"ask"</code>의 동작이다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">다중 문제</span></div>
+      <div class="qq"><span class="sc">고객이 한 메시지에서 이중 결제, 로밍 요금 이상, 해지 위약금 문의를 함께 했다.</span>가장 알맞은 처리 방식은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>세 항목으로 나누고, 한 번 확인한 가입자 정보를 공유해 독립 조회를 병렬로 진행한 뒤 하나의 답으로 통합한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>첫 번째 문제만 처리하고 나머지는 다시 문의해 달라고 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>항목마다 본인 확인부터 다시 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>세 문제를 곧바로 사람 상담원에게 넘긴다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>분해 → 공유 맥락으로 병렬 조사 → 통합이 다중 문제 요청의 기본형이다. B는 요구를 놓치고, C는 불필요하게 반복하며, D는 에이전트가 처리할 수 있는 조사까지 떠넘긴다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">핸드오프</span></div>
+      <div class="qq"><span class="sc">환급액이 에이전트 한도를 넘어 사람 상담원에게 넘겨야 한다. 상담원은 에이전트 대화 기록을 볼 수 없다.</span>인계 내용으로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>"고객 불만이 큽니다. 연락 바랍니다."</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>가입자 ID와 본인 확인 여부, 항목별 원인 분석, 금액, 이미 한 조치, 권장 조치를 담은 구조화 요약</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>대화 기록 파일의 경로</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>고객에게 처음부터 다시 설명해 달라고 안내</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>기록을 볼 수 없는 상담원이 바로 결정하려면 자기완결적인 구조화 요약이 필요하다. A는 결정에 쓸 정보가 없고, C는 상담원이 접근할 수 없으며, D는 고객 경험을 해친다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">게이트 범위</span></div>
+      <div class="qq"><span class="sc">본인 확인 게이트를 matcher 없이 등록했더니, 확인 전에는 <code>verify_subscriber</code>와 요금 조회 도구까지 모두 거부돼 상담이 진행되지 않는다.</span>가장 알맞은 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>게이트를 지우고 프롬프트 지침으로 되돌린다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>게이트 훅을 PostToolUse로 옮긴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>거부 대신 <code>"ask"</code>를 돌려준다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>matcher로 크레딧 지급처럼 막아야 할 하위 도구만 지정한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>게이트는 선행 조건이 필요한 하위 도구에만 겨눠야 한다. matcher를 생략하면 모든 도구에 적용된다. A는 결정적 보장을 포기하고, B는 실행 뒤라 막지 못한다. C는 무인 운영에서 쓸 수 없고 조회 도구까지 승인을 요구하는 문제는 그대로다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/hooks-guide" target="_blank" rel="noopener">Automate actions with hooks</a> · <a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener">Hooks reference</a> · <a href="https://code.claude.com/docs/en/agent-sdk/hooks" target="_blank" rel="noopener">Intercept and control agent behavior with hooks (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop" target="_blank" rel="noopener">How the agent loop works</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/parallel-tool-use" target="_blank" rel="noopener">Parallel tool use</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

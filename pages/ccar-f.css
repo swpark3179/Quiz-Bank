@@ -1,5 +1,9 @@
 /* CCAR-F 자격시험 교재 — 자습 가이드 추가 스타일 (guide.css 위에 얹어 사용) */
 
+/* 긴 코드 줄이 본문 폭을 밀어내지 않게: 본문 표 폭 고정 + 그리드 칸이 내용보다 좁아질 수 있게 */
+.doc-frame{ table-layout:fixed; }
+.duo .pane, .tri .pane, .map .pc{ min-width:0; }
+
 /* 원문 출처 박스 */
 .src{ display:flex; gap:14px; align-items:flex-start; background:var(--paper); border:1px solid var(--line);
   border-radius:10px; padding:13px 17px; margin:18px 0; font-size:13.5px; color:var(--soft); break-inside:avoid; }
@@ -103,6 +107,7 @@
 .lock .go{ flex:none; font-size:12.5px; white-space:nowrap; }
 
 @media (max-width:640px){
+  code{ overflow-wrap:anywhere; }
   .dom .row{ grid-template-columns:minmax(0,1fr) 70px 40px; }
   .myth,.bg{ grid-template-columns:1fr; }
   .myth .m{ border-right:0; border-bottom:1px solid var(--line); }

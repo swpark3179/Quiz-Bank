@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 3 · 서브도메인 3.3</span></div>
+    <h1>경로 한정 규칙: .claude/rules/와 paths</h1>
+    <p class="sub">.claude/rules/ · paths frontmatter · glob 패턴 · 지연 로드 · 하위 CLAUDE.md와 비교 · 로드 확인</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/path-scoped-rules-in-claude-rules-paths-frontmatter-and-glob-patterns" target="_blank" rel="noopener">CertSafari 3.3</a> &nbsp;|&nbsp; 출제 도메인: 도메인 3 · Claude Code Configuration &amp; Workflows (20%)</p>
+    <div class="secrow">
+      <span class="s">3.1 CLAUDE.md</span><span class="s">3.2 명령·스킬</span><span class="s on">3.3 경로별 규칙</span><span class="s">3.4 플랜 모드</span><span class="s">3.5 반복 개선</span><span class="s">3.6 CI/CD</span>
+    </div>
+  </header>
+
+  <p class="lede">Terraform 작성 규칙이나 테스트 파일 규칙처럼 일부 파일에만 해당하는 지침을 매 세션 싣는 것은 컨텍스트 낭비다. <code>.claude/rules/</code>의 규칙 파일에 <code>paths</code> frontmatter를 달면, Claude가 일치하는 파일을 다룰 때만 그 규칙이 들어온다. 시험은 glob 패턴 해석과 "하위 CLAUDE.md로 할지, 경로 규칙으로 할지"를 묻는다. <strong>디렉터리를 가로질러 흩어진 파일 유형에 대한 규칙은 glob으로 범위를 정한 규칙 파일 하나에 둔다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li><code>.claude/rules/*.md</code>의 YAML frontmatter <code>paths</code>에 glob 패턴을 적어 조건부로 활성화하기</li>
+      <li>경로 규칙은 일치하는 파일을 다룰 때만 로드되어 무관한 컨텍스트와 토큰을 줄인다</li>
+      <li><code>**/*.test.tsx</code>처럼 위치와 상관없이 파일 유형으로 규칙을 적용하기</li>
+      <li>코드베이스 곳곳에 흩어진 파일에는 하위 디렉터리 CLAUDE.md보다 경로 규칙이 유리한 이유</li>
+      <li>규칙이 실제로 로드됐는지 확인하고, 로드되지 않는 흔한 원인 짚기</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>언제 로드되는가</h3><span class="unit-en">Unconditional vs path-scoped</span></div>
+    <table class="t">
+      <thead><tr><th style="width:24%">규칙 종류</th><th style="width:38%">로드 시점</th><th>컨텍스트 비용</th></tr></thead>
+      <tbody>
+        <tr><td><code>paths</code> 없음</td><td>세션 시작 시. <code>.claude/CLAUDE.md</code>와 같은 우선순위</td><td>매 요청</td></tr>
+        <tr><td><code>paths</code> 있음</td><td>Claude가 일치하는 파일에 Read · Write · Edit를 쓸 때. 파일 하나에 <code>cat</code>·<code>head</code> 등을 실행해 "읽기"로 인정될 때도 포함</td><td>일치 파일을 다루기 전까지 0</td></tr>
+      </tbody>
+    </table>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">세션 시작</div><div class="ft"><code>rules/terraform.md</code><br>는 아직 없음</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">파일 접근</div><div class="ft">Claude가<br><code>infra/net/vpc.tf</code> Read</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">규칙 로드</div><div class="ft"><code>infra/**/*.tf</code> 일치<br>→ 메시지 이력에 추가</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">이후 작업</div><div class="ft">Terraform 수정에<br>규칙 적용</div></div>
+    </div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 경로 규칙이 "일치하는 파일을 <em>편집</em>할 때" 로드된다고 적는다. 현재 문서는 편집만이 아니라 <strong>Read로 읽을 때도</strong>(Write·Edit, 그리고 읽기로 인정되는 단일 파일 Bash 조회 포함) 로드된다고 설명한다. 문서가 트리거로 드는 것은 이 파일 단위 동작이며, 검색 결과에 파일 이름이 나온 것만으로 로드된다고 설명하지는 않는다.</p></div>
+    <p>경로 규칙은 메시지 이력에 들어가므로 <strong>압축(compaction) 때 나머지 대화와 함께 요약되어 사라지고</strong>, 일치 파일을 다시 다룰 때 다시 로드된다. 압축 뒤에도 반드시 남아야 하는 규칙이라면 <code>paths</code>를 빼거나 루트 CLAUDE.md로 옮긴다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>paths frontmatter 쓰기</h3><span class="unit-en">The only field a rule reads</span></div>
+    <div class="code"><span class="c"># .claude/rules/terraform.md</span>
+---
+paths:
+  - "infra/**/*.tf"
+  - "infra/**/*.tfvars"
+---
+- provider 버전은 versions.tf에서만 고정한다
+- 모듈 입력 변수에는 type과 description을 모두 적는다
+- 변경 전 terraform plan 결과를 요약해 보여 준다
+
+<span class="c"># .claude/rules/tests.md — 쉼표로 구분한 문자열도 된다</span>
+---
+paths: "**/*.test.ts, **/*.spec.ts"
+---
+- 외부 HTTP는 msw 핸들러로 막는다. 실제 네트워크 호출 금지</div>
+    <ul>
+      <li>규칙 파일에서 Claude Code가 읽는 frontmatter 필드는 <code>paths</code> 하나다. 다른 필드는 오류 없이 무시되고, frontmatter는 로드 전에 제거된다.</li>
+      <li>값은 YAML 목록이나 쉼표로 구분한 문자열로 쓴다.</li>
+      <li>패턴의 기준 디렉터리: 프로젝트 규칙은 그 규칙의 <code>.claude</code> 폴더를 담은 디렉터리, <code>~/.claude/rules/</code>의 개인 규칙은 세션의 기본 작업 디렉터리다.</li>
+    </ul>
+    <div class="note"><span class="lbl">함정 · YAML이 깨지면 항상 로드된다</span><p>frontmatter의 YAML이 파싱되지 않으면 Claude Code는 frontmatter를 무시하고 <strong><code>paths</code>가 없는 규칙처럼</strong> 로드한다. 즉 조건부 규칙이 조용히 매 세션 규칙이 된다. <code>claude --debug</code>로 파싱 오류를 확인한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>glob 패턴 읽기</h3><span class="unit-en">*, **, braces, brackets</span></div>
+    <table class="t">
+      <thead><tr><th style="width:32%">패턴</th><th style="width:34%">일치</th><th>일치하지 않음 (예)</th></tr></thead>
+      <tbody>
+        <tr><td><code>**/*.test.tsx</code></td><td>어느 깊이든 모든 <code>.test.tsx</code></td><td><code>Button.tsx</code>, <code>Button.test.ts</code></td></tr>
+        <tr><td><code>infra/**/*</code></td><td><code>infra/</code> 아래 모든 파일</td><td><code>tools/infra.sh</code></td></tr>
+        <tr><td><code>*.md</code></td><td>프로젝트 루트의 마크다운</td><td><code>docs/guide.md</code></td></tr>
+        <tr><td><code>apps/admin/pages/*.tsx</code></td><td>그 디렉터리 바로 아래의 <code>.tsx</code></td><td><code>apps/admin/pages/users/list.tsx</code></td></tr>
+        <tr><td><code>src/**/*.{ts,tsx}</code></td><td><code>src/</code> 아래 <code>.ts</code>와 <code>.tsx</code> (중괄호 확장)</td><td><code>src/style.css</code></td></tr>
+        <tr><td><code>assets/\[old]/**</code></td><td>이름에 대괄호가 든 <code>assets/[old]/</code> 아래 (이스케이프)</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li>중괄호 그룹은 패턴 수를 곱으로 늘린다(<code>{a,b}/*.{ts,tsx}</code> → 4개). 규칙 하나의 <code>paths</code> 전체가 확장 패턴 1,000개·4MiB 예산을 공유하며, 예산을 넘는 패턴은 확장되지 않은 채 쓰여 아무 파일과도 맞지 않는다.</li>
+      <li><code>[</code>는 <code>[abc]</code> 같은 대괄호 표현의 시작이다. 대괄호 표현으로 읽을 수 없는 <code>[</code>가 든 패턴은 무효가 되어 아무것도 맞지 않고, 같은 규칙의 다른 패턴은 계속 동작한다. 문자 그대로의 <code>[</code>는 <code>\[</code>로 쓴다.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>경로 규칙 vs 하위 디렉터리 CLAUDE.md</h3><span class="unit-en">Scattered files vs owned directories</span></div>
+    <table class="t">
+      <thead><tr><th style="width:22%">방식</th><th style="width:24%">파일 위치</th><th style="width:24%">로드 시점</th><th>어울리는 경우</th></tr></thead>
+      <tbody>
+        <tr><td>하위 디렉터리 CLAUDE.md</td><td>그 디렉터리 안, 코드 옆</td><td>그 디렉터리에서 시작할 때, 또는 그 안의 파일을 다룰 때</td><td>디렉터리 담당자가 자기 규칙을 코드와 함께 관리</td></tr>
+        <tr><td><code>.claude/rules/</code> 경로 규칙</td><td>루트의 중앙 <code>.claude/</code></td><td><code>paths</code> glob과 일치하는 파일을 다룰 때</td><td>규칙을 한곳에 모으고 싶거나, 같은 규칙이 흩어진 여러 경로에 적용될 때</td></tr>
+      </tbody>
+    </table>
+    <p>시나리오: 스토리북 작성 규칙이 <code>apps/admin</code>, <code>apps/shop</code>, <code>packages/ui</code> 등 열두 곳의 <code>*.stories.tsx</code>에 똑같이 적용된다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 디렉터리마다 복사</div><div class="code">apps/admin/CLAUDE.md     <span class="c"># 스토리 규칙 사본</span>
+apps/shop/CLAUDE.md      <span class="c"># 사본</span>
+packages/ui/CLAUDE.md    <span class="c"># 사본 …×12</span></div><p>한 곳을 고치면 나머지가 어긋난다. 그 디렉터리의 다른 파일을 다룰 때도 스토리 규칙이 딸려 온다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 파일 유형으로 한 번</div><div class="code"><span class="c"># .claude/rules/storybook.md</span>
+---
+paths:
+  - "**/*.stories.tsx"
+---
+- args는 타입이 있는 Meta로 선언한다</div><p>위치와 무관하게 스토리 파일을 다룰 때만 로드된다.</p></div>
+    </div>
+    <div class="axis"><span class="lbl">선택 기준</span><ul><li>기준이 <strong>파일 유형·이름 규칙</strong>이고 여러 디렉터리에 흩어져 있다 → 경로 규칙</li><li>기준이 <strong>한 패키지·서비스의 스택</strong>이고 그 팀이 관리한다 → 하위 CLAUDE.md</li><li>매번 직접 호출하는 절차나 가끔 필요한 참고 자료 → 스킬(스킬에도 <code>paths</code> 필드가 있어 일치 파일 작업 시 자동 활성화를 제한할 수 있다)</li></ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>로드됐는지 확인하고, 안 될 때 따지기</h3><span class="unit-en">Verify and troubleshoot</span></div>
+    <p>경로 규칙은 세션 중간에 로드되므로 시작 직후 <code>/context</code>의 Memory files 목록에는 보이지 않는다. 로드 시점을 보려면 <code>InstructionsLoaded</code> hook을 쓴다. 이 이벤트는 지침 파일이 로드될 때마다 발생하며 입력에 <code>load_reason</code>(<code>path_glob_match</code> 등), <code>globs</code>, <code>trigger_file_path</code>가 담긴다. 차단 기능은 없는 관찰용이다.</p>
+    <div class="code"><span class="c">// .claude/settings.local.json — 경로 규칙 로드만 기록</span>
+{
+  "hooks": {
+    "InstructionsLoaded": [
+      {
+        "matcher": "path_glob_match",
+        "hooks": [
+          { "type": "command",
+            "command": "jq -c '{file_path, globs, trigger_file_path}' &gt;&gt; ~/rules-load.log" }
+        ]
+      }
+    ]
+  }
+}</div>
+    <table class="t">
+      <caption>규칙이 기대대로 로드되지 않을 때</caption>
+      <thead><tr><th style="width:38%">증상</th><th>확인할 것</th></tr></thead>
+      <tbody>
+        <tr><td>조건부여야 할 규칙이 매 세션 들어온다</td><td>frontmatter YAML 파싱 실패 → <code>paths</code> 없는 규칙으로 취급</td></tr>
+        <tr><td>심볼릭 링크로 가져온 공유 규칙 중 일부만 로드된다</td><td>작업 디렉터리 밖을 가리키는 링크는 외부 가져오기 승인 후에도 <code>paths</code> <strong>없는</strong> 규칙만 로드된다</td></tr>
+        <tr><td>형제 git worktree의 파일에는 적용되지 않는다</td><td>그 worktree에서 시작하거나 <code>/cd</code>로 세션을 옮긴다</td></tr>
+        <tr><td>긴 규칙의 뒷부분을 따르지 않는다</td><td>지연 로드 파일의 파일별 크기 한도(200K 컨텍스트에서 40,000자)를 넘으면 앞부분만 들어간다 → 나눈다</td></tr>
+        <tr><td><code>--setting-sources</code>에서 <code>project</code>를 뺐다</td><td>프로젝트 규칙은 건너뛴다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>.claude/rules/</code>로 옮기기만 하면 해당 파일을 다룰 때만 로드된다.</div><div class="f"><span class="k">사실</span><code>paths</code>가 없으면 매 세션 시작 시 로드된다. 조건부 로드는 <code>paths</code>를 지정해야 일어난다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>*.md</code>는 저장소 전체의 마크다운 파일과 일치한다.</div><div class="f"><span class="k">사실</span>프로젝트 루트의 마크다운만이다. 모든 깊이를 포함하려면 <code>**/*.md</code>를 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>경로 규칙은 한 번 로드되면 압축 뒤에도 계속 남는다.</div><div class="f"><span class="k">사실</span>메시지 이력의 일부라 압축 때 요약되고, 일치 파일을 다시 다룰 때 재로드된다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>규칙 frontmatter에 <code>description</code>이나 <code>priority</code>를 넣으면 로드 순서를 조정할 수 있다.</div><div class="f"><span class="k">사실</span>규칙이 읽는 필드는 <code>paths</code>뿐이고, 나머지는 경고 없이 무시된다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">흩어진 파일</span></div>
+      <div class="qq"><span class="sc">GraphQL resolver 작성 규칙이 저장소 곳곳의 <code>*.resolver.ts</code> 파일 150여 개에 적용된다. 파일은 30개가 넘는 디렉터리에 흩어져 있다.</span>가장 알맞은 구성은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>resolver 파일이 있는 디렉터리마다 CLAUDE.md를 만들어 규칙을 복사한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>.claude/rules/graphql.md</code>에 <code>paths: ["**/*.resolver.ts"]</code>를 지정한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>루트 CLAUDE.md에 규칙을 넣어 매 세션 로드한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>개인 <code>~/.claude/CLAUDE.md</code>에 넣는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>위치가 아니라 파일 유형이 기준이므로 glob 규칙 하나가 맞다. A는 사본 관리 부담이 크고, C는 resolver와 무관한 작업에도 비용을 낸다. D는 팀과 공유되지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">로드 트리거</span></div>
+      <div class="qq"><code>paths: ["infra/**/*.tf"]</code> 규칙이 있다. 현재 문서 기준으로 이 규칙이 컨텍스트에 들어오는 시점은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>세션 시작 시 항상</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>사용자가 <code>/memory</code>로 규칙 파일을 열 때</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>일치하는 파일을 Edit할 때만 — 읽기로는 로드되지 않는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Claude가 일치하는 파일을 Read·Write·Edit할 때</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>문서는 일치 파일에 대한 Read·Write·Edit(그리고 읽기로 인정되는 단일 파일 Bash 조회)를 트리거로 든다. C는 시험 가이드의 "편집할 때" 표현만 보고 고르기 쉬운 오답이다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">glob 해석</span></div>
+      <div class="qq"><span class="sc">규칙에 <code>paths: ["lib/*.py"]</code>를 적었는데 <code>lib/payments/refund.py</code>를 다룰 때 규칙이 적용되지 않는다.</span>원인과 고칠 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>lib/*.py</code>는 <code>lib/</code> 바로 아래 파일만 맞는다 → <code>lib/**/*.py</code>로 바꾼다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>paths</code>는 디렉터리만 받는다 → <code>lib/</code>로 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>규칙은 <code>.py</code>를 지원하지 않는다 → 루트 CLAUDE.md로 옮긴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>패턴을 따옴표로 감싸서 생긴 문제다 → 따옴표를 뺀다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>하위 디렉터리까지 포함하려면 <code>**</code>가 필요하다. 문서 예시도 <code>src/**/*</code>를 "src 아래 모든 파일"로, <code>src/components/*.tsx</code>를 "특정 디렉터리의 컴포넌트"로 구분한다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">하위 CLAUDE.md가 나은 경우</span></div>
+      <div class="qq">경로 규칙보다 하위 디렉터리 CLAUDE.md가 더 알맞은 상황은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모든 SQL 마이그레이션 파일에 같은 명명 규칙을 적용하려 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>저장소 전역의 <code>*.stories.tsx</code>에 스토리 작성 규칙을 적용하려 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>services/ledger</code> 팀이 자기 서비스의 스택 규칙을 코드 옆에서 직접 관리하려 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>모든 규칙을 한곳에서 검토하고 싶다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>디렉터리 담당자가 코드와 함께 버전 관리하는 규칙은 하위 CLAUDE.md가 어울린다. A·B는 흩어진 파일 유형, D는 중앙 관리 요구라 경로 규칙이 맞다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">조건부가 안 될 때</span></div>
+      <div class="qq"><span class="sc"><code>.claude/rules/k8s.md</code>에 <code>paths</code>를 적었지만, Kubernetes와 무관한 작업에서도 매 세션 이 규칙이 로드된다.</span>가장 먼저 의심할 원인은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>규칙 파일이 하위 폴더에 있어 우선순위가 올라갔다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>frontmatter YAML이 파싱되지 않아 <code>paths</code> 없는 규칙으로 취급되고 있다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>경로 규칙은 원래 시작 시 로드되고 일치할 때만 적용된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>paths</code> 패턴이 너무 구체적이다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>YAML 파싱에 실패하면 frontmatter가 무시되어 무조건 로드 규칙이 된다. <code>claude --debug</code>로 오류를 확인한다. 하위 폴더 배치는 정리용일 뿐 우선순위와 무관하다(A).</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">압축 이후</span></div>
+      <div class="qq"><span class="sc">긴 세션 중 <code>/compact</code>를 실행했다. 그 전에 Terraform 파일을 다루며 로드된 경로 규칙이 있었다.</span>압축 직후 이 규칙의 상태는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>루트 CLAUDE.md처럼 디스크에서 즉시 다시 주입된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>영구히 비활성화되어 세션을 다시 시작해야 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>대화와 함께 요약되며, 일치하는 파일을 다시 다룰 때 재로드된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>자동으로 <code>paths</code> 없는 규칙으로 바뀐다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>문서는 루트 CLAUDE.md와 무조건 규칙은 디스크에서 재주입되고(A는 이 경우), <code>paths</code> 규칙과 하위 CLAUDE.md는 필요할 때 다시 로드된다고 구분한다. 압축 뒤에도 남겨야 하면 <code>paths</code>를 빼거나 루트 CLAUDE.md로 옮긴다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener">How Claude remembers your project (Memory)</a> · <a href="https://code.claude.com/docs/en/large-codebases" target="_blank" rel="noopener">Set up Claude Code in a monorepo or large codebase</a> · <a href="https://code.claude.com/docs/en/features-overview" target="_blank" rel="noopener">Extend Claude Code</a> · <a href="https://code.claude.com/docs/en/context-window" target="_blank" rel="noopener">Explore the context window</a> · <a href="https://code.claude.com/docs/en/claude-directory" target="_blank" rel="noopener">Explore the .claude directory</a> · <a href="https://code.claude.com/docs/en/tools-reference" target="_blank" rel="noopener">Tools reference</a> · <a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener">Hooks reference</a> · <a href="https://code.claude.com/docs/en/skills" target="_blank" rel="noopener">Extend Claude with skills</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

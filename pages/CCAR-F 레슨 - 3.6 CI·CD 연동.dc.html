@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 3 · 서브도메인 3.6</span></div>
+    <h1>CI/CD의 Claude Code: -p·권한·JSON 출력</h1>
+    <p class="sub">-p (--print) · --bare · --allowedTools · dontAsk · --output-format json · --json-schema · CLAUDE.md · 독립 리뷰 · 재실행</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/headless-claude-code-in-ci-p-tool-permissions-and-json-output" target="_blank" rel="noopener">CertSafari 3.6 (1)</a> · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/context-for-ci-reviews-and-test-generation-claude-md-independent-reviewers-re-runs" target="_blank" rel="noopener">CertSafari 3.6 (2)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 3 · Claude Code Configuration &amp; Workflows (20%)</p>
+    <div class="secrow">
+      <span class="s">3.1 CLAUDE.md</span><span class="s">3.2 명령·스킬</span><span class="s">3.3 경로별 규칙</span><span class="s">3.4 플랜 모드</span><span class="s">3.5 반복 개선</span><span class="s on">3.6 CI/CD</span>
+    </div>
+  </header>
+
+  <p class="lede">CI 러너에는 프롬프트에 답할 사람이 없다. 그래서 파이프라인 속 Claude Code는 시작 시점에 할 일, 허용 도구, 출력 형식, 프로젝트 기준을 모두 받아야 한다. 시험은 이 설정들과, 리뷰·테스트 생성 품질을 좌우하는 맥락 공급 방식을 묻는다. <strong>CI의 Claude Code는 "-p로 한 번 실행하고, 권한은 미리 정하고, 결과는 스키마로 받고, 리뷰는 코드를 쓴 세션과 분리한다"로 요약된다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li><code>-p</code>(<code>--print</code>)로 비대화형 실행하기 — 대화형 입력을 기다리며 파이프라인이 멈추는 일 방지</li>
+      <li><code>--output-format json</code>과 <code>--json-schema</code>로 기계가 파싱할 수 있는 구조화 결과를 받아 PR 인라인 코멘트로 게시하기</li>
+      <li>CLAUDE.md로 테스트 기준·픽스처 규칙·리뷰 기준 같은 프로젝트 맥락을 CI 실행에 공급하기</li>
+      <li>코드를 생성한 세션이 아닌 독립 인스턴스로 리뷰하기</li>
+      <li>재리뷰 때 이전 결과를 넘겨 새·미해결 문제만 보고하게 하기, 테스트 생성 때 기존 테스트를 넘겨 중복 막기</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>-p: 한 번 실행하고 끝나는 모드</h3><span class="unit-en">Non-interactive runs</span></div>
+    <p><code>claude</code>나 <code>claude "질문"</code>은 대화형 세션을 열어 다음 입력을 기다린다. <code>-p</code>(<code>--print</code>)를 붙이면 프롬프트 하나를 처리하고 종료한다(CLI 참조: "Query via SDK, then exit"). Agent SDK를 CLI로 쓰는 것이라 같은 도구·에이전트 루프를 쓴다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">성질</th><th>CI에서 의미</th></tr></thead>
+      <tbody>
+        <tr><td>표준 입력 읽기</td><td><code>git diff main | claude -p "..."</code>처럼 diff·로그를 파이프로 넣는다 (파이프 입력 상한 10MB)</td></tr>
+        <tr><td>종료 코드</td><td>성공 0, 실패 시 0이 아닌 값 → 스크립트가 분기할 수 있다</td></tr>
+        <tr><td><code>--max-turns</code> · <code>--max-budget-usd</code></td><td>에이전트 턴 수·추정 비용 상한 (print 모드 전용). 턴 상한에 닿으면 오류로 종료</td></tr>
+        <tr><td><code>--bare</code></td><td>hook·스킬·플러그인·MCP 서버·auto memory·CLAUDE.md 자동 탐색을 건너뛰어 어느 머신에서나 같은 결과. 인증은 <code>ANTHROPIC_API_KEY</code> 등에서만</td></tr>
+      </tbody>
+    </table>
+    <p><code>--bare</code>가 없으면 <code>-p</code> 세션도 대화형 세션처럼 작업 디렉터리와 <code>~/.claude</code>의 설정(프로젝트 hook, <code>.mcp.json</code> 서버 포함)을 신뢰 확인 없이 로드한다. 헤드리스 문서는 스크립트·SDK 호출에 <code>--bare</code>를 권장하며, 이후 릴리스에서 <code>-p</code>의 기본값이 될 예정이라고 밝힌다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>권한은 실행 전에 정한다</h3><span class="unit-en">Pre-approve, deny the rest</span></div>
+    <p>무인 실행에서는 "승인할까요?"에 답할 사람이 없으므로 권한을 시작 시점에 확정한다. 권한 모드를 지정하지 않은 <code>claude -p</code> 실행은 Manual 모드(설정값 <code>default</code>)로 시작하고, 승인이 필요한 호출은 허용 규칙·hook·<code>--permission-prompt-tool</code> 등이 승인하지 않는 한 <strong>거부</strong>된다(v2.1.302 이후).</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">수단</th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td><code>--allowedTools "Read,Bash(npm test)"</code></td><td>나열한 도구·패턴은 묻지 않고 실행. 권한 규칙 문법을 쓴다 — <code>Bash(git diff *)</code>처럼 <strong>공백 + *</strong>가 접두사 매칭</td></tr>
+        <tr><td><code>--permission-mode dontAsk</code></td><td>사전 승인되지 않은 것 중 프롬프트가 필요한 호출은 모두 거부. 문서가 "잠긴 CI"용으로 소개하는 모드</td></tr>
+        <tr><td><code>--permission-mode acceptEdits</code></td><td>파일 쓰기와 <code>mkdir</code>·<code>mv</code> 같은 흔한 파일 명령은 자동 승인, 나머지 셸 명령은 허용 규칙 필요</td></tr>
+        <tr><td><code>--permission-mode auto</code></td><td>classifier가 행동을 검토. 비대화형 실행에서는 차단된 행동만 거부되고 실행은 계속된다</td></tr>
+        <tr><td><code>--tools</code> · <code>--disallowedTools</code></td><td>쓸 수 있는 내장 도구 자체를 제한 / 거부 규칙 (<code>--allowedTools</code>는 "제한"이 아니라 "사전 승인")</td></tr>
+      </tbody>
+    </table>
+    <div class="code"><span class="c"># 테스트를 돌리고 실패를 고치는 CI 단계 (이 가이드의 예시)</span>
+claude --bare -p "npm test를 실행하고 실패한 테스트를 고쳐라. 결과를 한 줄로 보고하라." \
+  --allowedTools "Read,Edit,Bash(npm test)" \
+  --permission-mode dontAsk \
+  --max-turns 20</div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 <code>-p</code>를 "대화형 입력 대기로 멈추는 것을 막는" 플래그로 설명한다. <code>-p</code> 없이 실행하면 세션이 사람 입력을 기다린다는 점에서 맞는 설명이다. 다만 2026년 10월 문서 기준으로 <code>-p</code> 실행 안에서 승인이 필요한 도구 호출은 기다리는 것이 아니라 <strong>거부</strong>된다. 그래서 실무 실패 양상은 "멈춤"보다 "필요한 도구가 거부돼 작업이 반쪽으로 끝남"이며, 처방은 <code>--allowedTools</code>·<code>dontAsk</code>·auto mode 같은 사전 권한 설정이다. 권한 호스트가 있는 실행이라면 <code>--permission-prompts none</code>(v2.1.259+)으로 호스트 응답을 기다리지 않게 한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>기계가 읽는 결과: JSON과 스키마</h3><span class="unit-en">--output-format json · --json-schema</span></div>
+    <p><code>--output-format</code>은 <code>text</code>(기본)·<code>json</code>·<code>stream-json</code>을 받는다. <code>json</code>이면 결과 객체 하나에 텍스트 결과(<code>result</code>), <code>session_id</code>, 추정 비용(<code>total_cost_usd</code>) 등이 담긴다. 여기에 <code>--json-schema</code>를 주면 스키마에 맞는 출력이 <strong><code>structured_output</code> 필드</strong>에 들어온다. Agent SDK 문서에 따르면 출력을 스키마로 검증해 맞지 않으면 다시 요청하고, 재시도 한도 안에 실패하면 오류가 된다.</p>
+    <div class="code"><span class="c"># PR 리뷰 결과를 인라인 코멘트용 JSON으로 받기 (이 가이드의 예시)</span>
+git diff origin/main...HEAD | claude --bare -p \
+  "이 diff를 리뷰하라. 기준은 첨부한 프로젝트 지침을 따른다." \
+  --append-system-prompt-file ./CLAUDE.md \
+  --output-format json \
+  --json-schema "$(cat .ci/findings.schema.json)" \
+  --permission-mode dontAsk --max-turns 10 &gt; review.json
+
+<span class="c"># structured_output이 없으면(예: 요청 거절) 게시 단계로 넘어가지 않는다</span>
+jq -e '.structured_output.findings' review.json &gt; findings.json || exit 1</div>
+    <div class="code"><span class="c"># .ci/findings.schema.json — 인라인 코멘트에 필요한 위치 정보를 필수로</span>
+{"type": "object",
+ "properties": {"findings": {"type": "array", "items": {
+   "type": "object",
+   "properties": {
+     "path": {"type": "string"},
+     "line": {"type": "integer"},
+     "severity": {"type": "string", "enum": ["blocker", "major", "minor"]},
+     "message": {"type": "string"}},
+   "required": ["path", "line", "severity", "message"]}}},
+ "required": ["findings"]}</div>
+    <p>후속 단계는 <code>findings.json</code>의 각 항목을 <code>path</code>·<code>line</code> 위치에 PR 인라인 코멘트로 올린다. 주의점: 유효하지 않은 스키마는 실행 전에 오류로 끝나고, <code>format</code> 키워드는 검증되지 않으며, 유효한 구조화 출력 없이 끝나면 <code>structured_output</code> 필드 자체가 없으므로 <strong>사용 전에 존재를 확인</strong>한다.</p>
+    <table class="t">
+      <caption>CI에 붙이는 경로</caption>
+      <thead><tr><th style="width:26%">경로</th><th>특징</th></tr></thead>
+      <tbody>
+        <tr><td>스크립트의 <code>claude -p</code></td><td>어떤 CI에서든 동작. 위처럼 JSON을 받아 게시 단계를 직접 만든다</td></tr>
+        <tr><td>GitHub Actions <code>anthropics/claude-code-action@v1</code></td><td><code>prompt</code>가 없으면 <code>@claude</code> 멘션에 응답, 있으면 이벤트마다 자동 실행. CLI 인자는 <code>claude_args</code>로 넘기며, 인라인 코멘트용 MCP 서버는 그 <code>--allowedTools</code>에 <code>mcp__github_inline_comment__create_inline_comment</code>가 있을 때만 시작된다</td></tr>
+        <tr><td>GitLab CI/CD</td><td>베타, GitLab이 유지 관리. CLI·Agent SDK 기반, CLAUDE.md를 따른다</td></tr>
+        <tr><td>관리형 Code Review</td><td>Team·Enterprise 플랜. 워크플로 없이 PR마다 심각도별 인라인 코멘트</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>CI 실행에 프로젝트 맥락 공급하기</h3><span class="unit-en">CLAUDE.md and existing tests</span></div>
+    <p>CI 실행은 대화 이력 없이 시작하므로 프로젝트 지식은 저장소에서 와야 한다. 프로젝트 CLAUDE.md(<code>./CLAUDE.md</code> 또는 <code>./.claude/CLAUDE.md</code>)는 매 세션 시작 시 읽히고 버전 관리로 팀과 공유된다. GitHub Actions 문서는 저장소 루트 CLAUDE.md에 코드 스타일, 리뷰 기준, 프로젝트 규칙을 정의하라고 권하고, 매 실행마다 읽히므로 <strong>간결하게</strong> 유지하라고 한다.</p>
+    <div class="code"><span class="c"># CLAUDE.md 중 테스트 생성 품질을 좌우하는 부분 (이 가이드의 예시)</span>
+## Tests
+- 한 파일만 실행: pytest tests/billing/test_invoice.py -q
+- 픽스처: tests/fixtures/factories.py의 make_customer(), make_invoice()를 쓴다.
+  DB를 직접 채우는 새 픽스처를 만들지 않는다.
+- 가치 있는 테스트: 경계값(0원, 통화 반올림), 과거 장애 회귀, 결제 API 실패 경로.
+- 쓰지 말 것: 단순 getter/setter 테스트, 구현 세부를 그대로 복사한 assert.</div>
+    <p>이런 내용은 코드를 읽어서는 알 수 없는 <strong>팀의 판단</strong>이다. best practices 문서도 코드에서 찾을 수 있는 것은 빼고 확인 명령, 오해를 부르는 지점, 저장소에 없는 결정만 적으라고 한다. "가치 있는 테스트" 기준이 없으면 테스트 생성은 저가치 테스트로 채워지기 쉽다.</p>
+    <p>테스트 생성 단계에는 <strong>기존 테스트 파일</strong>도 맥락으로 넘긴다. Common workflows 문서는 Claude가 기존 테스트 파일을 살펴 스타일·프레임워크·assertion 패턴을 맞춘다고 설명한다. 기존 테스트가 무엇을 이미 다루는지 보여 주면 같은 시나리오를 다시 제안하는 중복도 줄어든다. 예: "<code>tests/billing/</code>의 기존 테스트를 읽고, 거기서 다루지 않는 경로에 대해서만 테스트를 추가하라."</p>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 CLAUDE.md를 "CI에서 호출된 Claude Code에 프로젝트 맥락을 주는 메커니즘"으로 설명한다. 기본 <code>-p</code> 실행에서는 그대로 맞다. 그러나 현재 문서가 스크립트·CI에 권장하는 <code>--bare</code>는 <strong>CLAUDE.md를 자동으로 읽지 않는다</strong>. bare 모드에서 같은 지침을 쓰려면 <code>--append-system-prompt-file ./CLAUDE.md</code>처럼 명시적으로 넘겨야 한다(위 예시). <code>--bare</code>가 <code>-p</code>의 기본값이 되면 이 차이는 더 중요해진다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>리뷰는 독립 인스턴스로, 재실행은 이전 결과와 함께</h3><span class="unit-en">Independent reviewer · re-runs</span></div>
+    <p>코드를 생성한 세션의 컨텍스트에는 코드를 그렇게 쓴 이유가 이미 가득해, 자기 리뷰는 같은 맹점을 공유하기 쉽다. best practices 문서는 <code>/code-review</code>가 대화를 본 적 없는 새 서브에이전트에서 diff를 리뷰하므로 "코드를 만든 추론에 흔들리지 않는다"고 설명하고, 두 번째 세션을 가장 손쉬운 독립 리뷰어로 소개한다. CI에서는 <strong>생성 단계와 리뷰 단계를 별도 <code>claude -p</code> 실행</strong>으로 나누고, 리뷰 단계에서 생성 세션을 <code>--continue</code>·<code>--resume</code>으로 이어 붙이지 않는다.</p>
+    <p>파이프라인으로 보면 <strong>생성 실행 → 독립 리뷰 실행(새 세션, diff + 기준만) → <code>structured_output</code>을 인라인 코멘트로 게시 → findings.json을 다음 실행용으로 보관</strong>의 순서다.</p>
+    <h4>새 커밋 뒤 재리뷰</h4>
+    <p>PR에 커밋이 추가될 때마다 처음부터 리뷰하면, 이미 단 코멘트가 다시 달리고 고친 문제까지 반복 지적된다. 재실행에는 <strong>이전 리뷰 결과를 맥락으로 함께 넘기고</strong>, 새로 생긴 문제와 아직 해결되지 않은 문제만 보고하라고 지시한다.</p>
+    <div class="code"><span class="c"># 재리뷰 프롬프트의 핵심 (이 가이드의 예시)</span>
+prev-findings.json은 직전 리뷰에서 이미 게시한 지적 목록이다.
+1) 이번 diff에서 해결된 항목은 보고하지 마라.
+2) 아직 해결되지 않은 항목은 status를 "still_open"으로 표시하되 새 코멘트를 만들지 마라.
+3) 이번 커밋에서 새로 생긴 문제만 status "new"로 보고하라.</div>
+    <p>관리형 Code Review도 비슷하게 동작한다. 푸시 뒤 자동으로 시작된 리뷰는 직전 리뷰 이후 바뀐 부분에 집중하고, 이전 지적에 달린 답글을 읽어 스레드를 해결하거나 후속 답글을 단다.</p>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul><li>리뷰 품질 문제 → <strong>독립 인스턴스</strong>(새 세션·서브에이전트)로 분리했는가</li><li>중복 코멘트 문제 → <strong>이전 결과를 넘기고 new/미해결만</strong> 보고하게 했는가</li><li>중복·저가치 테스트 문제 → <strong>기존 테스트와 CLAUDE.md의 테스트 기준</strong>을 맥락으로 줬는가</li><li>파싱 실패 문제 → <code>--output-format json</code> + <code>--json-schema</code>, 그리고 <code>structured_output</code> 존재 확인</li></ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>-p</code>만 붙이면 CI에서 필요한 도구를 모두 쓸 수 있다.</div><div class="f"><span class="k">사실</span>권한 모드를 정하지 않은 <code>-p</code> 실행은 Manual 모드로 시작해 승인이 필요한 호출을 거부한다. <code>--allowedTools</code>·<code>dontAsk</code>·auto mode로 미리 정한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>--json-schema</code>를 주면 스키마에 맞춘 결과가 <code>result</code> 필드에 문자열로 들어온다.</div><div class="f"><span class="k">사실</span>스키마 결과는 <code>structured_output</code> 필드에 들어오고, 유효한 출력 없이 끝나면 그 필드가 없다. 쓰기 전에 존재를 확인한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>코드를 만든 세션에 <code>--continue</code>로 리뷰를 이어 시키면 맥락이 풍부해 더 정확하다.</div><div class="f"><span class="k">사실</span>생성 과정의 추론이 남아 같은 맹점을 공유한다. 독립 인스턴스가 리뷰에 낫다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>--bare</code>로 돌려도 저장소의 CLAUDE.md는 자동으로 적용된다.</div><div class="f"><span class="k">사실</span>bare 모드는 CLAUDE.md 자동 로드를 건너뛴다. 필요한 지침은 <code>--append-system-prompt-file</code> 등으로 넘긴다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">비대화형 실행</span></div>
+      <div class="qq"><span class="sc">야간 배치 작업에 <code>claude "의존성 보안 공지를 요약해 줘"</code>를 넣었더니 작업이 끝나지 않고 타임아웃으로 죽는다.</span>가장 먼저 고칠 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>--verbose</code>를 추가해 로그를 늘린다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>프롬프트를 더 짧게 줄인다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>-p</code>를 붙여 프롬프트를 처리한 뒤 종료하는 비대화형 실행으로 바꾼다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>--continue</code>로 이전 세션을 이어 실행한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p><code>claude "query"</code>는 그 질의를 첫 메시지로 대화형 세션을 열고 다음 입력을 기다린다. <code>-p</code>로 질의 후 종료하게 해야 한다. 나머지는 대기와 무관하다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">구조화 출력</span></div>
+      <div class="qq"><span class="sc">리뷰 결과를 PR 인라인 코멘트로 자동 게시하려는데, 자유 텍스트 출력의 형식이 매번 달라 파서가 자주 깨진다.</span>가장 알맞은 설정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>--output-format json</code>과 path·line·severity·message를 필수로 한 <code>--json-schema</code>를 주고 <code>structured_output</code>을 읽는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>프롬프트 끝에 "반드시 JSON으로만 답하라"를 추가하고 <code>result</code>를 정규식으로 파싱한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>--output-format stream-json</code>만 켠다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>--max-turns 1</code>로 출력 길이를 줄인다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>스키마를 주면 검증된 결과가 <code>structured_output</code>에 들어오고, 위치 필드를 필수로 둘 수 있다. B는 형식 보장이 없고, C는 이벤트 스트리밍일 뿐 결과 스키마를 정하지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">무인 권한</span></div>
+      <div class="qq">CI 작업이 테스트 실행(<code>npm test</code>)과 파일 편집만 하도록, 그 밖에 승인이 필요한 행동은 기다리지도 실행하지도 않게 하려 한다. 가장 알맞은 조합은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>--dangerously-skip-permissions</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>--permission-mode plan</code></span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>CLAUDE.md에 "npm test 외 명령은 실행하지 말 것"을 적는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>--allowedTools "Read,Edit,Bash(npm test)"</code> + <code>--permission-mode dontAsk</code></span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>필요한 도구만 사전 승인하고 dontAsk로 나머지 프롬프트성 호출은 거부한다. A는 모든 확인을 끄는 격리 환경 전용 설정, B는 편집을 막는 모드, C는 하네스가 강제하지 않는 지침이다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">독립 리뷰</span></div>
+      <div class="qq"><span class="sc">파이프라인의 1단계에서 Claude가 기능을 구현하고, 같은 세션을 <code>--resume</code>으로 이어 2단계에서 "방금 코드를 리뷰하라"고 시킨다. 리뷰가 거의 아무것도 잡지 못한다.</span>가장 알맞은 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>리뷰 프롬프트에 "아주 엄격하게"를 추가한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>생성 세션과 분리된 새 <code>claude -p</code> 실행에 diff와 리뷰 기준만 주고 리뷰시킨다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>같은 세션에서 리뷰를 세 번 반복시킨다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>리뷰 단계의 <code>--max-turns</code>를 늘린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>생성 세션은 코드를 쓴 추론을 그대로 갖고 있어 같은 맹점을 공유한다. 대화를 본 적 없는 독립 인스턴스가 낫다. A·C·D는 같은 컨텍스트에서 강도만 바꾼다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">재리뷰</span></div>
+      <div class="qq"><span class="sc">PR에 새 커밋이 올라올 때마다 자동 리뷰가 돌고, 이미 고친 문제와 이미 달린 지적이 매번 다시 코멘트로 달려 개발자들이 불만이다.</span>가장 알맞은 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>리뷰를 PR당 한 번만 돌리도록 트리거를 바꾼다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>severity가 minor인 지적을 모두 숨긴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>이전 리뷰 결과를 맥락으로 넘기고, 새로 생긴 문제와 아직 해결되지 않은 문제만 보고하라고 지시한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>매 실행마다 다른 모델을 써서 결과를 다양하게 만든다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>이전 결과를 넘기면 해결된 항목은 빼고 미해결 항목은 다시 코멘트하지 않으며 새 문제만 올린다. A는 새 커밋의 문제를 놓치고, B는 중복과 무관하게 정보를 버린다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">테스트 생성 맥락</span></div>
+      <div class="qq">CI의 테스트 생성 단계가 이미 있는 시나리오를 다시 만들고, 픽스처 대신 DB를 직접 채우는 저가치 테스트를 자주 낸다. 가장 효과적인 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>기존 테스트 파일을 맥락으로 넘기고, CLAUDE.md에 테스트 기준·사용할 픽스처·가치 있는 테스트의 조건을 적는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>생성할 테스트 개수를 두 배로 늘려 커버리지를 높인다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>--bare</code>를 켜서 불필요한 설정을 건너뛴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>테스트 생성을 리뷰 단계와 같은 세션에서 돌린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>중복은 기존 테스트를 보여 줘서, 저가치 테스트는 CLAUDE.md의 기준·픽스처 규칙으로 줄인다. C는 명시적으로 넘기지 않는 한 CLAUDE.md를 읽지 않게 만들고, B는 문제를 키운다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/headless" target="_blank" rel="noopener">Run Claude Code programmatically</a> · <a href="https://code.claude.com/docs/en/cli-reference" target="_blank" rel="noopener">CLI reference</a> · <a href="https://code.claude.com/docs/en/permission-modes" target="_blank" rel="noopener">Choose a permission mode</a> · <a href="https://code.claude.com/docs/en/agent-sdk/structured-outputs" target="_blank" rel="noopener">Agent SDK structured outputs</a> · <a href="https://code.claude.com/docs/en/github-actions" target="_blank" rel="noopener">Claude Code GitHub Actions</a> · <a href="https://code.claude.com/docs/en/gitlab-ci-cd" target="_blank" rel="noopener">Claude Code GitLab CI/CD</a> · <a href="https://code.claude.com/docs/en/code-review" target="_blank" rel="noopener">Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-pull-requests" target="_blank" rel="noopener">Read and request reviews on a pull request</a> · <a href="https://code.claude.com/docs/en/code-review-customize" target="_blank" rel="noopener">Customize Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-local" target="_blank" rel="noopener">Review locally with /code-review</a> · <a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener">How Claude remembers your project</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://code.claude.com/docs/en/common-workflows" target="_blank" rel="noopener">Common workflows</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

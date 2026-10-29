@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.6</span></div>
+    <h1>작업 분해: 프롬프트 체이닝 vs 동적 분해</h1>
+    <p class="sub">프롬프트 체이닝 · 게이트 · orchestrator-workers · 파일별 패스 + 통합 패스 · 적응형 조사 계획</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/prompt-chaining-vs-dynamic-decomposition" target="_blank" rel="noopener">CertSafari 1.6</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agentic Architecture &amp; Orchestration (27%)</p>
+    <div class="secrow">
+      <span class="s">1.1 에이전트 루프</span><span class="s">1.2 코디네이터</span><span class="s">1.3 서브에이전트 생성</span><span class="s">1.4 게이트·핸드오프</span><span class="s">1.5 SDK 훅</span><span class="s on">1.6 작업 분해</span><span class="s">1.7 세션 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">복잡한 작업은 어떻게든 쪼개야 한다. 시험이 묻는 것은 쪼갤지 말지가 아니라 <strong>계획을 코드가 쥘지, 모델이 쥘지</strong>다. 하위 작업이 입력과 상관없이 늘 같다면 코드가 순서를 고정하는 프롬프트 체이닝이 맞고, 하위 작업이 중간 결과를 보고 나서야 정해진다면 모델이 계획을 세우고 고쳐 가는 동적 분해가 맞다. 공식 문서는 이 구분을 "미리 정의된 코드 경로(workflow)"와 "모델이 스스로 과정을 이끄는 에이전트"로 부른다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>고정 순차 파이프라인(프롬프트 체이닝)과 동적·적응형 분해를 고르는 기준</li>
+      <li>단계마다 별도 호출을 두고 사이에 코드 게이트를 넣는 체이닝 설계</li>
+      <li>대형 코드 리뷰를 파일별 로컬 패스 + 교차 파일 통합 패스로 나누는 이유(주의력 희석)</li>
+      <li>발견에 따라 하위 작업을 만들고 멈춤 조건·노력 상한을 두는 적응형 조사 계획</li>
+      <li>"레거시 코드에 테스트 추가" 같은 열린 과제를 구조 파악 → 우선순위 → 적응형 계획으로 분해</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>계획을 누가 쥐는가</h3><span class="unit-en">Workflows vs agents</span></div>
+    <p>Anthropic의 <em>Building effective agents</em>는 agentic system을 둘로 나눈다. <strong>workflow</strong>는 LLM과 도구를 미리 정의된 코드 경로로 엮은 시스템이고, <strong>agent</strong>는 LLM이 자기 과정과 도구 사용을 동적으로 정하는 시스템이다. 같은 글은 가장 단순한 해법에서 출발해 결과가 실제로 좋아질 때만 복잡도를 올리라고 권한다. 검색과 예시를 붙인 단일 호출로 충분한 경우도 많다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">패턴</th><th style="width:26%">하위 작업을 정하는 주체</th><th>잘 맞는 경우</th></tr></thead>
+      <tbody>
+        <tr><td>프롬프트 체이닝</td><td>코드 (설계 시점)</td><td>고정된 하위 작업으로 깔끔하게 나뉘는 일. 지연을 조금 감수하고 각 호출을 쉬운 일로 만들어 정확도를 얻는다</td></tr>
+        <tr><td>병렬화 (sectioning · voting)</td><td>코드 (설계 시점)</td><td>서로 독립인 하위 작업을 동시에 돌리거나, 같은 작업을 여러 관점으로 돌려 신뢰도를 높일 때</td></tr>
+        <tr><td>orchestrator-workers</td><td>오케스트레이터 LLM (실행 시점, 입력마다)</td><td>필요한 하위 작업을 미리 예측할 수 없는 일. 예: 과제마다 고칠 파일 수와 변경 성격이 달라지는 코딩</td></tr>
+        <tr><td>자율 에이전트</td><td>모델 (매 턴)</td><td>필요한 단계 수를 예측하기 어렵고 경로를 하드코딩할 수 없는 열린 문제</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>프롬프트 체이닝: 단계마다 별도 호출, 사이에 게이트</h3><span class="unit-en">Prompt chaining with gates</span></div>
+    <p>체이닝은 작업을 순서 있는 단계로 나누고, 각 LLM 호출이 앞 단계의 출력을 받아 처리하게 한다. 단계 사이에는 programmatic check, 곧 <strong>게이트</strong>를 두어 진행이 궤도를 벗어나지 않았는지 코드로 확인한다. 예로 법무팀이 매일 들어오는 공급 계약서를 같은 순서로 검토한다고 하자. 어떤 계약서가 들어와도 단계 목록은 바뀌지 않으므로 계획을 모델에게 맡길 이유가 없다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">1단계 · LLM</div><div class="ft">조항 추출<br>(JSON)</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">게이트 · 코드</div><div class="ft">필수 조항<br>누락 검사</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2단계 · LLM</div><div class="ft">조항별<br>위험 평가</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">3단계 · LLM</div><div class="ft">검토 메모<br>작성</div></div>
+    </div>
+    <div class="code">clauses = call_claude(EXTRACT_PROMPT, contract_text)          <span class="c"># 1단계: 조항 추출</span>
+missing = REQUIRED_CLAUSES - {c["type"] for c in clauses}
+if missing:                                                   <span class="c"># 게이트: 판단은 코드가</span>
+    return route_to_human(contract_id, missing=sorted(missing))
+risks = [call_claude(RISK_PROMPT, c) for c in clauses]       <span class="c"># 2단계: 조항별 평가</span>
+memo = call_claude(MEMO_PROMPT, {"clauses": clauses, "risks": risks})   <span class="c"># 3단계</span></div>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 한 번의 호출에 단계 나열</div><div class="code">system: "1) 조항을 추출하고 2) 누락을 확인하고
+3) 위험을 평가한 뒤 4) 메모를 써라."</div><p>모델이 단계를 합치거나 건너뛰어도 코드는 알 수 없다. 중간 산출물이 없으니 게이트를 둘 자리도 없다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 코드가 순서를 쥔 별도 호출</div><div class="code">extract() → gate() → assess() → memo()</div><p>단계마다 출력을 로그로 남기고 평가하며, 실패하면 그 지점에서 분기한다.</p></div>
+    </div>
+    <div class="note best"><span class="lbl">현재 문서의 표현</span><p>Prompting best practices는 최신 모델이 adaptive thinking과 서브에이전트 오케스트레이션으로 대부분의 다단계 추론을 내부에서 처리한다고 하면서도, <strong>중간 출력을 검사해야 하거나 특정 파이프라인 구조를 강제해야 할 때</strong>는 명시적 체이닝이 여전히 유용하다고 적는다. 가장 흔한 형태는 self-correction 체인(초안 → 기준 대비 리뷰 → 수정)이다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>큰 코드 리뷰: 파일별 패스 + 통합 패스</h3><span class="unit-en">Local passes, then one integration pass</span></div>
+    <p>수십 개 파일이 바뀐 PR을 한 번에 넣고 리뷰를 시키면 지적이 얕아진다. 원인은 창 크기보다 주의력이다. <em>Effective context engineering</em> 글은 컨텍스트의 토큰이 늘수록 그 안의 정보를 정확히 떠올리는 능력이 떨어지는 <strong>context rot</strong>이 모든 모델에서 나타난다고 설명하고, 컨텍스트를 수확 체감이 있는 유한한 자원(attention budget)으로 다루라고 한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:18%">패스</th><th style="width:27%">입력</th><th style="width:29%">찾는 것</th><th>출력</th></tr></thead>
+      <tbody>
+        <tr><td>로컬 패스 (파일당 1회)</td><td>파일 하나의 diff와 그 주변 코드</td><td>null 처리, 경계값, 자원 해제처럼 파일 안에서 드러나는 결함</td><td>파일별 발견 목록 + 그 파일이 바꾼 공개 인터페이스 요약</td></tr>
+        <tr><td>통합 패스 (1회)</td><td>원본 전체가 아니라 파일별 요약과 인터페이스 변경 목록</td><td>호출부와 피호출부 불일치, 이름이 바뀐 필드, 순서 가정, 중복 지적</td><td>중복을 없애고 순위를 매긴 최종 리뷰</td></tr>
+      </tbody>
+    </table>
+    <p>예: 결제 모듈 PR에서 <code>serializer.py</code>는 <code>amount_cents</code>를 <code>amount_minor</code>로 바꿨는데 <code>refund_worker.py</code>는 옛 이름을 그대로 읽는다. 두 파일을 따로 보면 둘 다 멀쩡하다. 이 결함은 두 파일의 인터페이스 요약을 나란히 놓는 통합 패스에서만 보인다.</p>
+    <div class="note tip"><span class="lbl">Claude Code에서의 형태</span><p>Claude Code의 dynamic workflows 문서에 이 구조를 그대로 요청하는 예시 프롬프트가 있다. PR에서 바뀐 파일마다 리뷰어를 하나씩 돌리고, 파일별 발견을 한 에이전트에 넘겨 순위를 매기고 중복을 없앤 요약을 만든다. 중간 결과는 Claude의 컨텍스트가 아니라 스크립트 변수에 머문다.</p></div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul><li>"컨텍스트 창이 더 큰 모델로 한 번에" 보기는 함정이다. 희석은 창 크기로 사라지지 않는다</li><li>로컬 패스끼리는 서로 독립이므로 병렬(sectioning)로 돌릴 수 있다</li><li>통합 패스에는 원문이 아니라 요약·인터페이스 변경을 넘긴다. 원문을 다 넣으면 통합 패스가 다시 희석된다</li></ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>동적 분해: 발견이 다음 작업을 만든다</h3><span class="unit-en">Adaptive decomposition</span></div>
+    <p>장애 원인 조사처럼 첫 결과를 보기 전에는 무엇을 봐야 할지 모르는 일이 있다. 이때는 orchestrator-workers나 에이전트 루프로 하위 작업을 실행 중에 만든다. orchestrator-workers 쿡북은 이를 두 단계로 설명한다. 분석·계획 단계에서 오케스트레이터가 <em>이 입력에</em> 필요한 하위 작업을 구조화된 설명으로 만들고, 실행 단계에서 각 워커가 원래 과제와 자기 몫의 지시를 함께 받아 수행한다.</p>
+    <h4>예: "앱 푸시 알림이 일부 사용자에게만 하루 늦게 도착한다"</h4>
+    <ol class="proc teal">
+      <li><strong>초기 계획</strong> — 발송 경로와 최근 배포 목록 확인. 아직 가설 없음</li>
+      <li><strong>발견</strong>: 늦은 알림은 모두 현지 자정 직후로 예약된 건 → 하위 작업 추가: 예약 시각 변환 코드 확인, 발송 스케줄러 설정 확인</li>
+      <li><strong>발견</strong>: 스케줄러가 서버 시간대로 날짜를 계산함 → 하위 작업 추가: 영향받은 사용자 범위 추정. "배포 diff 전수 검토"는 우선순위를 내림</li>
+      <li><strong>멈춤 조건 충족</strong>: 재현 시나리오 확보 + 수정 방향 하나 검증 → 결과 정리</li>
+    </ol>
+    <table class="t">
+      <caption>동적 분해에 붙여야 할 안전장치 (Anthropic 멀티에이전트 리서치 시스템 글 등)</caption>
+      <thead><tr><th style="width:28%">장치</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>노력을 복잡도에 맞추기</td><td>리서치 시스템은 규칙을 프롬프트에 넣었다: 단순 사실 확인은 에이전트 1개·도구 호출 3~10회, 직접 비교는 서브에이전트 2~4개, 복잡한 조사는 10개 이상</td></tr>
+        <tr><td>계획을 밖에 저장</td><td>리드 에이전트는 컨텍스트가 잘릴 때를 대비해 계획을 메모리에 저장하고 필요할 때 다시 읽었다</td></tr>
+        <tr><td>멈춤 조건</td><td>완료 조건과 함께 최대 반복 횟수 같은 정지 조건을 둔다 (Building effective agents)</td></tr>
+        <tr><td>비용 인식</td><td>같은 글의 측정으로 멀티에이전트 시스템은 일반 채팅보다 약 15배 토큰을 쓴다. 공유 컨텍스트와 의존성이 많은 작업에는 덜 맞는다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>열린 과제: 레거시 코드에 테스트 추가</h3><span class="unit-en">Map, rank, then adapt</span></div>
+    <p>"이 레거시 코드베이스에 포괄적인 테스트를 추가하라"는 하위 작업 목록을 처음부터 쓸 수 없는 전형적인 과제다. 그렇다고 파일 순서대로 테스트부터 쓰기 시작하면 가치가 낮은 곳에 노력을 쏟는다. 세 단계로 나누고, 단계 3의 계획은 고정하지 않는다.</p>
+    <div class="map">
+      <div class="pc"><div class="pck">1단계</div><h4>구조 매핑</h4><ul><li>진입점, 모듈 경계, 외부 의존(DB·시계·네트워크) 목록</li><li>기존 테스트와 테스트가 없는 함수 찾기</li><li>넓은 질문에서 시작해 좁혀 간다 (Common workflows의 팁)</li></ul></div>
+      <div class="pc"><div class="pck">2단계</div><h4>고영향 영역 선정</h4><ul><li>돈·권한·데이터 손실과 닿는 코드</li><li>자주 바뀌는 파일, 장애 이력이 있는 경로</li><li>결과물: 근거를 붙인 우선순위 목록</li></ul></div>
+      <div class="pc"><div class="pck">3단계</div><h4>적응형 계획</h4><ul><li>우선순위대로 진행</li><li>테스트를 막는 의존성이 드러나면 계획을 고친다</li><li>예: 정산 함수가 내부에서 현재 시각을 직접 읽는다는 게 드러나면, "시계를 주입할 수 있게 하는 작은 리팩터링"이 계획 맨 앞에 끼어든다</li></ul></div>
+      <div class="pc"><div class="pck">여러 세션에 걸칠 때</div><h4>상태를 파일로</h4><ul><li>첫 컨텍스트 창은 틀(테스트·setup 스크립트)을 깔고, 이후 창은 todo를 반복</li><li>테스트 상태는 <code>tests.json</code> 같은 구조화 형식, 진행 메모는 자유 텍스트, 이력은 git</li></ul></div>
+    </div>
+    <p class="cap">마지막 칸은 Prompting best practices의 다중 컨텍스트 창 권고를 요약한 것이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>고르는 기준과 Claude Code의 선택지</h3><span class="unit-en">Choosing a pattern</span></div>
+    <div class="axis"><span class="lbl">시험 판단 기준</span><ul><li>입력이 달라도 단계 목록이 같다 → <strong>체이닝 + 게이트</strong>. 쿡북은 하위 작업을 미리 정의할 수 있으면 orchestrator-workers를 쓰지 말라고 한다(더 단순한 패턴으로 충분, 호출이 늘어 지연도 커짐)</li><li>하위 작업이 서로 독립 → 병렬. 앞 결과가 뒤 입력이 된다 → 순차</li><li>무엇을 할지가 중간 결과에 달렸다 → <strong>동적 분해</strong>. 단, 멈춤 조건과 노력 상한을 함께 설계</li><li>섞어도 된다: 큰 틀은 고정하고 한 단계(예: "의심 파일 심층 조사")만 에이전트로. 패턴은 처방이 아니라 조합하는 블록이다</li></ul></div>
+    <table class="t">
+      <caption>Claude Code 문서가 정리한 "누가 계획을 쥐는가"</caption>
+      <thead><tr><th style="width:20%">수단</th><th style="width:30%">다음에 무엇을 실행할지 정하는 주체</th><th style="width:26%">중간 결과가 머무는 곳</th><th>규모</th></tr></thead>
+      <tbody>
+        <tr><td>서브에이전트</td><td>Claude, 턴마다</td><td>Claude의 컨텍스트</td><td>턴당 위임 몇 개</td></tr>
+        <tr><td>에이전트 팀</td><td>리드 에이전트, 턴마다</td><td>공유 작업 목록</td><td>오래 도는 동료 몇 개</td></tr>
+        <tr><td>dynamic workflow</td><td>스크립트</td><td>스크립트 변수</td><td>실행당 수십~수백 에이전트</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 "고정 순차 파이프라인(prompt chaining) vs 동적 적응형 분해"라는 개념어를 쓴다. 현재 Claude Code에는 이를 제품 기능으로 옮긴 <strong>dynamic workflows</strong>가 있다. Claude가 과제에 맞는 JavaScript 오케스트레이션 스크립트를 쓰고 런타임이 백그라운드에서 실행하므로, 계획은 Claude가 동적으로 만들되 만들어진 계획은 코드로 고정되어 읽고 다시 실행할 수 있다. 개념 구분은 그대로이고, 현재 문서는 이를 "누가 계획을 쥐는가"라는 표로 설명한다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>컨텍스트 창이 충분히 크면 PR 전체를 한 번에 리뷰하는 편이 맥락을 잃지 않아 낫다.</div><div class="f"><span class="k">사실</span>context rot은 모든 모델에서 나타나며 토큰이 늘수록 회상 정확도가 떨어진다. 파일별 패스 + 요약 기반 통합 패스가 주의를 집중시킨다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>오케스트레이터가 매번 계획을 세우는 동적 분해가 체이닝보다 항상 견고하다.</div><div class="f"><span class="k">사실</span>workflow는 잘 정의된 작업에 예측 가능성과 일관성을 준다. 하위 작업을 미리 정할 수 있으면 오케스트레이터는 호출과 지연만 늘린다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>시스템 프롬프트에 "1단계… 2단계…"를 적으면 프롬프트 체이닝이다.</div><div class="f"><span class="k">사실</span>체이닝은 단계마다 별도 API 호출이고 코드가 순서를 정한다. 그래야 중간 출력을 로그·평가하고 게이트에서 분기할 수 있다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>적응형 계획이란 처음 세운 조사 계획을 끝까지 충실히 따르는 것이다.</div><div class="f"><span class="k">사실</span>새 발견이 하위 작업을 추가·삭제·재정렬한다. 대신 멈춤 조건과 노력 상한이 있어야 비용과 오류 누적을 막는다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">체이닝 선택</span></div>
+      <div class="qq"><span class="sc">보험사가 매일 접수되는 자동차 사고 청구서를 처리한다. 모든 청구서는 "사고 사실 추출 → 필수 서류 누락 확인 → 보상 항목 분류 → 심사 메모 작성" 순서를 똑같이 거친다.</span>가장 알맞은 분해 방식은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>청구서마다 오케스트레이터가 필요한 하위 작업을 새로 계획하게 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>네 단계를 시스템 프롬프트에 번호로 적고 한 번의 호출로 처리한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>단계마다 별도 호출을 두고, 서류 누락 확인은 코드 게이트로 처리하는 체이닝을 쓴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>자율 에이전트에게 청구서와 모든 도구를 주고 알아서 처리하게 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>단계가 입력과 무관하게 고정되어 있으므로 코드가 순서를 쥐는 체이닝이 맞고, 규칙이 명확한 누락 확인은 코드 게이트가 맡는다. A는 매번 같은 계획을 다시 세우는 호출만 늘리고, B는 중간 산출물이 없어 검사·분기가 불가능하며, D는 예측 가능한 작업에 불필요한 자율성과 비용을 더한다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">대형 리뷰</span></div>
+      <div class="qq"><span class="sc">보안 감사 에이전트에게 인증 관련 모듈 25개를 한 번의 요청으로 검토시켰더니 파일마다 지적이 한두 줄로 얕아졌고, 토큰 발급 모듈(초 단위)과 검증 모듈(밀리초 단위) 사이의 만료 시간 단위 불일치를 놓쳤다.</span>가장 효과적인 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모듈마다 로컬 검토 패스를 돌린 뒤, 모듈별 발견과 공개 인터페이스 요약을 받아 교차 모듈 통합 패스를 한 번 더 돌린다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>컨텍스트 창이 더 큰 모델로 바꿔 같은 방식으로 다시 돌린다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트에 "꼼꼼하게, 모듈 간 관계도 확인하라"를 추가한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>모듈별 검토만 돌리고 결과를 이어 붙인다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>모듈별 패스로 주의를 집중하고, 통합 패스로 모듈 사이의 불일치를 잡는다. B는 창 크기와 무관하게 나타나는 context rot을 해결하지 못하고, C는 같은 희석 상태에서 지시만 늘린다. D는 각 모듈 안에서는 드러나지 않는 단위 불일치 같은 교차 결함을 놓친다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">패턴 구분</span></div>
+      <div class="qq"><em>Building effective agents</em>에서 orchestrator-workers가 병렬화(sectioning)와 구별되는 핵심은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>워커들이 반드시 동시에 실행된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>워커마다 다른 모델을 써야 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>워커 결과를 사람이 직접 합친다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>하위 작업이 미리 정의되지 않고, 오케스트레이터가 입력에 따라 정한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>두 패턴은 모양이 비슷하지만, orchestrator-workers는 하위 작업을 실행 시점에 입력을 보고 정한다는 유연성이 다르다. A의 동시 실행은 병렬화도 마찬가지이고, B와 C는 정의와 관계가 없다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">적응형 조사</span></div>
+      <div class="qq"><span class="sc">지난주부터 사내 검색 결과의 품질이 떨어졌다는 불만이 늘었다. 원인이 색인 파이프라인인지, 랭킹 모델 배포인지, 데이터 소스 변경인지 아직 모른다.</span>조사 에이전트 설계로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>색인·랭킹·데이터 소스·인프라를 각각 같은 깊이로 조사하는 고정 4단계 파이프라인을 만든다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>첫 관찰 결과로 다음 하위 작업을 만들고 계획을 갱신하되, 완료·정지 조건과 노력 상한을 둔다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>반복 횟수 제한 없이 에이전트가 만족할 때까지 조사하게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>떠오르는 모든 가설에 서브에이전트를 하나씩 미리 배정해 한꺼번에 띄운다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>무엇을 볼지가 중간 결과에 달린 열린 조사이므로 동적 분해가 맞고, 정지 조건과 상한이 함께 있어야 한다. A는 발견을 반영하지 못하고 무관한 단계에도 같은 비용을 쓴다. C는 정지 조건이 없어 비용과 오류가 쌓이고, D는 단서가 나오기 전에 과투자해 노력을 복잡도에 맞추라는 권고에 어긋난다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">열린 과제</span></div>
+      <div class="qq"><span class="sc">테스트가 거의 없는 8년 된 사내 재고 관리 시스템(약 400개 파일)에 "포괄적인 테스트를 추가하라"는 과제를 Claude Code에 맡긴다.</span>첫 지시로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>진입점·모듈 경계·외부 의존과 기존 테스트 현황을 파악하고, 위험이 큰 영역부터 우선순위 계획을 세우게 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>파일을 알파벳 순서로 돌며 각 파일에 단위 테스트를 작성하게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>커버리지 100%를 목표로 하는 고정 체크리스트를 먼저 만들고 그대로 따르게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>가장 큰 파일부터 테스트를 작성하게 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>열린 과제는 구조 파악 → 고영향 영역 선정 → 의존성 발견에 맞춰 바뀌는 계획 순으로 분해한다. B와 D는 영향도와 무관한 순서이고, C는 의존성을 알기 전에 만든 고정 목록이라 곧 현실과 어긋난다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">현재 문서</span></div>
+      <div class="qq">현재 Prompting best practices가 최신 모델에서도 명시적 프롬프트 체이닝이 여전히 유용하다고 보는 상황은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>최신 모델은 다단계 추론을 하지 못하므로 모든 작업에서</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>출력 토큰 수를 줄이고 싶을 때</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>도구 정의가 다섯 개를 넘을 때</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>중간 출력을 검사해야 하거나 특정 파이프라인 구조를 강제해야 할 때</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>문서는 최신 모델이 다단계 추론 대부분을 내부에서 처리한다고 하면서, 중간 출력 검사나 파이프라인 강제가 필요할 때는 명시적 체이닝을 권한다. A는 문서 내용과 반대이고, B와 C는 체이닝을 고르는 기준이 아니다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices</a> · <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a> · <a href="https://platform.claude.com/cookbook/patterns-agents-orchestrator-workers" target="_blank" rel="noopener">Orchestrator workers (Cookbook)</a> · <a href="https://code.claude.com/docs/en/workflows" target="_blank" rel="noopener">Claude Code: Dynamic workflows</a> · <a href="https://code.claude.com/docs/en/common-workflows" target="_blank" rel="noopener">Claude Code: Common workflows</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>
