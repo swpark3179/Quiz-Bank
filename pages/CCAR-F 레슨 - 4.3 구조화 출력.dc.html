@@ -179,150 +179,17 @@ record = block.input                                              <span class="c
   <div class="myth"><div class="m"><span class="k">오해</span>누락을 막으려면 모든 필드를 null 불가 필수 필드로 만드는 것이 안전하다.</div><div class="f"><span class="k">사실</span>원문에 없는 정보까지 채우도록 강요해 날조를 부른다. 없을 수 있는 필드는 nullable 또는 optional로 둔다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>어느 모델에서든 <code>tool_choice: {"type": "tool"}</code>로 특정 도구를 강제할 수 있다.</div><div class="f"><span class="k">사실</span>2026년 10월 기준 Opus 5.5 · Sonnet 5.5 · Fable 5.1 · Mythos 5.1은 400 오류를 낸다. <code>auto</code> + strict 또는 <code>output_config.format</code>으로 설계한다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">tool_choice 선택</span></div>
-      <div class="qq"><span class="sc">물류사가 하루 수천 건의 스캔 문서를 받는다. B/L·상업송장·포장명세서 중 무엇인지 미리 알 수 없어 유형별 추출 도구 3개를 정의했다. 모델은 강제 호출을 지원하는 Claude Haiku 5.5인데, 가끔 도구를 부르지 않고 "송장으로 보입니다"라고 텍스트로만 답한다.</span>가장 적절한 설정은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span><code>tool_choice: {"type": "any"}</code></span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span><code>tool_choice: {"type": "tool", "name": "record_commercial_invoice"}</code></span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span><code>tool_choice: {"type": "none"}</code></span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span><code>auto</code>를 유지하고 system 프롬프트에 "반드시 JSON으로 답하라"를 추가한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p><code>any</code>는 도구 중 하나를 반드시 부르게 하되 어느 것인지는 Claude가 문서를 보고 고르게 한다. B는 B/L에도 송장 스키마를 강요하고, C는 도구 호출을 막으며, D는 프롬프트 지시일 뿐 호출을 보장하지 않는다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">모델별 제한</span></div>
-      <div class="qq"><span class="sc">Q1의 파이프라인을 Claude Sonnet 5.5로 옮기자 <code>tool_choice: {"type": "any"}</code> 요청이 400 <code>invalid_request_error</code>로 실패한다.</span>가장 적절한 대응은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span><code>{"type": "tool", "name": …}</code>로 바꿔 도구 하나를 지정한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>수동 extended thinking(<code>thinking: {type: "enabled"}</code>)을 켜서 다시 보낸다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span><code>auto</code>로 두고 도구에 <code>strict: true</code>를 켠 뒤 도구 선택을 프롬프트로 지시한다. 응답 자체가 고정 JSON이어야 하면 <code>output_config.format</code>을 쓴다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>도구를 모두 지우고 프롬프트에 JSON 예시만 넣는다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>Sonnet 5.5는 <code>any</code>와 <code>tool</code>을 모두 400으로 거절하고, 수동 extended thinking과 강제 호출도 함께 쓸 수 없다. 문서가 제시하는 대안은 <code>auto</code> + strict 또는 structured outputs다. D는 형식 보장을 버리는 퇴보다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">의미 오류</span></div>
-      <div class="qq"><span class="sc">strict 도구로 송장을 추출한 뒤 파싱 오류는 사라졌다. 그런데 몇 퍼센트의 결과에서 <code>line_items</code> 금액의 합이 <code>total_amount</code>와 다르다.</span>원인과 대응으로 옳은 것은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>strict가 제대로 적용되지 않았다 — 도구 정의를 다시 배포한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>스키마에 <code>minimum</code>·<code>maximum</code> 제약을 추가해 합계를 맞춘다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span><code>tool_choice</code>를 특정 도구로 강제한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>스키마는 구조만 보장하므로 앱에서 합계를 다시 계산해 불일치를 잡고, 오류 내용을 담아 재요청한다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>합계 불일치는 스키마를 지킨 채로 생기는 의미 오류다. B의 수치 제약은 strict 스키마에서 지원되지 않을뿐더러 필드 간 관계를 표현하지도 못한다. 도구를 강제해도 값의 정확성은 달라지지 않는다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">nullable 설계</span></div>
-      <div class="qq"><span class="sc">계약서 추출 스키마에 <code>renewal_notice_days</code>(integer, required)를 넣었다. 갱신 통지 조항이 없는 계약서에서도 30이나 60 같은 값이 채워져 나온다.</span>가장 좋은 수정은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>프롬프트에 "모르면 0을 넣어라"를 추가한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>타입을 <code>["integer", "null"]</code>로 바꾸고 설명에 "조항이 없으면 null"을 적는다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>required를 유지하고 description에 "정확하게 채울 것"을 강조한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span><code>max_tokens</code>를 줄여 불필요한 생성을 막는다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>null 불가 필수 필드는 없는 정보를 지어내게 만든다. nullable로 바꾸면 "없음"을 정직하게 표현할 수 있다. A의 0은 "통지 기간 0일"과 구분되지 않는 가짜 값이고, C는 같은 압박을 그대로 둔다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">확장 가능한 범주</span></div>
-      <div class="qq"><span class="sc">반품 사유를 <code>enum: ["파손", "오배송", "단순 변심"]</code>으로 분류한다. 새로운 사유가 계속 생기는데, 그런 건이 가장 비슷해 보이는 범주로 억지로 들어가 통계가 왜곡된다.</span>가장 적절한 개선은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>enum을 없애고 자유 문자열로 받는다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>예상되는 사유를 모두 넣어 enum을 30개로 늘린다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>enum에 <code>"other"</code>와 <code>"unclear"</code>를 추가하고, <code>other</code>일 때 원문 사유를 담는 상세 문자열 필드를 둔다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span><code>tool_choice</code>를 <code>any</code>로 바꾼다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>열린 enum 패턴은 기존 범주의 일관성을 지키면서 새 유형을 따로 모아 나중에 범주로 승격할 근거를 남긴다. A는 집계 일관성을 잃고, B도 결국 닫힌 목록이라 같은 문제가 반복된다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">보장의 예외</span></div>
-      <div class="qq"><code>output_config.format</code>으로 structured outputs를 켰다. 그래도 응답이 스키마와 맞지 않을 수 있는 경우는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span><code>stop_reason</code>이 <code>"max_tokens"</code>로 끝나 출력이 잘린 경우</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>스키마에 required 필드가 많은 경우</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>해당 스키마를 처음 사용해 문법 컴파일이 일어난 경우</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>같은 요청에 strict 도구가 함께 정의된 경우</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>잘린 출력과 <code>refusal</code>은 문서가 명시한 예외다. enum 대소문자도 보장되지 않는다. 첫 사용 시 컴파일은 지연만 늘리고, JSON outputs와 strict 도구는 한 요청에서 함께 쓸 수 있다.</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D4</strong>(한글)과 <strong>레슨문제 D4</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 4.3</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools (Forcing tool use)</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" target="_blank" rel="noopener">Strict tool use</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Structured outputs</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls</a> · <a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">API errors (Forced tool use not supported)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/structured-outputs" target="_blank" rel="noopener">Agent SDK: Structured outputs</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>

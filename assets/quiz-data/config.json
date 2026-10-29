@@ -101,6 +101,66 @@
         "name": "실전모의고사4-한글",
         "questionCount": 60,
         "order": 4
+      },
+      {
+        "id": "lesson-d1",
+        "name": "레슨문제 D1 에이전트 아키텍처",
+        "questionCount": 42,
+        "order": 5
+      },
+      {
+        "id": "lesson-d2",
+        "name": "레슨문제 D2 도구 설계·MCP",
+        "questionCount": 31,
+        "order": 6
+      },
+      {
+        "id": "lesson-d3",
+        "name": "레슨문제 D3 Claude Code 설정",
+        "questionCount": 33,
+        "order": 7
+      },
+      {
+        "id": "lesson-d4",
+        "name": "레슨문제 D4 프롬프트·구조화 출력",
+        "questionCount": 38,
+        "order": 8
+      },
+      {
+        "id": "lesson-d5",
+        "name": "레슨문제 D5 컨텍스트·신뢰성",
+        "questionCount": 41,
+        "order": 9
+      },
+      {
+        "id": "selfcheck-d1-kor",
+        "name": "자가점검 D1 에이전트 아키텍처-한글",
+        "questionCount": 42,
+        "order": 10
+      },
+      {
+        "id": "selfcheck-d2-kor",
+        "name": "자가점검 D2 도구 설계·MCP-한글",
+        "questionCount": 30,
+        "order": 11
+      },
+      {
+        "id": "selfcheck-d3-kor",
+        "name": "자가점검 D3 Claude Code 설정-한글",
+        "questionCount": 36,
+        "order": 12
+      },
+      {
+        "id": "selfcheck-d4-kor",
+        "name": "자가점검 D4 프롬프트·구조화 출력-한글",
+        "questionCount": 36,
+        "order": 13
+      },
+      {
+        "id": "selfcheck-d5-kor",
+        "name": "자가점검 D5 컨텍스트·신뢰성-한글",
+        "questionCount": 36,
+        "order": 14
       }
     ]
   }

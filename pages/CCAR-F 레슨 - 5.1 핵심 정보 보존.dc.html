@@ -173,150 +173,17 @@ def run_get_order(order_id):
   <div class="myth"><div class="m"><span class="k">오해</span>요약 주기를 조정하면 숫자가 흐려지는 문제가 해결된다.</div><div class="f"><span class="k">사실</span>주기와 상관없이 요약은 구체적 값을 일반화한다. 바뀌면 안 되는 사실은 요약 대상에서 빼서 따로 싣는다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>tool result clearing을 켜면 필요한 값은 알아서 남는다.</div><div class="f"><span class="k">사실</span>임계값을 넘으면 오래된 결과부터 자리표시 텍스트로 바뀐다. 필요한 값은 미리 case facts로 옮기거나 <code>exclude_tools</code>로 보호한다.</div></div>
 
-  <h2 class="sec">자가 점검 퀴즈</h2>
-  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
-  <div class="quiz">
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q1</span><span class="qt">case facts</span></div>
-      <div class="qq"><span class="sc">상담 봇은 대화가 20턴을 넘으면 앞부분을 요약으로 바꾼다. 30턴째 고객이 "아까 말한 48,200원 환급은 언제 돼요?"라고 묻자, 요약에 "일부 환급 약속"만 남아 있어 봇이 금액과 날짜를 답하지 못했다.</span>가장 적절한 개선은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>요약 시작 시점을 40턴으로 늦춘다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>금액·날짜·약속·주문번호를 case facts 블록으로 뽑아 요약과 별도로 매 요청에 넣는다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>요약 프롬프트에 "더 간결하게"를 추가한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>더 큰 컨텍스트 창을 가진 모델로 바꾼다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>거래성 사실은 요약하지 말고 구조화된 블록으로 따로 유지해야 한다. A와 D는 손실 시점을 늦출 뿐이고, C는 구체적 값을 더 지운다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q2</span><span class="qt">도구 결과</span></div>
-      <div class="qq"><span class="sc">반품 에이전트가 턴마다 주문 조회 도구를 부르는데, 응답이 45개 필드의 JSON이다. 대화가 길어질수록 비용이 급증하고, 답변에 반품과 무관한 필드가 섞여 나온다.</span>가장 적절한 조치는?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>주문 조회 도구를 없앤다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span><code>max_tokens</code>를 줄인다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>system 프롬프트에 "관련 필드만 참고하라"를 추가한다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>도구 결과를 이력에 넣기 전에 반품 판단에 필요한 필드만 남긴다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>불필요한 필드는 들어오는 순간부터 이후 모든 요청에서 토큰을 차지한다. C는 필드가 여전히 컨텍스트에 쌓이고, B의 <code>max_tokens</code>는 출력 한도라 입력 누적과 무관하다.</p></div>
-    </div>
-    <div class="q" data-answer="A">
-      <div class="qh"><span class="qn">Q3</span><span class="qt">stateless</span></div>
-      <div class="qq">Messages API로 만든 챗봇이 두 번째 요청에서 첫 질문의 맥락을 전혀 모른다. 가장 가능성 높은 원인은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>두 번째 요청의 <code>messages</code>에 이전 user·assistant 메시지를 넣지 않았다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>서버 쪽 대화 세션이 만료됐다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>system 프롬프트가 너무 짧다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>첫 응답의 <code>stop_reason</code>이 <code>end_turn</code>이었다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (A)</span><p>API는 상태를 저장하지 않으므로 대화 이력은 앱이 매번 보내야 한다. 서버 세션이란 개념이 없으므로 B는 틀렸고, <code>end_turn</code>은 정상 종료일 뿐이다.</p></div>
-    </div>
-    <div class="q" data-answer="C">
-      <div class="qh"><span class="qn">Q4</span><span class="qt">위치 효과</span></div>
-      <div class="qq"><span class="sc">리서치 코디네이터가 서브에이전트 10개의 보고서를 순서대로 이어 붙여 종합한다. 중간에 놓인 보고서들의 발견이 최종 보고서에서 자주 빠진다.</span>가장 적절한 개선은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>실행할 때마다 보고서 순서를 무작위로 섞는다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>보고서 10개를 한 문단으로 압축해 합친다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>입력 맨 앞에 보고서별 핵심 발견 요약을 두고, 각 보고서를 출처가 붙은 명시적 섹션으로 나누며, 지시는 끝에 둔다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>컨텍스트 창이 더 큰 모델로 바꾼다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (C)</span><p>핵심 요약을 앞에 두면 중간 보고서의 결론도 잘 처리되는 위치에 한 번 더 놓이고, 섹션과 출처 태그가 긴 입력의 구조를 드러낸다. A는 누락을 다른 보고서로 옮길 뿐이고, B는 세부 사항을 잃는다.</p></div>
-    </div>
-    <div class="q" data-answer="D">
-      <div class="qh"><span class="qn">Q5</span><span class="qt">핸드오프 형식</span></div>
-      <div class="qq"><span class="sc">하위 에이전트들이 추론 과정을 포함한 3,000단어 서술을 반환한다. 종합 에이전트는 컨텍스트 예산이 빠듯하고, 최종 보고서에 기준일이 불분명한 오래된 통계가 최신처럼 인용됐다.</span>어디를 어떻게 바꾸는 것이 가장 적절한가?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>종합 에이전트가 받은 서술을 다시 요약하게 한다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>하위 에이전트에게 더 자세히, 더 길게 쓰라고 지시한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>종합 단계를 없애고 서술을 그대로 이어 붙여 낸다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>하위 에이전트가 핵심 사실·수치·기준일·출처 위치·관련도를 구조화해 반환하도록 출력 형식을 바꾼다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (D)</span><p>문제의 원인은 상류의 출력 형식이다. 구조화된 사실과 메타데이터를 받으면 하류는 적은 토큰으로 날짜와 출처를 보존할 수 있다. A는 요약을 한 번 더 거쳐 정보를 더 잃는다.</p></div>
-    </div>
-    <div class="q" data-answer="B">
-      <div class="qh"><span class="qn">Q6</span><span class="qt">context editing</span></div>
-      <div class="qq">context editing의 tool result clearing(<code>clear_tool_uses_20250919</code>)에 대한 설명으로 옳은 것은?</div>
-      <div class="opts">
-        <button class="opt" data-k="A"><span class="ok">A</span><span>앱이 보관한 원본 대화 이력에서도 해당 결과가 삭제된다</span></button>
-        <button class="opt" data-k="B"><span class="ok">B</span><span>임계값을 넘으면 오래된 도구 결과부터 자리표시 텍스트로 바뀌므로, 나중에 필요한 값은 미리 옮겨 두거나 <code>exclude_tools</code>로 보호해야 한다</span></button>
-        <button class="opt" data-k="C"><span class="ok">C</span><span>가장 최근 도구 결과부터 지운다</span></button>
-        <button class="opt" data-k="D"><span class="ok">D</span><span>prompt cache에는 전혀 영향을 주지 않는다</span></button>
-      </div>
-      <div class="exp"><span class="verdict">정답 (B)</span><p>clearing은 서버 측에서 적용되어 원본 이력은 앱에 그대로 남고(A 오답), 오래된 결과부터 지우며 기본으로 최근 3개를 남긴다(C 오답). 내용을 지우면 캐시된 접두부가 무효화되므로 <code>clear_at_least</code>로 한 번에 충분히 지우게 한다(D 오답).</p></div>
-    </div>
-  </div>
+  <h2 class="sec">연습 문제</h2>
+  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D5</strong>(한글)과 <strong>레슨문제 D5</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 5.1</code>인 문항이 이 레슨에 해당한다.</p></div>
 
   <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/working-with-messages" target="_blank" rel="noopener">Using the Messages API</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/context-windows" target="_blank" rel="noopener">Context windows</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/compaction" target="_blank" rel="noopener">Compaction overview</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/compaction-on-demand" target="_blank" rel="noopener">Compaction on demand</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/context-editing" target="_blank" rel="noopener">Context editing</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/manage-tool-context" target="_blank" rel="noopener">Manage tool context</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices (long context · state management)</a> · <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a></p></div>
 
-  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
 
 </td></tr></tbody>
 <tfoot><tr><td class="ftr-space"></td></tr></tfoot>
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>

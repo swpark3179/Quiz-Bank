@@ -31,14 +31,14 @@
     </div>
   </header>
 
-  <p class="lede">CCAR-F 공식 시험 가이드는 시험 범위를 5개 도메인, 30개 과제(Task Statement)로 나눈다. 이 가이드는 <strong>과제 하나를 레슨 한 페이지로</strong> 다루고, 페이지마다 습득 포인트 → 단원별 정리 → 시험 함정 → 자가 점검 6문항 순서로 구성했다. 내용은 Anthropic 공식 문서를 근거로 2026년 10월 기준으로 새로 썼다.</p>
+  <p class="lede">CCAR-F 공식 시험 가이드는 시험 범위를 5개 도메인, 30개 과제(Task Statement)로 나눈다. 이 가이드는 <strong>과제 하나를 레슨 한 페이지로</strong> 다룬다. 페이지는 습득 포인트 → 단원별 정리 → 시험 함정 순서로 구성했고, 연습 문제는 문제은행 앱에 도메인별 세트로 모았다. 내용은 Anthropic 공식 문서를 근거로 2026년 10월 기준으로 새로 썼다.</p>
 
   <div class="obj"><span class="lbl">이 가이드 사용법</span>
     <ul>
       <li>왼쪽 메뉴에서 레슨을 고른다. 번호(1.1~5.6)는 공식 시험 가이드의 과제 번호와 같다.</li>
       <li>레슨 맨 위 <strong>습득 포인트</strong>는 시험 가이드의 Knowledge / Skills 항목을 줄인 것이다. 먼저 훑어보고, 다 읽은 뒤 각 항목을 스스로 설명할 수 있는지 확인한다.</li>
       <li><strong>시험 함정</strong>과 판단 축 박스에는 오답 보기에 자주 쓰이는 생각을 모았다.</li>
-      <li>자가 점검 퀴즈는 보기를 누르는 즉시 채점된다. 틀린 문항은 해당 단원으로 돌아가 근거를 다시 읽는다.</li>
+      <li>연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에서 푼다. <strong>자가점검 D1~D5</strong>는 이 가이드의 한글 문항이고, <strong>레슨문제 D1~D5</strong>는 CertSafari 레슨의 영문 원문 문항에 한글 해설을 붙인 것이다. 해설 첫 줄의 <code>📘 레슨 번호</code>로 해당 레슨을 찾아 근거를 다시 읽는다.</li>
     </ul>
   </div>
 
@@ -157,7 +157,7 @@
     <div class="unit-h"><span class="unit-n">05</span><h3>추천 학습 순서</h3><span class="unit-en">Study path</span></div>
     <div class="flow">
       <div class="flow-step"><div class="fn">1단계</div><div class="ft">기초 두 레슨<br><span style="font-weight:400;font-size:12px;color:var(--soft)">1.1 에이전트 루프 · 2.1 도구 설명</span></div></div><div class="flow-arrow">→</div>
-      <div class="flow-step"><div class="fn">2단계</div><div class="ft">도메인 순서대로<br><span style="font-weight:400;font-size:12px;color:var(--soft)">레슨마다 퀴즈 6문항까지</span></div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2단계</div><div class="ft">도메인 순서대로<br><span style="font-weight:400;font-size:12px;color:var(--soft)">앱 자가점검·레슨문제 D1~D5</span></div></div><div class="flow-arrow">→</div>
       <div class="flow-step"><div class="fn">3단계</div><div class="ft">시나리오별 복습<br><span style="font-weight:400;font-size:12px;color:var(--soft)">위 표의 관련 레슨 묶음</span></div></div><div class="flow-arrow">→</div>
       <div class="flow-step"><div class="fn">4단계</div><div class="ft">모의고사<br><span style="font-weight:400;font-size:12px;color:var(--soft)">앱 CCAR-F 카테고리</span></div></div>
     </div>
@@ -177,70 +177,5 @@
 </table>
 </main>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  componentDidMount() {
-    const root = document.querySelector('.doc');
-    if (!root || root.__ccarQuiz) return;
-    root.__ccarQuiz = true;
-    const quiz = root.querySelector('.quiz');
-    if (!quiz) return;
-    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
-    const scoreEl = root.querySelector('[data-score]');
-    qs.forEach(q => {
-      const ans = q.getAttribute('data-answer');
-      q.querySelectorAll('.opt').forEach(b => {
-        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
-      });
-      const v = q.querySelector('.verdict');
-      if (v) v.setAttribute('data-orig', v.textContent);
-    });
-    const paint = () => {
-      const done = qs.filter(q => q.classList.contains('done'));
-      const ok = done.filter(q => !q.classList.contains('miss')).length;
-      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
-    };
-    root.addEventListener('click', (e) => {
-      const t = e.target;
-      if (!(t instanceof Element)) return;
-      const opt = t.closest('.opt');
-      if (opt && quiz.contains(opt)) {
-        const q = opt.closest('.q');
-        if (!q || q.classList.contains('done')) return;
-        const ans = q.getAttribute('data-answer');
-        q.classList.add('done');
-        q.querySelectorAll('.opt').forEach(b => {
-          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
-        });
-        const v = q.querySelector('.verdict');
-        if (opt.getAttribute('data-k') !== ans) {
-          opt.classList.add('wrong');
-          q.classList.add('miss');
-          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
-        } else if (v) {
-          v.textContent = '정답! (' + ans + ')';
-        }
-        paint();
-        return;
-      }
-      const act = t.closest('[data-act]');
-      if (!act || !root.contains(act)) return;
-      if (act.getAttribute('data-act') === 'reset') {
-        qs.forEach(q => {
-          q.classList.remove('done', 'miss');
-          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
-          const v = q.querySelector('.verdict');
-          if (v) v.textContent = v.getAttribute('data-orig') || '';
-        });
-        quiz.classList.remove('reveal');
-        paint();
-      } else if (act.getAttribute('data-act') === 'reveal') {
-        quiz.classList.toggle('reveal');
-      }
-    });
-    paint();
-  }
-}
-</script>
 </body>
 </html>
