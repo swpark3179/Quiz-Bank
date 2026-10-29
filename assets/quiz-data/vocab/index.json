@@ -8,12 +8,73 @@
     "forms": ["abandoned", "abandoning", "abandonment"]
   },
   {
+    "id": "absence",
+    "word": "absence",
+    "pos": "명사",
+    "ipa": "ˈæbsəns",
+    "meaning": "없음, 부재 — (있어야 할 값·정보가) 존재하지 않음",
+    "forms": ["absent"]
+  },
+  {
+    "id": "absolutely",
+    "word": "absolutely",
+    "pos": "부사",
+    "ipa": "ˌæbsəˈluːtli",
+    "meaning": "완전히, 절대적으로 (never 와 함께: 절대 ~ 않다)",
+    "forms": ["absolute"]
+  },
+  {
+    "id": "academic",
+    "word": "academic",
+    "pos": "형용사",
+    "ipa": "ˌækəˈdemɪk",
+    "meaning": "학술의, 학계의 (논문·연구 자료의)"
+  },
+  {
+    "id": "accept",
+    "word": "accept",
+    "pos": "동사",
+    "ipa": "əkˈsept",
+    "meaning": "① 받아들이다, 감수하다 ② 허용하다 (acceptable: 허용할 수 있는)",
+    "forms": ["acceptable", "accepting", "accepted", "acceptance", "unacceptable"]
+  },
+  {
+    "id": "access",
+    "word": "access",
+    "pos": "명사·동사",
+    "ipa": "ˈækses",
+    "meaning": "접근 (권한) / 접근하다, 조회하다",
+    "forms": ["accessed", "accessing", "accessible"]
+  },
+  {
+    "id": "account",
+    "word": "account",
+    "pos": "명사",
+    "ipa": "əˈkaʊnt",
+    "meaning": "① (고객·사용자) 계정 ② 설명 (account for: ~을 설명하다, 감안하다)"
+  },
+  {
     "id": "accumulate",
     "word": "accumulate",
     "pos": "동사",
     "ipa": "əˈkjuːmjəleɪt",
     "meaning": "(점점) 쌓이다, 누적되다",
     "forms": ["accumulated", "accumulating", "accumulation"]
+  },
+  {
+    "id": "accuracy",
+    "word": "accuracy",
+    "pos": "명사",
+    "ipa": "ˈækjərəsi",
+    "meaning": "정확도, 정확성",
+    "forms": ["accurate", "accurately", "inaccurate"]
+  },
+  {
+    "id": "across",
+    "word": "across",
+    "pos": "전치사",
+    "ipa": "əˈkrɔːs",
+    "meaning": "~ 전체에 걸쳐, (여러 개) 사이에서 두루"
   },
   {
     "id": "actionable",
@@ -23,12 +84,28 @@
     "meaning": "바로 조치할 수 있는, 실행에 옮길 수 있는"
   },
   {
+    "id": "activate",
+    "word": "activate",
+    "pos": "동사",
+    "ipa": "ˈæktɪveɪt",
+    "meaning": "활성화하다, (기능이) 켜져 작동하다",
+    "forms": ["activated", "activating", "activation"]
+  },
+  {
     "id": "ad-hoc",
     "word": "ad hoc",
     "pos": "형용사·부사",
     "ipa": "ˌæd ˈhɑːk",
     "meaning": "그때그때 임시로 하는, 즉석의",
     "forms": ["ad-hoc"]
+  },
+  {
+    "id": "add-up",
+    "word": "add up",
+    "pos": "동사구",
+    "ipa": "æd ʌp",
+    "meaning": "① (합계·숫자가) 맞아떨어지다 ② 합산하다, 쌓여 커지다",
+    "forms": ["adds up", "added up", "adding up"]
   },
   {
     "id": "address",
@@ -47,12 +124,58 @@
     "forms": ["adequately"]
   },
   {
+    "id": "advisory",
+    "word": "advisory",
+    "pos": "형용사",
+    "ipa": "ədˈvaɪzəri",
+    "meaning": "권고용의, 참고용의 — 강제력은 없는"
+  },
+  {
+    "id": "agentic",
+    "word": "agentic",
+    "pos": "형용사",
+    "ipa": "eɪˈdʒentɪk",
+    "meaning": "에이전트형의 — 모델이 스스로 도구를 골라 여러 단계를 진행하는"
+  },
+  {
     "id": "aggregate",
     "word": "aggregate",
     "pos": "동사",
     "ipa": "ˈæɡrɪɡeɪt",
     "meaning": "(여러 개를) 모아 합치다, 집계하다",
     "forms": ["aggregated", "aggregating", "aggregation"]
+  },
+  {
+    "id": "align",
+    "word": "align",
+    "pos": "동사",
+    "ipa": "əˈlaɪn",
+    "meaning": "(서로) 맞추다, 짝지어 대응시키다, 정렬하다",
+    "forms": ["aligned", "aligning", "alignment", "misaligned"]
+  },
+  {
+    "id": "allow",
+    "word": "allow",
+    "pos": "동사",
+    "ipa": "əˈlaʊ",
+    "meaning": "허용하다, ~하게 해 주다",
+    "forms": ["allowed", "allowing"]
+  },
+  {
+    "id": "allowedtools",
+    "word": "allowedTools",
+    "pos": "명사",
+    "ipa": "əˈlaʊd tuːlz",
+    "meaning": "허용 도구 목록 — 승인 없이 쓸 수 있게 미리 허용한 도구를 적는 설정",
+    "forms": ["allowed-tools", "allowed_tools"]
+  },
+  {
+    "id": "allowlist",
+    "word": "allowlist",
+    "pos": "명사",
+    "ipa": "ˈælaʊlɪst",
+    "meaning": "허용 목록 — 목록에 있는 것만 통과시키는 방식",
+    "forms": ["allow-list", "allowlisted"]
   },
   {
     "id": "alongside",
@@ -70,12 +193,50 @@
     "forms": ["alternated", "alternating"]
   },
   {
+    "id": "altogether",
+    "word": "altogether",
+    "pos": "부사",
+    "ipa": "ˌɔːltəˈɡeðər",
+    "meaning": "아예, 완전히 (전부 다)"
+  },
+  {
+    "id": "always-loaded",
+    "word": "always-loaded",
+    "pos": "형용사",
+    "ipa": "ˈɔːlweɪz ˈloʊdɪd",
+    "meaning": "항상 로드되는 — 매 세션 자동으로 컨텍스트에 들어가는",
+    "forms": ["always loaded"]
+  },
+  {
     "id": "ambiguous",
     "word": "ambiguous",
     "pos": "형용사",
     "ipa": "æmˈbɪɡjuəs",
     "meaning": "모호한, 두 가지 이상으로 해석될 수 있는",
     "forms": ["ambiguity", "ambiguities", "ambiguously"]
+  },
+  {
+    "id": "amount",
+    "word": "amount",
+    "pos": "명사",
+    "ipa": "əˈmaʊnt",
+    "meaning": "① 금액 ② 양, 분량"
+  },
+  {
+    "id": "analysis",
+    "word": "analysis",
+    "pos": "명사",
+    "ipa": "əˈnæləsɪs",
+    "meaning": "분석 (analyze: 분석하다)",
+    "forms": ["analyses", "analyze", "analyzed", "analyzing"]
+  },
+  {
+    "id": "anchor",
+    "word": "anchor",
+    "pos": "동사·명사",
+    "ipa": "ˈæŋkər",
+    "meaning": "(기준점에) 고정하다, 붙잡아 두다 / 기준점",
+    "forms": ["anchoring", "anchored"]
   },
   {
     "id": "annotate",
@@ -94,12 +255,126 @@
     "forms": ["anticipated", "anticipating", "anticipation"]
   },
   {
+    "id": "apac",
+    "word": "APAC",
+    "pos": "약어",
+    "ipa": "ˈeɪpæk",
+    "meaning": "아시아·태평양 지역 (Asia-Pacific)"
+  },
+  {
+    "id": "api",
+    "word": "API",
+    "pos": "약어",
+    "ipa": "ˌeɪ.piːˈaɪ",
+    "meaning": "API — 프로그램이 다른 서비스의 기능을 호출하는 창구 (Application Programming Interface)"
+  },
+  {
+    "id": "apologize",
+    "word": "apologize",
+    "pos": "동사",
+    "ipa": "əˈpɑːlədʒaɪz",
+    "meaning": "사과하다",
+    "forms": ["apologized", "apologizing", "apology", "apologies"]
+  },
+  {
+    "id": "appear",
+    "word": "appear",
+    "pos": "동사",
+    "ipa": "əˈpɪr",
+    "meaning": "① 나타나다, (기록·목록에) 나오다 ② ~인 것 같다",
+    "forms": ["appeared", "appearing"]
+  },
+  {
+    "id": "append",
+    "word": "append",
+    "pos": "동사",
+    "ipa": "əˈpend",
+    "meaning": "(끝에) 덧붙이다, 추가하다",
+    "forms": ["appending", "appended"]
+  },
+  {
+    "id": "apply",
+    "word": "apply",
+    "pos": "동사",
+    "ipa": "əˈplaɪ",
+    "meaning": "① (규칙·기준을) 적용하다 ② (변경이) 반영되다, 적용되다",
+    "forms": ["applied", "applies", "applying", "applicable"]
+  },
+  {
+    "id": "approach",
+    "word": "approach",
+    "pos": "명사·동사",
+    "ipa": "əˈproʊtʃ",
+    "meaning": "접근법, (문제를 푸는) 방법 / 다가가다",
+    "forms": ["approached", "approaching"]
+  },
+  {
     "id": "appropriate",
     "word": "appropriate",
     "pos": "형용사",
     "ipa": "əˈproʊpriət",
     "meaning": "(상황에) 알맞은, 적절한",
     "forms": ["appropriately"]
+  },
+  {
+    "id": "approval",
+    "word": "approval",
+    "pos": "명사",
+    "ipa": "əˈpruːvl",
+    "meaning": "승인 (approve: 승인하다)",
+    "forms": ["approve", "approved", "approves", "approving", "unapproved"]
+  },
+  {
+    "id": "architecture",
+    "word": "architecture",
+    "pos": "명사",
+    "ipa": "ˈɑːrkɪtektʃər",
+    "meaning": "아키텍처 — 시스템 전체의 구조·설계 (architectural: 구조 차원의)",
+    "forms": ["architectural", "architecturally"]
+  },
+  {
+    "id": "argument",
+    "word": "argument",
+    "pos": "명사",
+    "ipa": "ˈɑːrɡjumənt",
+    "meaning": "① (명령·함수에 넘기는) 인자 ② 논거, 주장"
+  },
+  {
+    "id": "arithmetic",
+    "word": "arithmetic",
+    "pos": "명사·형용사",
+    "ipa": "əˈrɪθmətɪk",
+    "meaning": "산술, 계산 / 산술의 (합계 등 숫자 계산의)"
+  },
+  {
+    "id": "arrange-act-assert",
+    "word": "arrange-act-assert",
+    "pos": "명사구",
+    "ipa": "əˈreɪndʒ ækt əˈsɜːrt",
+    "meaning": "AAA 패턴 — 테스트를 준비(Arrange)·실행(Act)·검증(Assert) 세 단계로 쓰는 구조",
+    "forms": ["arrange act assert"]
+  },
+  {
+    "id": "array",
+    "word": "array",
+    "pos": "명사",
+    "ipa": "əˈreɪ",
+    "meaning": "배열 — 값을 순서대로 담은 목록 (JSON 의 [ ])"
+  },
+  {
+    "id": "as-is",
+    "word": "as-is",
+    "pos": "부사·형용사",
+    "ipa": "ˌæz ˈɪz",
+    "meaning": "있는 그대로, 손대지 않은 채로"
+  },
+  {
+    "id": "assertion",
+    "word": "assertion",
+    "pos": "명사",
+    "ipa": "əˈsɜːrʃn",
+    "meaning": "① (테스트) 단언문 — 결과가 기대값과 맞는지 검사하는 코드 ② 주장",
+    "forms": ["assertion-strength", "assert", "asserted", "asserting"]
   },
   {
     "id": "assess",
@@ -110,12 +385,66 @@
     "forms": ["assessed", "assessing", "assessment"]
   },
   {
+    "id": "assign",
+    "word": "assign",
+    "pos": "동사",
+    "ipa": "əˈsaɪn",
+    "meaning": "(일·역할·값을) 배정하다, 할당하다, 부여하다",
+    "forms": ["assigned", "assigning", "assignment", "unassigned"]
+  },
+  {
+    "id": "assume",
+    "word": "assume",
+    "pos": "동사",
+    "ipa": "əˈsuːm",
+    "meaning": "가정하다, (확인 없이) ~라고 여기다",
+    "forms": ["assumed", "assuming", "assumption"]
+  },
+  {
     "id": "asynchronous",
     "word": "asynchronous",
     "pos": "형용사",
     "ipa": "eɪˈsɪŋkrənəs",
     "meaning": "비동기의 — 결과를 기다리지 않고 다음 일을 하는",
     "forms": ["asynchronously", "async"]
+  },
+  {
+    "id": "at-once",
+    "word": "at once",
+    "pos": "부사구",
+    "ipa": "ət ˈwʌns",
+    "meaning": "① 동시에, 한꺼번에 ② 즉시"
+  },
+  {
+    "id": "atomic",
+    "word": "atomic",
+    "pos": "형용사",
+    "ipa": "əˈtɑːmɪk",
+    "meaning": "원자적인 — 전부 성공하거나 전부 실패하는, 더 쪼갤 수 없는 한 단위의",
+    "forms": ["atomically", "atomicity"]
+  },
+  {
+    "id": "attach",
+    "word": "attach",
+    "pos": "동사",
+    "ipa": "əˈtætʃ",
+    "meaning": "붙이다, 첨부하다",
+    "forms": ["attached", "attaching", "attachment"]
+  },
+  {
+    "id": "attempt",
+    "word": "attempt",
+    "pos": "명사·동사",
+    "ipa": "əˈtempt",
+    "meaning": "시도(하다)",
+    "forms": ["attempted", "attempting"]
+  },
+  {
+    "id": "attention",
+    "word": "attention",
+    "pos": "명사",
+    "ipa": "əˈtenʃn",
+    "meaning": "① 주의, 집중 ② (LLM) 어텐션 — 입력의 어느 부분에 집중할지 정하는 메커니즘"
   },
   {
     "id": "attribution",
@@ -133,11 +462,57 @@
     "forms": ["audited", "auditing"]
   },
   {
+    "id": "auth",
+    "word": "auth",
+    "pos": "약어",
+    "ipa": "ɔːθ",
+    "meaning": "인증·인가 (authentication / authorization 의 줄임말)"
+  },
+  {
+    "id": "author",
+    "word": "author",
+    "pos": "명사·동사",
+    "ipa": "ˈɔːθər",
+    "meaning": "작성자, 저자 / 작성하다",
+    "forms": ["authored", "authoring"]
+  },
+  {
     "id": "authoritative",
     "word": "authoritative",
     "pos": "형용사",
     "ipa": "əˈθɔːrəteɪtɪv",
     "meaning": "가장 믿을 만한, 공식적인 (기준이 되는)"
+  },
+  {
+    "id": "authority",
+    "word": "authority",
+    "pos": "명사",
+    "ipa": "əˈθɔːrəti",
+    "meaning": "① (스스로 처리할 수 있는) 권한, 한도 ② 권위, 권위 있는 출처",
+    "forms": ["authorities"]
+  },
+  {
+    "id": "auto",
+    "word": "auto",
+    "pos": "형용사",
+    "ipa": "ˈɔːtoʊ",
+    "meaning": "자동(의) — tool_choice 의 auto: 도구를 쓸지 말지 모델이 정함"
+  },
+  {
+    "id": "auto-issued",
+    "word": "auto-issued",
+    "pos": "형용사",
+    "ipa": "ˌɔːtoʊ ˈɪʃuːd",
+    "meaning": "(사람 승인 없이) 자동으로 지급·발급된",
+    "forms": ["auto-issue"]
+  },
+  {
+    "id": "automate",
+    "word": "automate",
+    "pos": "동사",
+    "ipa": "ˈɔːtəmeɪt",
+    "meaning": "자동화하다 (automatically: 자동으로)",
+    "forms": ["automated", "automatically", "automating", "automation", "automatic"]
   },
   {
     "id": "autonomous",
@@ -148,6 +523,91 @@
     "forms": ["autonomously", "autonomy"]
   },
   {
+    "id": "available",
+    "word": "available",
+    "pos": "형용사",
+    "ipa": "əˈveɪləbl",
+    "meaning": "이용할 수 있는, 쓸 수 있는",
+    "forms": ["availability", "unavailable"]
+  },
+  {
+    "id": "average",
+    "word": "average",
+    "pos": "명사·형용사·동사",
+    "ipa": "ˈævərɪdʒ",
+    "meaning": "평균(의) / 평균을 내다",
+    "forms": ["averaged", "averaging"]
+  },
+  {
+    "id": "avoid",
+    "word": "avoid",
+    "pos": "동사",
+    "ipa": "əˈvɔɪd",
+    "meaning": "피하다, (일이 생기지 않게) 막다",
+    "forms": ["avoided", "avoiding"]
+  },
+  {
+    "id": "backend",
+    "word": "backend",
+    "pos": "명사",
+    "ipa": "ˈbækend",
+    "meaning": "백엔드 — 화면 뒤에서 데이터·업무 처리를 맡는 서버 시스템",
+    "forms": ["back-end"]
+  },
+  {
+    "id": "bar",
+    "word": "bar",
+    "pos": "명사",
+    "ipa": "bɑːr",
+    "meaning": "① (통과해야 할) 기준, 문턱 ② 막대, 바"
+  },
+  {
+    "id": "bare",
+    "word": "bare",
+    "pos": "형용사",
+    "ipa": "ber",
+    "meaning": "아무것도 덧붙이지 않은, 맨 ~ (최소한만 있는)"
+  },
+  {
+    "id": "base",
+    "word": "base",
+    "pos": "명사·동사",
+    "ipa": "beɪs",
+    "meaning": "① 기반, (지식) 베이스 ② ~에 기반을 두다 (based: ~ 기반의)",
+    "forms": ["based", "basing"]
+  },
+  {
+    "id": "based-on",
+    "word": "based on",
+    "pos": "전치사구",
+    "ipa": "beɪst ɑːn",
+    "meaning": "~을 바탕으로, ~에 근거해"
+  },
+  {
+    "id": "batch",
+    "word": "batch",
+    "pos": "명사·동사",
+    "ipa": "bætʃ",
+    "meaning": "① 묶음, 일괄 처리 단위 ② (여러 개를) 한데 묶다",
+    "forms": ["batched", "batching"]
+  },
+  {
+    "id": "behavior",
+    "word": "behavior",
+    "pos": "명사",
+    "ipa": "bɪˈheɪvjər",
+    "meaning": "동작, (시스템·모델이) 행동하는 방식",
+    "forms": ["behave", "behaved", "behaving", "behavioral", "behaviour"]
+  },
+  {
+    "id": "bias",
+    "word": "bias",
+    "pos": "명사·동사",
+    "ipa": "ˈbaɪəs",
+    "meaning": "편향, 치우침 / 한쪽으로 치우치게 하다 (biased: 편향된)",
+    "forms": ["biased", "unbiased"]
+  },
+  {
     "id": "bidirectional",
     "word": "bidirectional",
     "pos": "형용사",
@@ -155,11 +615,65 @@
     "meaning": "양방향의"
   },
   {
+    "id": "bill",
+    "word": "bill",
+    "pos": "명사·동사",
+    "ipa": "bɪl",
+    "meaning": "청구서, 계산서 / (요금을) 청구하다",
+    "forms": ["billed"]
+  },
+  {
     "id": "billing",
     "word": "billing",
     "pos": "명사",
     "ipa": "ˈbɪlɪŋ",
-    "meaning": "요금 청구, 결제"
+    "meaning": "요금 청구, 결제",
+    "forms": ["billing-dispute"]
+  },
+  {
+    "id": "blend",
+    "word": "blend",
+    "pos": "동사",
+    "ipa": "blend",
+    "meaning": "(여러 개를) 섞다, 혼합하다",
+    "forms": ["blended", "blending"]
+  },
+  {
+    "id": "blob",
+    "word": "blob",
+    "pos": "명사",
+    "ipa": "blɑːb",
+    "meaning": "블롭 — 내용을 따지지 않고 한 덩어리로 다루는 (바이너리) 데이터"
+  },
+  {
+    "id": "block",
+    "word": "block",
+    "pos": "명사·동사",
+    "ipa": "blɑːk",
+    "meaning": "① (콘텐츠) 블록, 덩어리 ② 막다, 차단하다",
+    "forms": ["blocked", "blocking"]
+  },
+  {
+    "id": "body",
+    "word": "body",
+    "pos": "명사",
+    "ipa": "ˈbɑːdi",
+    "meaning": "본문 — 머리말·설정 부분을 뺀 본 내용",
+    "forms": ["bodies"]
+  },
+  {
+    "id": "boilerplate",
+    "word": "boilerplate",
+    "pos": "명사",
+    "ipa": "ˈbɔɪlərpleɪt",
+    "meaning": "상용구 — 어디에나 반복되는 판에 박힌 내용"
+  },
+  {
+    "id": "borderline",
+    "word": "borderline",
+    "pos": "형용사",
+    "ipa": "ˈbɔːrdərlaɪn",
+    "meaning": "경계선상의, (어느 쪽인지) 애매한"
   },
   {
     "id": "bottleneck",
@@ -177,11 +691,97 @@
     "forms": ["boundaries"]
   },
   {
+    "id": "brainstorm",
+    "word": "brainstorm",
+    "pos": "동사",
+    "ipa": "ˈbreɪnstɔːrm",
+    "meaning": "(아이디어를) 떠오르는 대로 끌어내다, 브레인스토밍하다",
+    "forms": ["brainstormed", "brainstorming"]
+  },
+  {
+    "id": "branch",
+    "word": "branch",
+    "pos": "명사·동사",
+    "ipa": "bræntʃ",
+    "meaning": "① (git) 브랜치 ② 갈라지다, 분기하다",
+    "forms": ["branched", "branching"]
+  },
+  {
+    "id": "branch-off",
+    "word": "branch off",
+    "pos": "동사구",
+    "ipa": "ˌbræntʃ ˈɔːf",
+    "meaning": "(본줄기에서) 갈라져 나가다, 분기하다",
+    "forms": ["branched off", "branching off", "branches off"]
+  },
+  {
+    "id": "brand-new",
+    "word": "brand-new",
+    "pos": "형용사",
+    "ipa": "ˌbrænd ˈnuː",
+    "meaning": "완전히 새로운",
+    "forms": ["brand new"]
+  },
+  {
     "id": "breadth",
     "word": "breadth",
     "pos": "명사",
     "ipa": "bredθ",
     "meaning": "(다루는) 폭, 범위"
+  },
+  {
+    "id": "brief",
+    "word": "brief",
+    "pos": "명사·형용사",
+    "ipa": "briːf",
+    "meaning": "① (작업) 의뢰, 과제 설명 ② 요약 보고서 ③ 짧은, 간단한",
+    "forms": ["briefly", "briefing", "briefed"]
+  },
+  {
+    "id": "broad",
+    "word": "broad",
+    "pos": "형용사",
+    "ipa": "brɔːd",
+    "meaning": "넓은, 폭넓은",
+    "forms": ["broader", "broadest", "broadly", "broaden"]
+  },
+  {
+    "id": "budget",
+    "word": "budget",
+    "pos": "명사",
+    "ipa": "ˈbʌdʒɪt",
+    "meaning": "예산 — (토큰·비용 등) 쓸 수 있게 정해 둔 한도",
+    "forms": ["budgeted", "budgeting"]
+  },
+  {
+    "id": "built-in",
+    "word": "built-in",
+    "pos": "형용사",
+    "ipa": "ˌbɪlt ˈɪn",
+    "meaning": "내장된, 기본 제공되는"
+  },
+  {
+    "id": "burn",
+    "word": "burn",
+    "pos": "동사",
+    "ipa": "bɜːrn",
+    "meaning": "(자원을) 헛되이 써 버리다, 태우다",
+    "forms": ["burning", "burned", "burnt"]
+  },
+  {
+    "id": "bury",
+    "word": "bury",
+    "pos": "동사",
+    "ipa": "ˈberi",
+    "meaning": "(다른 내용 속에) 묻다, 파묻히게 하다",
+    "forms": ["buried", "burying", "buries"]
+  },
+  {
+    "id": "by-hand",
+    "word": "by hand",
+    "pos": "부사구",
+    "ipa": "baɪ ˈhænd",
+    "meaning": "(자동화 없이) 손으로, 수작업으로"
   },
   {
     "id": "bypass",
@@ -192,12 +792,57 @@
     "forms": ["bypassed", "bypassing"]
   },
   {
+    "id": "cache",
+    "word": "cache",
+    "pos": "명사·동사",
+    "ipa": "kæʃ",
+    "meaning": "캐시(하다) — 다시 쓸 결과를 저장해 두고 재사용하다",
+    "forms": ["cached", "caching"]
+  },
+  {
     "id": "calibrate",
     "word": "calibrate",
     "pos": "동사",
     "ipa": "ˈkælɪbreɪt",
     "meaning": "(기준에 맞게) 보정하다, 맞추다",
     "forms": ["calibrated", "calibrating", "calibration"]
+  },
+  {
+    "id": "caller",
+    "word": "caller",
+    "pos": "명사",
+    "ipa": "ˈkɔːlər",
+    "meaning": "호출자 — 함수·API·도구를 부르는 쪽"
+  },
+  {
+    "id": "candidate",
+    "word": "candidate",
+    "pos": "명사",
+    "ipa": "ˈkændɪdət",
+    "meaning": "후보 — 해당될 수도 있어 살펴볼 대상"
+  },
+  {
+    "id": "canonical",
+    "word": "canonical",
+    "pos": "형용사",
+    "ipa": "kəˈnɑːnɪkl",
+    "meaning": "표준의, 정식의 — 하나로 정해 둔 기준 형태의"
+  },
+  {
+    "id": "cap",
+    "word": "cap",
+    "pos": "명사·동사",
+    "ipa": "kæp",
+    "meaning": "상한(을 두다) — 넘지 못하게 정한 최대치",
+    "forms": ["capped", "capping"]
+  },
+  {
+    "id": "capable",
+    "word": "capable",
+    "pos": "형용사",
+    "ipa": "ˈkeɪpəbl",
+    "meaning": "① 성능이 좋은, 유능한 ② (~을) 할 수 있는",
+    "forms": ["capability", "capabilities"]
   },
   {
     "id": "capacity",
@@ -208,12 +853,120 @@
     "forms": ["capacities"]
   },
   {
+    "id": "capture",
+    "word": "capture",
+    "pos": "동사",
+    "ipa": "ˈkæptʃər",
+    "meaning": "(정보를) 담아 두다, 포착하다",
+    "forms": ["captured", "capturing"]
+  },
+  {
+    "id": "carry",
+    "word": "carry",
+    "pos": "동사",
+    "ipa": "ˈkæri",
+    "meaning": "(정보를) 지니다, 달고 가다, 옮기다",
+    "forms": ["carried", "carries", "carrying"]
+  },
+  {
+    "id": "carry-out",
+    "word": "carry out",
+    "pos": "동사구",
+    "ipa": "ˌkæri ˈaʊt",
+    "meaning": "(작업·계획을) 수행하다, 실행하다",
+    "forms": ["carried out", "carrying out", "carries out"]
+  },
+  {
+    "id": "case-facts",
+    "word": "case-facts",
+    "pos": "명사구",
+    "ipa": "ˈkeɪs ˌfækts",
+    "meaning": "케이스 사실 — 주문 번호·금액·날짜처럼 그 건에서 정확히 지켜야 할 핵심 사실",
+    "forms": ["case facts"]
+  },
+  {
+    "id": "catalog",
+    "word": "catalog",
+    "pos": "명사",
+    "ipa": "ˈkætəlɔːɡ",
+    "meaning": "카탈로그, 목록 — 무엇이 있는지 정리해 둔 목록",
+    "forms": ["catalogue"]
+  },
+  {
+    "id": "catch",
+    "word": "catch",
+    "pos": "동사",
+    "ipa": "kætʃ",
+    "meaning": "(문제를) 잡아내다, 발견하다",
+    "forms": ["caught", "catching"]
+  },
+  {
+    "id": "category",
+    "word": "category",
+    "pos": "명사",
+    "ipa": "ˈkætəɡɔːri",
+    "meaning": "범주, 카테고리 — 분류의 한 갈래",
+    "forms": ["categories", "categorize", "categorized", "categorization"]
+  },
+  {
+    "id": "ceiling",
+    "word": "ceiling",
+    "pos": "명사",
+    "ipa": "ˈsiːlɪŋ",
+    "meaning": "상한(선) — 넘을 수 없는 최대치"
+  },
+  {
+    "id": "chain",
+    "word": "chain",
+    "pos": "명사·동사",
+    "ipa": "tʃeɪn",
+    "meaning": "체인, 연쇄 — 단계를 정해진 순서로 이은 흐름 / 잇다",
+    "forms": ["chained", "chaining"]
+  },
+  {
+    "id": "checklist",
+    "word": "checklist",
+    "pos": "명사",
+    "ipa": "ˈtʃeklɪst",
+    "meaning": "체크리스트, 점검 목록"
+  },
+  {
+    "id": "checkout",
+    "word": "checkout",
+    "pos": "명사",
+    "ipa": "ˈtʃekaʊt",
+    "meaning": "① (git) 체크아웃 — 저장소에서 꺼내 놓은 작업 사본 ② (쇼핑) 결제 단계"
+  },
+  {
+    "id": "chunk",
+    "word": "chunk",
+    "pos": "명사·동사",
+    "ipa": "tʃʌŋk",
+    "meaning": "청크, 조각 — 큰 데이터를 나눈 한 덩어리 / 조각으로 나누다",
+    "forms": ["chunked", "chunking"]
+  },
+  {
+    "id": "ci",
+    "word": "CI",
+    "pos": "약어",
+    "ipa": "ˌsiːˈaɪ",
+    "meaning": "CI(지속적 통합) — 커밋마다 빌드·테스트를 자동으로 돌리는 파이프라인",
+    "forms": ["continuous integration"]
+  },
+  {
+    "id": "circumstance",
+    "word": "circumstance",
+    "pos": "명사",
+    "ipa": "ˈsɜːrkəmstæns",
+    "meaning": "상황, 사정"
+  },
+  {
     "id": "cite",
     "word": "cite",
     "pos": "동사",
     "ipa": "saɪt",
     "meaning": "인용하다, (근거로) 들다",
-    "forms": ["cited", "citing", "citation"]
+    "forms": ["cited", "citing", "citation", "uncited"]
   },
   {
     "id": "claim",
@@ -222,6 +975,13 @@
     "ipa": "kleɪm",
     "meaning": "주장(하다) — 사실이라고 내세우다",
     "forms": ["claimed", "claiming"]
+  },
+  {
+    "id": "claim-to-source",
+    "word": "claim-to-source",
+    "pos": "형용사",
+    "ipa": "ˌkleɪm tə ˈsɔːrs",
+    "meaning": "주장-출처 (대응)의 — 각 주장과 그 근거 출처를 짝지은"
   },
   {
     "id": "clarify",
@@ -239,12 +999,135 @@
     "meaning": "분류기 — 입력을 정해진 범주로 나누는 모델·규칙"
   },
   {
+    "id": "classify",
+    "word": "classify",
+    "pos": "동사",
+    "ipa": "ˈklæsɪfaɪ",
+    "meaning": "분류하다 — 기준에 따라 정해진 갈래로 나누다",
+    "forms": ["classification", "classified", "classifies", "classifying"]
+  },
+  {
+    "id": "cleanly",
+    "word": "cleanly",
+    "pos": "부사",
+    "ipa": "ˈkliːnli",
+    "meaning": "깔끔하게, (섞이거나 꼬이지 않고) 깨끗이"
+  },
+  {
+    "id": "clear-cut",
+    "word": "clear-cut",
+    "pos": "형용사",
+    "ipa": "ˌklɪr ˈkʌt",
+    "meaning": "명백한, 판단이 분명한"
+  },
+  {
+    "id": "cli",
+    "word": "CLI",
+    "pos": "약어",
+    "ipa": "ˌsiː.elˈaɪ",
+    "meaning": "CLI(명령줄 인터페이스) — 터미널에 명령어를 입력해 쓰는 방식",
+    "forms": ["command-line interface"]
+  },
+  {
+    "id": "clone",
+    "word": "clone",
+    "pos": "동사·명사",
+    "ipa": "kloʊn",
+    "meaning": "(저장소를) 복제하다, 클론하다 / 복제본",
+    "forms": ["cloned", "cloning"]
+  },
+  {
+    "id": "clue",
+    "word": "clue",
+    "pos": "명사",
+    "ipa": "kluː",
+    "meaning": "단서, 실마리"
+  },
+  {
+    "id": "clutter",
+    "word": "clutter",
+    "pos": "동사·명사",
+    "ipa": "ˈklʌtər",
+    "meaning": "(불필요한 것으로) 어수선하게 만들다 / 잡동사니",
+    "forms": ["cluttered", "cluttering"]
+  },
+  {
+    "id": "code-intelligence",
+    "word": "code-intelligence",
+    "pos": "명사구",
+    "ipa": "ˈkoʊd ɪnˌtelɪdʒəns",
+    "meaning": "코드 인텔리전스 — 심볼·참조 관계를 이해해 코드를 찾고 분석하는 기능",
+    "forms": ["code intelligence"]
+  },
+  {
+    "id": "code-review",
+    "word": "code-review",
+    "pos": "명사구",
+    "ipa": "ˈkoʊd rɪˌvjuː",
+    "meaning": "코드 리뷰 — 변경된 코드를 읽고 결함을 검토하는 일",
+    "forms": ["code review"]
+  },
+  {
+    "id": "coexist",
+    "word": "coexist",
+    "pos": "동사",
+    "ipa": "ˌkoʊɪɡˈzɪst",
+    "meaning": "공존하다, 한곳에 함께 있다",
+    "forms": ["coexisted", "coexisting", "coexistence"]
+  },
+  {
+    "id": "coherent",
+    "word": "coherent",
+    "pos": "형용사",
+    "ipa": "koʊˈhɪrənt",
+    "meaning": "일관된, 앞뒤가 맞게 하나로 이어지는",
+    "forms": ["coherence", "coherently"]
+  },
+  {
     "id": "collaborate",
     "word": "collaborate",
     "pos": "동사",
     "ipa": "kəˈlæbəreɪt",
     "meaning": "협업하다, 함께 작업하다",
     "forms": ["collaborated", "collaborating", "collaboration", "collaborative", "collaboratively"]
+  },
+  {
+    "id": "combine",
+    "word": "combine",
+    "pos": "동사",
+    "ipa": "kəmˈbaɪn",
+    "meaning": "결합하다, 합치다",
+    "forms": ["combined", "combining", "combination"]
+  },
+  {
+    "id": "come-up",
+    "word": "come up",
+    "pos": "동사구",
+    "ipa": "ˌkʌm ˈʌp",
+    "meaning": "(화제·문제가) 나오다, 생기다",
+    "forms": ["comes up", "came up", "coming up"]
+  },
+  {
+    "id": "comfortably",
+    "word": "comfortably",
+    "pos": "부사",
+    "ipa": "ˈkʌmftərbli",
+    "meaning": "넉넉히, 여유 있게",
+    "forms": ["comfortable"]
+  },
+  {
+    "id": "command",
+    "word": "command",
+    "pos": "명사",
+    "ipa": "kəˈmænd",
+    "meaning": "명령(어), 커맨드 — 셸 명령이나 슬래시 커맨드"
+  },
+  {
+    "id": "commentary",
+    "word": "commentary",
+    "pos": "명사",
+    "ipa": "ˈkɑːmənteri",
+    "meaning": "(덧붙이는) 설명, 논평"
   },
   {
     "id": "commit",
@@ -255,6 +1138,29 @@
     "forms": ["committed", "committing", "commitment"]
   },
   {
+    "id": "compact",
+    "word": "compact",
+    "pos": "동사·형용사",
+    "ipa": "kəmˈpækt",
+    "meaning": "① 압축하다 — 대화 기록을 요약해 줄이다 ② 간결한",
+    "forms": ["compaction", "compacted", "compacting"]
+  },
+  {
+    "id": "compete",
+    "word": "compete",
+    "pos": "동사",
+    "ipa": "kəmˈpiːt",
+    "meaning": "경쟁하다, (한정된 것을) 두고 다투다",
+    "forms": ["competed", "competing", "competition"]
+  },
+  {
+    "id": "competitive",
+    "word": "competitive",
+    "pos": "형용사",
+    "ipa": "kəmˈpetətɪv",
+    "meaning": "경쟁의 — competitive landscape: 경쟁 구도"
+  },
+  {
     "id": "competitor",
     "word": "competitor",
     "pos": "명사",
@@ -262,11 +1168,50 @@
     "meaning": "경쟁자, 경쟁사"
   },
   {
+    "id": "compile",
+    "word": "compile",
+    "pos": "동사",
+    "ipa": "kəmˈpaɪl",
+    "meaning": "① 컴파일하다 ② (자료를) 모아 엮다",
+    "forms": ["compiled", "compiling", "compilation", "compiler"]
+  },
+  {
+    "id": "complete",
+    "word": "complete",
+    "pos": "동사·형용사",
+    "ipa": "kəmˈpliːt",
+    "meaning": "① 완료하다, 끝내다 ② 완전한, 빠짐없는",
+    "forms": ["completing", "completion", "completed", "completely"]
+  },
+  {
     "id": "completeness",
     "word": "completeness",
     "pos": "명사",
     "ipa": "kəmˈpliːtnəs",
     "meaning": "완전성, 빠짐없음"
+  },
+  {
+    "id": "complex",
+    "word": "complex",
+    "pos": "형용사",
+    "ipa": "kəmˈpleks",
+    "meaning": "복잡한, 여러 요소·단계가 얽힌",
+    "forms": ["complexity", "complexities"]
+  },
+  {
+    "id": "compliance",
+    "word": "compliance",
+    "pos": "명사",
+    "ipa": "kəmˈplaɪəns",
+    "meaning": "(규정) 준수, 컴플라이언스",
+    "forms": ["comply", "compliant", "complies", "complied"]
+  },
+  {
+    "id": "component",
+    "word": "component",
+    "pos": "명사",
+    "ipa": "kəmˈpoʊnənt",
+    "meaning": "구성 요소, (소프트웨어의) 컴포넌트"
   },
   {
     "id": "composite",
@@ -292,12 +1237,28 @@
     "forms": ["concatenated", "concatenating", "concatenation"]
   },
   {
+    "id": "conceivable",
+    "word": "conceivable",
+    "pos": "형용사",
+    "ipa": "kənˈsiːvəbl",
+    "meaning": "생각할 수 있는, 상상할 수 있는",
+    "forms": ["conceivably"]
+  },
+  {
     "id": "concern",
     "word": "concern",
     "pos": "명사",
     "ipa": "kənˈsɜːrn",
     "meaning": "① (해결해야 할) 문의 사항, 용건 ② 우려, 걱정",
     "forms": ["multi-concern", "single-concern"]
+  },
+  {
+    "id": "concise",
+    "word": "concise",
+    "pos": "형용사",
+    "ipa": "kənˈsaɪs",
+    "meaning": "간결한, 요점만 담은",
+    "forms": ["concisely", "conciseness"]
   },
   {
     "id": "conclude",
@@ -316,12 +1277,27 @@
     "forms": ["concretely"]
   },
   {
+    "id": "concurrently",
+    "word": "concurrently",
+    "pos": "부사",
+    "ipa": "kənˈkɜːrəntli",
+    "meaning": "동시에, 병렬로",
+    "forms": ["concurrent", "concurrency"]
+  },
+  {
     "id": "condense",
     "word": "condense",
     "pos": "동사",
     "ipa": "kənˈdens",
     "meaning": "(내용을) 압축하다, 줄여 요약하다",
     "forms": ["condensed", "condensing"]
+  },
+  {
+    "id": "condition",
+    "word": "condition",
+    "pos": "명사",
+    "ipa": "kənˈdɪʃn",
+    "meaning": "① (처한) 상황, 상태 ② 조건"
   },
   {
     "id": "conditional",
@@ -348,12 +1324,52 @@
     "forms": ["confident"]
   },
   {
+    "id": "configure",
+    "word": "configure",
+    "pos": "동사",
+    "ipa": "kənˈfɪɡjər",
+    "meaning": "(설정 값을) 구성하다, 설정하다",
+    "forms": ["config", "configuration", "configured", "configuring"]
+  },
+  {
+    "id": "confirm",
+    "word": "confirm",
+    "pos": "동사",
+    "ipa": "kənˈfɜːrm",
+    "meaning": "확인하다, (맞다고) 확정하다",
+    "forms": ["confirmation", "confirmed", "confirming"]
+  },
+  {
     "id": "conflict",
     "word": "conflict",
     "pos": "명사·동사",
     "ipa": "ˈkɑːnflɪkt",
     "meaning": "충돌, 상충(하다) — 서로 맞지 않음",
     "forms": ["conflicting", "conflicted"]
+  },
+  {
+    "id": "confuse",
+    "word": "confuse",
+    "pos": "동사",
+    "ipa": "kənˈfjuːz",
+    "meaning": "헷갈리게 하다, 혼동하다",
+    "forms": ["confusing", "confused", "confusion"]
+  },
+  {
+    "id": "consecutive",
+    "word": "consecutive",
+    "pos": "형용사",
+    "ipa": "kənˈsekjətɪv",
+    "meaning": "연속된, 잇따른",
+    "forms": ["consecutively"]
+  },
+  {
+    "id": "conservative",
+    "word": "conservative",
+    "pos": "형용사",
+    "ipa": "kənˈsɜːrvətɪv",
+    "meaning": "보수적인, 신중한 (위험을 피하는)",
+    "forms": ["conservatively"]
   },
   {
     "id": "consistent",
@@ -372,11 +1388,79 @@
     "forms": ["consolidated", "consolidating", "consolidation"]
   },
   {
+    "id": "constant",
+    "word": "constant",
+    "pos": "명사·형용사",
+    "ipa": "ˈkɑːnstənt",
+    "meaning": "① (코드의) 상수 ② 끊임없는, 일정한",
+    "forms": ["constantly"]
+  },
+  {
+    "id": "constrained-decoding",
+    "word": "constrained decoding",
+    "pos": "명사구",
+    "ipa": "kənˈstreɪnd diːˈkoʊdɪŋ",
+    "meaning": "제약 디코딩 — 스키마·문법에 맞는 토큰만 고르게 해 출력 형식을 보장하는 생성 방식"
+  },
+  {
     "id": "constraint",
     "word": "constraint",
     "pos": "명사",
     "ipa": "kənˈstreɪnt",
-    "meaning": "제약 (조건) — 반드시 지켜야 하는 한계"
+    "meaning": "제약 (조건) — 반드시 지켜야 하는 한계",
+    "forms": ["constrained"]
+  },
+  {
+    "id": "consume",
+    "word": "consume",
+    "pos": "동사",
+    "ipa": "kənˈsuːm",
+    "meaning": "(자원·토큰을) 소모하다, 써 버리다",
+    "forms": ["consuming", "consumed", "consumption"]
+  },
+  {
+    "id": "contain",
+    "word": "contain",
+    "pos": "동사",
+    "ipa": "kənˈteɪn",
+    "meaning": "(안에) 담고 있다, 포함하다",
+    "forms": ["containing", "contained"]
+  },
+  {
+    "id": "container",
+    "word": "container",
+    "pos": "명사",
+    "ipa": "kənˈteɪnər",
+    "meaning": "① (Docker 등의) 컨테이너 — 격리된 실행 환경 ② 그릇, 담는 것"
+  },
+  {
+    "id": "content",
+    "word": "content",
+    "pos": "명사",
+    "ipa": "ˈkɑːntent",
+    "meaning": "내용(물), 콘텐츠"
+  },
+  {
+    "id": "context",
+    "word": "context",
+    "pos": "명사",
+    "ipa": "ˈkɑːntekst",
+    "meaning": "① 컨텍스트 — 모델이 한 번에 보는 입력 전체 ② 맥락, 배경 정보"
+  },
+  {
+    "id": "continuous",
+    "word": "continuous",
+    "pos": "형용사",
+    "ipa": "kənˈtɪnjuəs",
+    "meaning": "지속적인, 끊김 없이 이어지는",
+    "forms": ["continuation", "continuously"]
+  },
+  {
+    "id": "contract",
+    "word": "contract",
+    "pos": "명사",
+    "ipa": "ˈkɑːntrækt",
+    "meaning": "① 계약(서) ② (인터페이스·출력 형식의) 약속, 규약"
   },
   {
     "id": "contradict",
@@ -391,7 +1475,37 @@
     "word": "convention",
     "pos": "명사",
     "ipa": "kənˈvenʃn",
-    "meaning": "(팀·코드의) 관례, 규칙"
+    "meaning": "(팀·코드의) 관례, 규칙",
+    "forms": ["coding-convention", "naming-convention"]
+  },
+  {
+    "id": "conversational",
+    "word": "conversational",
+    "pos": "형용사",
+    "ipa": "ˌkɑːnvərˈseɪʃənl",
+    "meaning": "대화형의, 대화체의"
+  },
+  {
+    "id": "convert",
+    "word": "convert",
+    "pos": "동사",
+    "ipa": "kənˈvɜːrt",
+    "meaning": "변환하다, (다른 형태로) 바꾸다",
+    "forms": ["converted", "converting", "conversion"]
+  },
+  {
+    "id": "coordinator",
+    "word": "coordinator",
+    "pos": "명사",
+    "ipa": "koʊˈɔːrdɪneɪtər",
+    "meaning": "코디네이터 — 일을 나눠 맡기고 결과를 모으는 조정 역할(에이전트)"
+  },
+  {
+    "id": "core",
+    "word": "core",
+    "pos": "형용사·명사",
+    "ipa": "kɔːr",
+    "meaning": "핵심(의), 중심이 되는"
   },
   {
     "id": "correlation",
@@ -410,11 +1524,34 @@
     "forms": ["corrupted", "corrupting", "corruption"]
   },
   {
+    "id": "costly",
+    "word": "costly",
+    "pos": "형용사",
+    "ipa": "ˈkɔːstli",
+    "meaning": "비용이 많이 드는, 대가가 큰"
+  },
+  {
+    "id": "cover",
+    "word": "cover",
+    "pos": "동사",
+    "ipa": "ˈkʌvər",
+    "meaning": "(범위를) 다루다, 포함하다, 아우르다",
+    "forms": ["covering", "covered"]
+  },
+  {
     "id": "coverage",
     "word": "coverage",
     "pos": "명사",
     "ipa": "ˈkʌvərɪdʒ",
     "meaning": "다루는 범위, 포괄 정도"
+  },
+  {
+    "id": "crash",
+    "word": "crash",
+    "pos": "동사·명사",
+    "ipa": "kræʃ",
+    "meaning": "(프로그램이) 갑자기 죽다, 멈추다 · 충돌(다운)",
+    "forms": ["crashed", "crashing"]
   },
   {
     "id": "credential",
@@ -432,6 +1569,13 @@
     "forms": ["credibility"]
   },
   {
+    "id": "credit",
+    "word": "credit",
+    "pos": "명사",
+    "ipa": "ˈkredɪt",
+    "meaning": "① 크레딧, 적립금 (보상 금액) ② (회계) 대변"
+  },
+  {
     "id": "criteria",
     "word": "criteria",
     "pos": "명사",
@@ -440,12 +1584,105 @@
     "forms": ["criterion"]
   },
   {
+    "id": "critical",
+    "word": "critical",
+    "pos": "형용사",
+    "ipa": "ˈkrɪtɪkl",
+    "meaning": "① 심각한, 치명적인 ② 비판적인 ③ 매우 중요한",
+    "forms": ["critically"]
+  },
+  {
     "id": "critique",
     "word": "critique",
     "pos": "명사·동사",
     "ipa": "krɪˈtiːk",
     "meaning": "비평(하다) — 검토해 문제점을 짚다",
     "forms": ["critiqued", "critiquing", "self-critique"]
+  },
+  {
+    "id": "crm",
+    "word": "CRM",
+    "pos": "약어",
+    "ipa": "ˌsiːɑːrˈem",
+    "meaning": "고객 관계 관리(Customer Relationship Management) 시스템"
+  },
+  {
+    "id": "cross-file",
+    "word": "cross-file",
+    "pos": "형용사",
+    "ipa": "ˌkrɔːs ˈfaɪl",
+    "meaning": "여러 파일에 걸친, 파일 간의"
+  },
+  {
+    "id": "cumulative",
+    "word": "cumulative",
+    "pos": "형용사",
+    "ipa": "ˈkjuːmjələtɪv",
+    "meaning": "누적된, 쌓여 가는",
+    "forms": ["cumulatively"]
+  },
+  {
+    "id": "currency",
+    "word": "currency",
+    "pos": "명사",
+    "ipa": "ˈkɜːrənsi",
+    "meaning": "통화, 화폐 (단위)",
+    "forms": ["currencies"]
+  },
+  {
+    "id": "currency-conversion",
+    "word": "currency-conversion",
+    "pos": "명사구",
+    "ipa": "ˈkɜːrənsi kənˈvɜːrʒn",
+    "meaning": "통화 변환, 환전",
+    "forms": ["currency conversion"]
+  },
+  {
+    "id": "current",
+    "word": "current",
+    "pos": "형용사",
+    "ipa": "ˈkɜːrənt",
+    "meaning": "현재의, 지금의",
+    "forms": ["currently"]
+  },
+  {
+    "id": "custom",
+    "word": "custom",
+    "pos": "형용사",
+    "ipa": "ˈkʌstəm",
+    "meaning": "맞춤(형)의, 사용자가 직접 정의한",
+    "forms": ["customize", "customized", "customization"]
+  },
+  {
+    "id": "cut-off",
+    "word": "cut-off",
+    "pos": "동사구·명사",
+    "ipa": "ˌkʌt ˈɔːf",
+    "meaning": "① (cut off) 도중에 잘리다, 끊기다 ② (cut-off) 기준점, 마감 시점",
+    "forms": ["cut off", "cutoff", "cuts off", "cutting off"]
+  },
+  {
+    "id": "debug",
+    "word": "debug",
+    "pos": "동사",
+    "ipa": "diːˈbʌɡ",
+    "meaning": "디버그하다 — 버그의 원인을 찾아 고치다",
+    "forms": ["debugging", "debugged", "debugger"]
+  },
+  {
+    "id": "decision",
+    "word": "decision",
+    "pos": "명사",
+    "ipa": "dɪˈsɪʒn",
+    "meaning": "결정, 판단"
+  },
+  {
+    "id": "declare",
+    "word": "declare",
+    "pos": "동사",
+    "ipa": "dɪˈkler",
+    "meaning": "(설정·코드에) 선언하다, 명시하다",
+    "forms": ["declared", "declaring", "declaration"]
   },
   {
     "id": "decline",
@@ -479,12 +1716,67 @@
     "forms": ["deduplicated", "deduplicating", "deduplication"]
   },
   {
+    "id": "deep-dive",
+    "word": "deep-dive",
+    "pos": "명사",
+    "ipa": "ˈdiːp daɪv",
+    "meaning": "심층 분석 (자료), 깊이 파고들기",
+    "forms": ["deep dive"]
+  },
+  {
+    "id": "defect",
+    "word": "defect",
+    "pos": "명사",
+    "ipa": "ˈdiːfekt",
+    "meaning": "결함, 버그",
+    "forms": ["defective"]
+  },
+  {
+    "id": "defense",
+    "word": "defense",
+    "pos": "명사",
+    "ipa": "dɪˈfens",
+    "meaning": "방어(책), 방어 수단",
+    "forms": ["defence"]
+  },
+  {
     "id": "defer",
     "word": "defer",
     "pos": "동사",
     "ipa": "dɪˈfɜːr",
     "meaning": "① 미루다 ② (판단을) 남에게 맡기다",
     "forms": ["deferred", "deferring"]
+  },
+  {
+    "id": "define",
+    "word": "define",
+    "pos": "동사",
+    "ipa": "dɪˈfaɪn",
+    "meaning": "정의하다, (명확히) 정하다",
+    "forms": ["defined", "defining"]
+  },
+  {
+    "id": "definition",
+    "word": "definition",
+    "pos": "명사",
+    "ipa": "ˌdefɪˈnɪʃn",
+    "meaning": "정의 — (도구·함수의) 이름·설명·입력 형식을 적은 명세"
+  },
+  {
+    "id": "degrade",
+    "word": "degrade",
+    "pos": "동사",
+    "ipa": "dɪˈɡreɪd",
+    "meaning": "(품질·성능이) 떨어지다, 저하되다",
+    "forms": ["degradation", "degraded", "degrading"]
+  },
+  {
+    "id": "delay",
+    "word": "delay",
+    "pos": "명사·동사",
+    "ipa": "dɪˈleɪ",
+    "meaning": "지연, 대기 시간 · 늦추다",
+    "forms": ["delayed", "delaying"]
   },
   {
     "id": "delegate",
@@ -519,12 +1811,50 @@
     "forms": ["demonstrated", "demonstrating", "demonstration"]
   },
   {
+    "id": "deny",
+    "word": "deny",
+    "pos": "동사",
+    "ipa": "dɪˈnaɪ",
+    "meaning": "① (권한·요청을) 거부하다, 막다 ② 부인하다",
+    "forms": ["denials", "denial", "denied", "denying"]
+  },
+  {
+    "id": "depend",
+    "word": "depend",
+    "pos": "동사",
+    "ipa": "dɪˈpend",
+    "meaning": "(~에) 달려 있다, 의존하다",
+    "forms": ["depended", "depending"]
+  },
+  {
     "id": "dependency",
     "word": "dependency",
     "pos": "명사",
     "ipa": "dɪˈpendənsi",
     "meaning": "의존 관계, (패키지) 의존성",
     "forms": ["dependencies"]
+  },
+  {
+    "id": "dependent",
+    "word": "dependent",
+    "pos": "형용사",
+    "ipa": "dɪˈpendənt",
+    "meaning": "(~에) 의존하는, 영향을 받는"
+  },
+  {
+    "id": "deploy",
+    "word": "deploy",
+    "pos": "동사",
+    "ipa": "dɪˈplɔɪ",
+    "meaning": "배포하다, (운영 환경에) 투입하다",
+    "forms": ["deployed", "deploying", "deployment"]
+  },
+  {
+    "id": "description",
+    "word": "description",
+    "pos": "명사",
+    "ipa": "dɪˈskrɪpʃn",
+    "meaning": "설명 — (도구 정의의) 설명 문구"
   },
   {
     "id": "descriptive",
@@ -534,11 +1864,138 @@
     "meaning": "설명적인, 서술형의 — 내용을 그대로 풀어 쓰는"
   },
   {
+    "id": "design",
+    "word": "design",
+    "pos": "명사·동사",
+    "ipa": "dɪˈzaɪn",
+    "meaning": "설계(하다)",
+    "forms": ["designed", "designing"]
+  },
+  {
+    "id": "designate",
+    "word": "designate",
+    "pos": "동사",
+    "ipa": "ˈdezɪɡneɪt",
+    "meaning": "지정하다, (특정 용도로) 정해 두다",
+    "forms": ["designated", "designating", "designation"]
+  },
+  {
+    "id": "despite",
+    "word": "despite",
+    "pos": "전치사",
+    "ipa": "dɪˈspaɪt",
+    "meaning": "~에도 불구하고"
+  },
+  {
     "id": "destructive",
     "word": "destructive",
     "pos": "형용사",
     "ipa": "dɪˈstrʌktɪv",
     "meaning": "파괴적인 — 되돌릴 수 없게 지우거나 바꾸는"
+  },
+  {
+    "id": "detail",
+    "word": "detail",
+    "pos": "명사",
+    "ipa": "ˈdiːteɪl",
+    "meaning": "세부 (사항), 자세한 내용",
+    "forms": ["detailed"]
+  },
+  {
+    "id": "detect",
+    "word": "detect",
+    "pos": "동사",
+    "ipa": "dɪˈtekt",
+    "meaning": "감지하다, 알아내다",
+    "forms": ["detected", "detecting", "detection"]
+  },
+  {
+    "id": "determine",
+    "word": "determine",
+    "pos": "동사",
+    "ipa": "dɪˈtɜːrmɪn",
+    "meaning": "① 알아내다, 밝혀내다 ② 결정하다, 좌우하다",
+    "forms": ["determined", "determining"]
+  },
+  {
+    "id": "deterministic",
+    "word": "deterministic",
+    "pos": "형용사",
+    "ipa": "dɪˌtɜːrmɪˈnɪstɪk",
+    "meaning": "결정적인 — 같은 입력이면 항상 같은 결과가 나오는",
+    "forms": ["deterministically"]
+  },
+  {
+    "id": "dictionary",
+    "word": "dictionary",
+    "pos": "명사",
+    "ipa": "ˈdɪkʃəneri",
+    "meaning": "사전 — 단어·값을 짝지어 모은 목록 (프로그래밍에선 키-값 자료형)",
+    "forms": ["dictionaries"]
+  },
+  {
+    "id": "diff",
+    "word": "diff",
+    "pos": "명사·동사",
+    "ipa": "dɪf",
+    "meaning": "변경분 비교 결과 — 파일에서 바뀐 줄을 보여 주는 것 / 비교하다",
+    "forms": ["diffing"]
+  },
+  {
+    "id": "differ",
+    "word": "differ",
+    "pos": "동사",
+    "ipa": "ˈdɪfər",
+    "meaning": "(~와) 다르다, 구별되다",
+    "forms": ["differed", "differing"]
+  },
+  {
+    "id": "differentiate",
+    "word": "differentiate",
+    "pos": "동사",
+    "ipa": "ˌdɪfəˈrenʃieɪt",
+    "meaning": "구별하다, 서로 다르게 만들다(차별화하다)",
+    "forms": ["differentiated", "differentiating", "differentiation"]
+  },
+  {
+    "id": "dilute",
+    "word": "dilute",
+    "pos": "동사",
+    "ipa": "daɪˈluːt",
+    "meaning": "희석하다, (집중·효과를) 흐리다",
+    "forms": ["diluting", "diluted", "dilution"]
+  },
+  {
+    "id": "direct",
+    "word": "direct",
+    "pos": "형용사·동사",
+    "ipa": "dəˈrekt",
+    "meaning": "① 직접적인, 바로 — directly: 직접, 곧바로 ② 지시하다, 향하게 하다",
+    "forms": ["directly", "directed", "directing"]
+  },
+  {
+    "id": "directory",
+    "word": "directory",
+    "pos": "명사",
+    "ipa": "dəˈrektəri",
+    "meaning": "디렉터리, 폴더 — 파일을 묶어 두는 경로",
+    "forms": ["directories"]
+  },
+  {
+    "id": "disable",
+    "word": "disable",
+    "pos": "동사",
+    "ipa": "dɪsˈeɪbl",
+    "meaning": "(기능을) 끄다, 비활성화하다",
+    "forms": ["disabled", "disabling"]
+  },
+  {
+    "id": "disambiguate",
+    "word": "disambiguate",
+    "pos": "동사",
+    "ipa": "ˌdɪsæmˈbɪɡjueɪt",
+    "meaning": "모호함을 없애다, (여러 후보 중) 어느 쪽인지 확정하다",
+    "forms": ["disambiguated", "disambiguating", "disambiguation"]
   },
   {
     "id": "discard",
@@ -547,6 +2004,30 @@
     "ipa": "dɪˈskɑːrd",
     "meaning": "버리다, 폐기하다",
     "forms": ["discarded", "discarding"]
+  },
+  {
+    "id": "discount",
+    "word": "discount",
+    "pos": "명사·동사",
+    "ipa": "ˈdɪskaʊnt",
+    "meaning": "① 할인(하다) — discounted: 할인된 ② 가볍게 여기다",
+    "forms": ["discounted", "discounting"]
+  },
+  {
+    "id": "discover",
+    "word": "discover",
+    "pos": "동사",
+    "ipa": "dɪˈskʌvər",
+    "meaning": "발견하다, (탐색해서) 알아내다",
+    "forms": ["discovered", "discovering"]
+  },
+  {
+    "id": "discovery",
+    "word": "discovery",
+    "pos": "명사",
+    "ipa": "dɪˈskʌvəri",
+    "meaning": "발견, 탐색 (단계) — 필요한 파일·위치를 찾아내는 과정",
+    "forms": ["discoveries"]
   },
   {
     "id": "discrepancy",
@@ -602,7 +2083,7 @@
     "pos": "동사",
     "ipa": "daɪˈvɜːrdʒ",
     "meaning": "(서로) 갈라지다, 어긋나다",
-    "forms": ["diverged", "diverging"]
+    "forms": ["diverged", "diverging", "divergent"]
   },
   {
     "id": "docstring",
@@ -612,11 +2093,34 @@
     "meaning": "독스트링 — 함수·클래스 안에 쓰는 설명 문자열"
   },
   {
+    "id": "document-analysis",
+    "word": "document-analysis",
+    "pos": "명사구",
+    "ipa": "ˈdɑːkjumənt əˈnæləsɪs",
+    "meaning": "문서 분석(의) — 수집한 문서를 읽고 분석하는 단계·서브에이전트",
+    "forms": ["document analysis"]
+  },
+  {
+    "id": "document-type",
+    "word": "document-type",
+    "pos": "명사구",
+    "ipa": "ˈdɑːkjumənt taɪp",
+    "meaning": "문서 유형 — 송장·영수증처럼 문서를 나눈 종류",
+    "forms": ["document type"]
+  },
+  {
     "id": "domain",
     "word": "domain",
     "pos": "명사",
     "ipa": "doʊˈmeɪn",
     "meaning": "① (지식의) 분야, 영역 ② (웹) 도메인 — 사이트 주소"
+  },
+  {
+    "id": "downstream",
+    "word": "downstream",
+    "pos": "형용사·부사",
+    "ipa": "ˌdaʊnˈstriːm",
+    "meaning": "(처리 흐름의) 뒤 단계의, 하위의 — 결과를 받아 쓰는 쪽"
   },
   {
     "id": "dozen",
@@ -634,12 +2138,66 @@
     "forms": ["drafted", "drafting"]
   },
   {
+    "id": "draw",
+    "word": "draw",
+    "pos": "동사",
+    "ipa": "drɔː",
+    "meaning": "① (반응·관심을) 끌어내다, 받다 ② (결론을) 끌어내다",
+    "forms": ["drew", "drawn"]
+  },
+  {
+    "id": "drive",
+    "word": "drive",
+    "pos": "동사",
+    "ipa": "draɪv",
+    "meaning": "(루프·과정을) 구동하다, 이끌다 — ~-driven: ~에 따라 움직이는",
+    "forms": ["driven", "drove", "driving"]
+  },
+  {
+    "id": "drop",
+    "word": "drop",
+    "pos": "동사·명사",
+    "ipa": "drɑːp",
+    "meaning": "① (정보를) 빠뜨리다, 버리다 ② 떨어지다, 줄다",
+    "forms": ["dropped", "dropping"]
+  },
+  {
+    "id": "dump",
+    "word": "dump",
+    "pos": "동사·명사",
+    "ipa": "dʌmp",
+    "meaning": "(대량 출력을) 한꺼번에 쏟아 내다 / 덤프(통째로 뽑아낸 출력)",
+    "forms": ["dumping", "dumped"]
+  },
+  {
+    "id": "dunning",
+    "word": "dunning",
+    "pos": "명사",
+    "ipa": "ˈdʌnɪŋ",
+    "meaning": "(연체 대금) 독촉 — 미납 고객에게 결제를 재촉하는 청구 업무"
+  },
+  {
     "id": "duplicate",
     "word": "duplicate",
     "pos": "형용사·명사·동사",
     "ipa": "ˈduːplɪkət",
     "meaning": "중복된 (것) / (이미 있는 것과) 중복되다, 되풀이하다",
     "forms": ["duplicated", "duplicating", "duplication"]
+  },
+  {
+    "id": "dynamic",
+    "word": "dynamic",
+    "pos": "형용사",
+    "ipa": "daɪˈnæmɪk",
+    "meaning": "동적인 — 미리 고정하지 않고 실행 중 상황에 맞춰 정하는",
+    "forms": ["dynamically"]
+  },
+  {
+    "id": "edge",
+    "word": "edge",
+    "pos": "명사",
+    "ipa": "edʒ",
+    "meaning": "가장자리, 끝"
   },
   {
     "id": "edge-case",
@@ -650,6 +2208,29 @@
     "forms": ["edge-case"]
   },
   {
+    "id": "effect",
+    "word": "effect",
+    "pos": "명사",
+    "ipa": "ɪˈfekt",
+    "meaning": "효과, 영향, (어떤 원인이 낳는) 현상"
+  },
+  {
+    "id": "effective",
+    "word": "effective",
+    "pos": "형용사",
+    "ipa": "ɪˈfektɪv",
+    "meaning": "① 효과적인 ② 실질적인, 실제로 작동하는",
+    "forms": ["effectively", "effectiveness"]
+  },
+  {
+    "id": "eligibility",
+    "word": "eligibility",
+    "pos": "명사",
+    "ipa": "ˌelɪdʒəˈbɪləti",
+    "meaning": "자격, (조건을 충족하는) 대상 여부",
+    "forms": ["eligible", "ineligible"]
+  },
+  {
     "id": "eliminate",
     "word": "eliminate",
     "pos": "동사",
@@ -658,12 +2239,75 @@
     "forms": ["eliminated", "eliminating", "elimination"]
   },
   {
+    "id": "elsewhere",
+    "word": "elsewhere",
+    "pos": "부사",
+    "ipa": "ˈelswer",
+    "meaning": "다른 곳에(서)"
+  },
+  {
+    "id": "embed",
+    "word": "embed",
+    "pos": "동사",
+    "ipa": "ɪmˈbed",
+    "meaning": "(안에) 끼워 넣다, 심어 두다",
+    "forms": ["embedded"]
+  },
+  {
+    "id": "emerge",
+    "word": "emerge",
+    "pos": "동사",
+    "ipa": "ɪˈmɜːrdʒ",
+    "meaning": "(새로) 나타나다, 드러나다 — emerging: 새로 떠오르는",
+    "forms": ["emerging", "emerged"]
+  },
+  {
+    "id": "emit",
+    "word": "emit",
+    "pos": "동사",
+    "ipa": "iˈmɪt",
+    "meaning": "(출력·이벤트를) 내보내다, 생성해 내다",
+    "forms": ["emitted", "emitting"]
+  },
+  {
+    "id": "emphatic",
+    "word": "emphatic",
+    "pos": "형용사",
+    "ipa": "ɪmˈfætɪk",
+    "meaning": "힘주어 강조하는, 단호한",
+    "forms": ["emphatically"]
+  },
+  {
+    "id": "enable",
+    "word": "enable",
+    "pos": "동사",
+    "ipa": "ɪˈneɪbl",
+    "meaning": "① (기능을) 켜다, 활성화하다 ② ~할 수 있게 하다",
+    "forms": ["enabled", "enabling"]
+  },
+  {
     "id": "encounter",
     "word": "encounter",
     "pos": "동사",
     "ipa": "ɪnˈkaʊntər",
     "meaning": "(문제 등에) 부딪히다, 마주치다",
     "forms": ["encountered", "encountering"]
+  },
+  {
+    "id": "encrypt",
+    "word": "encrypt",
+    "pos": "동사",
+    "ipa": "ɪnˈkrɪpt",
+    "meaning": "암호화하다 (↔ decrypt: 복호화하다)",
+    "forms": ["encrypted", "encrypting", "encryption", "decrypt", "decrypted", "decryption"]
+  },
+  {
+    "id": "end-to-end",
+    "word": "end-to-end",
+    "pos": "형용사·부사",
+    "ipa": "ˌend tə ˈend",
+    "meaning": "처음부터 끝까지의, 전 과정의",
+    "forms": ["end to end"]
   },
   {
     "id": "enforce",
@@ -682,12 +2326,98 @@
     "forms": ["enhanced", "enhancing", "enhancement"]
   },
   {
+    "id": "enlarge",
+    "word": "enlarge",
+    "pos": "동사",
+    "ipa": "ɪnˈlɑːrdʒ",
+    "meaning": "크게 하다, 늘리다",
+    "forms": ["enlarged", "enlarging"]
+  },
+  {
+    "id": "enrich",
+    "word": "enrich",
+    "pos": "동사",
+    "ipa": "ɪnˈrɪtʃ",
+    "meaning": "(정보를 더해) 풍부하게 하다, 보강하다",
+    "forms": ["enriched", "enriching", "enrichment"]
+  },
+  {
     "id": "ensure",
     "word": "ensure",
     "pos": "동사",
     "ipa": "ɪnˈʃʊr",
     "meaning": "반드시 ~하게 하다, 보장하다",
     "forms": ["ensured", "ensuring"]
+  },
+  {
+    "id": "entire",
+    "word": "entire",
+    "pos": "형용사",
+    "ipa": "ɪnˈtaɪər",
+    "meaning": "전체의, 온 — entirely: 완전히, 아예",
+    "forms": ["entirely"]
+  },
+  {
+    "id": "entity",
+    "word": "entity",
+    "pos": "명사",
+    "ipa": "ˈentəti",
+    "meaning": "엔티티, 개체 — 고객·주문처럼 데이터로 다루는 대상 하나",
+    "forms": ["entities"]
+  },
+  {
+    "id": "entry",
+    "word": "entry",
+    "pos": "명사",
+    "ipa": "ˈentri",
+    "meaning": "(목록·설정의) 항목, 기재 사항",
+    "forms": ["entries"]
+  },
+  {
+    "id": "entrypoint",
+    "word": "entrypoint",
+    "pos": "명사",
+    "ipa": "ˈentri pɔɪnt",
+    "meaning": "진입점 — 실행·처리 흐름이 시작되는 곳",
+    "forms": ["entry point", "entry-point"]
+  },
+  {
+    "id": "enum",
+    "word": "enum",
+    "pos": "명사",
+    "ipa": "ˈiːnəm",
+    "meaning": "열거형 — 허용 값을 미리 정해 둔 목록 타입"
+  },
+  {
+    "id": "enumerate",
+    "word": "enumerate",
+    "pos": "동사",
+    "ipa": "ɪˈnuːməreɪt",
+    "meaning": "(하나하나) 열거하다, 나열하다",
+    "forms": ["enumerating", "enumerated", "enumeration"]
+  },
+  {
+    "id": "environment",
+    "word": "environment",
+    "pos": "명사",
+    "ipa": "ɪnˈvaɪrənmənt",
+    "meaning": "(실행) 환경 — 프로그램이 돌아가는 머신·설정 조건"
+  },
+  {
+    "id": "equip",
+    "word": "equip",
+    "pos": "동사",
+    "ipa": "ɪˈkwɪp",
+    "meaning": "(도구·기능을) 갖추게 하다 — be equipped with: ~을 갖추다",
+    "forms": ["equipped", "equipping"]
+  },
+  {
+    "id": "error-handling",
+    "word": "error-handling",
+    "pos": "명사구",
+    "ipa": "ˈerər ˌhændlɪŋ",
+    "meaning": "오류 처리 (방식)",
+    "forms": ["error handling"]
   },
   {
     "id": "escalate",
@@ -698,11 +2428,35 @@
     "forms": ["escalated", "escalating", "escalation"]
   },
   {
+    "id": "establish",
+    "word": "establish",
+    "pos": "동사",
+    "ipa": "ɪˈstæblɪʃ",
+    "meaning": "① (사실을) 확정하다, 확인하다 ② 세우다, 수립하다",
+    "forms": ["established", "establishing"]
+  },
+  {
+    "id": "eventually",
+    "word": "eventually",
+    "pos": "부사",
+    "ipa": "ɪˈventʃuəli",
+    "meaning": "결국, 마침내",
+    "forms": ["eventual"]
+  },
+  {
     "id": "evidence",
     "word": "evidence",
     "pos": "명사",
     "ipa": "ˈevɪdəns",
     "meaning": "근거, 증거"
+  },
+  {
+    "id": "exact",
+    "word": "exact",
+    "pos": "형용사",
+    "ipa": "ɪɡˈzækt",
+    "meaning": "정확한, 바로 그 — exactly: 정확히",
+    "forms": ["exactly"]
   },
   {
     "id": "examine",
@@ -737,6 +2491,21 @@
     "forms": ["exclusive"]
   },
   {
+    "id": "execute",
+    "word": "execute",
+    "pos": "동사",
+    "ipa": "ˈeksɪkjuːt",
+    "meaning": "실행하다",
+    "forms": ["executed", "executing", "execution"]
+  },
+  {
+    "id": "executive",
+    "word": "executive",
+    "pos": "명사·형용사",
+    "ipa": "ɪɡˈzekjətɪv",
+    "meaning": "임원(의), 경영진(용)"
+  },
+  {
     "id": "exemplar",
     "word": "exemplar",
     "pos": "명사",
@@ -749,7 +2518,38 @@
     "pos": "동사",
     "ipa": "ɪɡˈzɔːst",
     "meaning": "다 써 버리다, 소진하다",
-    "forms": ["exhausted", "exhausting"]
+    "forms": ["exhausted", "exhausting", "exhaustive"]
+  },
+  {
+    "id": "exit",
+    "word": "exit",
+    "pos": "동사·명사",
+    "ipa": "ˈeɡzɪt",
+    "meaning": "(프로그램이) 종료하다 / 종료 — exit code: 종료 코드",
+    "forms": ["exited", "exiting"]
+  },
+  {
+    "id": "expand",
+    "word": "expand",
+    "pos": "동사",
+    "ipa": "ɪkˈspænd",
+    "meaning": "넓히다, 확장하다, (풀어서) 늘리다",
+    "forms": ["expanded", "expanding", "expansion"]
+  },
+  {
+    "id": "expect",
+    "word": "expect",
+    "pos": "동사",
+    "ipa": "ɪkˈspekt",
+    "meaning": "① (입력을) 받도록 되어 있다 ② 예상하다, 기대하다",
+    "forms": ["expected", "expecting", "expectation"]
+  },
+  {
+    "id": "explanatory",
+    "word": "explanatory",
+    "pos": "형용사",
+    "ipa": "ɪkˈsplænətɔːri",
+    "meaning": "설명하는, 설명을 위한"
   },
   {
     "id": "explicit",
@@ -768,12 +2568,36 @@
     "forms": ["exploratory"]
   },
   {
+    "id": "explore",
+    "word": "explore",
+    "pos": "동사",
+    "ipa": "ɪkˈsplɔːr",
+    "meaning": "탐색하다, 두루 살펴보다",
+    "forms": ["exploring", "explored"]
+  },
+  {
     "id": "exponential-backoff",
     "word": "exponential backoff",
     "pos": "명사구",
     "ipa": "ˌekspəˈnenʃl ˈbækɔːf",
     "meaning": "지수 백오프 — 실패할 때마다 재시도 간격을 두 배씩 늘리는 방식",
-    "forms": ["exponential back-off"]
+    "forms": ["exponential back-off", "backoff"]
+  },
+  {
+    "id": "expose",
+    "word": "expose",
+    "pos": "동사",
+    "ipa": "ɪkˈspoʊz",
+    "meaning": "(기능·데이터를) 노출하다, 밖에서 쓰도록 제공하다",
+    "forms": ["exposed", "exposing", "exposure"]
+  },
+  {
+    "id": "extend",
+    "word": "extend",
+    "pos": "동사",
+    "ipa": "ɪkˈstend",
+    "meaning": "확장하다, 늘리다 — extended thinking: 확장 사고",
+    "forms": ["extended", "extending", "extension"]
   },
   {
     "id": "extract",
@@ -781,7 +2605,45 @@
     "pos": "동사",
     "ipa": "ɪkˈstrækt",
     "meaning": "(필요한 부분을) 뽑아내다, 추출하다",
-    "forms": ["extracted", "extracting", "extraction"]
+    "forms": ["extracted", "extracting", "extraction", "extractor"]
+  },
+  {
+    "id": "fabricate",
+    "word": "fabricate",
+    "pos": "동사",
+    "ipa": "ˈfæbrɪkeɪt",
+    "meaning": "(없는 것을) 지어내다, 날조하다",
+    "forms": ["fabricated", "fabricating", "fabrication"]
+  },
+  {
+    "id": "factor",
+    "word": "factor",
+    "pos": "명사",
+    "ipa": "ˈfæktər",
+    "meaning": "요인, 요소"
+  },
+  {
+    "id": "fail",
+    "word": "fail",
+    "pos": "동사",
+    "ipa": "feɪl",
+    "meaning": "실패하다, (검사를) 통과하지 못하다",
+    "forms": ["failed", "failing"]
+  },
+  {
+    "id": "fail-closed",
+    "word": "fail-closed",
+    "pos": "형용사",
+    "ipa": "ˌfeɪl ˈkloʊzd",
+    "meaning": "실패 시 차단(하는) — 오류·불확실할 때 기본으로 막는 방식",
+    "forms": ["fail closed"]
+  },
+  {
+    "id": "failure",
+    "word": "failure",
+    "pos": "명사",
+    "ipa": "ˈfeɪljər",
+    "meaning": "실패, 장애 — 작업·호출이 제대로 되지 않은 것"
   },
   {
     "id": "fall-below",
@@ -796,7 +2658,8 @@
     "word": "fallback",
     "pos": "명사",
     "ipa": "ˈfɔːlbæk",
-    "meaning": "대비책 — 원래 방법이 실패했을 때 쓰는 대체 수단"
+    "meaning": "대비책 — 원래 방법이 실패했을 때 쓰는 대체 수단",
+    "forms": ["fall back", "falls back", "falling back", "fell back"]
   },
   {
     "id": "false-positive",
@@ -806,11 +2669,63 @@
     "meaning": "오탐 — 문제가 아닌데 문제라고 잘못 판단한 것"
   },
   {
+    "id": "faq",
+    "word": "FAQ",
+    "pos": "약어",
+    "ipa": "ˌef.eɪˈkjuː",
+    "meaning": "자주 묻는 질문 (Frequently Asked Questions)"
+  },
+  {
+    "id": "fence",
+    "word": "fence",
+    "pos": "명사",
+    "ipa": "fens",
+    "meaning": "① (마크다운) 코드 펜스 — 코드 블록 앞뒤를 감싸는 백틱 세 개 줄 ② 울타리",
+    "forms": ["fenced"]
+  },
+  {
+    "id": "fetch",
+    "word": "fetch",
+    "pos": "동사",
+    "ipa": "fetʃ",
+    "meaning": "(데이터를) 가져오다, 조회해 오다",
+    "forms": ["fetched", "fetching", "refetch", "refetched", "refetching", "re-fetch", "re-fetched", "re-fetching"]
+  },
+  {
     "id": "few-shot",
     "word": "few-shot",
     "pos": "형용사",
     "ipa": "ˈfjuː ʃɑːt",
     "meaning": "퓨샷 — 프롬프트에 예시 몇 개를 넣어 보여 주는 방식"
+  },
+  {
+    "id": "field",
+    "word": "field",
+    "pos": "명사",
+    "ipa": "fiːld",
+    "meaning": "① (데이터 구조의) 필드, 항목 — 이름이 붙은 값 하나 ② 분야"
+  },
+  {
+    "id": "figure",
+    "word": "figure",
+    "pos": "명사",
+    "ipa": "ˈfɪɡjər",
+    "meaning": "① 수치, 숫자 (금액·통계) ② 그림, 도표 ③ (figure out) 알아내다"
+  },
+  {
+    "id": "fill-in",
+    "word": "fill in",
+    "pos": "동사구",
+    "ipa": "fɪl ɪn",
+    "meaning": "(빈칸·자리를) 채우다, 채워 넣다",
+    "forms": ["fills in", "filled in", "filling in"]
+  },
+  {
+    "id": "finding",
+    "word": "finding",
+    "pos": "명사",
+    "ipa": "ˈfaɪndɪŋ",
+    "meaning": "(조사·분석으로) 알아낸 것, 발견 사항 — 주로 findings"
   },
   {
     "id": "fine-tune",
@@ -821,11 +2736,35 @@
     "forms": ["fine-tuned", "fine-tuning"]
   },
   {
+    "id": "fire",
+    "word": "fire",
+    "pos": "동사",
+    "ipa": "ˈfaɪər",
+    "meaning": "(요청·호출을) 보내다, 실행하다 / (이벤트·훅이) 발동하다",
+    "forms": ["fired", "firing"]
+  },
+  {
     "id": "first-contact-resolution",
     "word": "first-contact resolution",
     "pos": "명사구",
     "ipa": "ˌfɜːrst ˈkɑːntækt ˌrezəˈluːʃn",
     "meaning": "첫 응대 해결률 — 넘기지 않고 처음 응대에서 끝낸 비율"
+  },
+  {
+    "id": "fit",
+    "word": "fit",
+    "pos": "동사·명사",
+    "ipa": "fɪt",
+    "meaning": "① (공간·한도 안에) 들어가다 ② (~에) 맞다, 적합하다 / 잘 맞는 것",
+    "forms": ["fitting"]
+  },
+  {
+    "id": "fix",
+    "word": "fix",
+    "pos": "동사·명사",
+    "ipa": "fɪks",
+    "meaning": "① 고치다 / 수정(안), 해결책 ② (fixed) 고정된, 정해진",
+    "forms": ["fixed", "fixing"]
   },
   {
     "id": "flag",
@@ -836,12 +2775,162 @@
     "forms": ["flagged", "flagging"]
   },
   {
+    "id": "flaky",
+    "word": "flaky",
+    "pos": "형용사",
+    "ipa": "ˈfleɪki",
+    "meaning": "(테스트·결과가) 들쭉날쭉한, 불안정한 — 같은 조건에서도 됐다 안 됐다 하는",
+    "forms": ["flakiness"]
+  },
+  {
+    "id": "flexibility",
+    "word": "flexibility",
+    "pos": "명사",
+    "ipa": "ˌfleksəˈbɪləti",
+    "meaning": "유연성 — 상황에 맞게 바꾸거나 세밀하게 조정할 수 있는 정도",
+    "forms": ["flexible", "flexibly"]
+  },
+  {
+    "id": "float",
+    "word": "float",
+    "pos": "명사·동사",
+    "ipa": "floʊt",
+    "meaning": "① (프로그래밍) 부동소수점 수, 실수형 — 소수점이 있는 숫자 ② (물에) 뜨다",
+    "forms": ["floating-point"]
+  },
+  {
+    "id": "flood",
+    "word": "flood",
+    "pos": "동사·명사",
+    "ipa": "flʌd",
+    "meaning": "(출력·데이터로) 넘쳐나게 하다, 가득 채우다 / 홍수",
+    "forms": ["flooded", "flooding"]
+  },
+  {
+    "id": "flow",
+    "word": "flow",
+    "pos": "명사·동사",
+    "ipa": "floʊ",
+    "meaning": "① (처리·대화의) 흐름 ② (데이터가) 흘러 들어가다",
+    "forms": ["flowed", "flowing"]
+  },
+  {
+    "id": "focus",
+    "word": "focus",
+    "pos": "명사·동사",
+    "ipa": "ˈfoʊkəs",
+    "meaning": "집중(하다), 초점(을 맞추다)",
+    "forms": ["focused", "focusing"]
+  },
+  {
+    "id": "follow-up",
+    "word": "follow-up",
+    "pos": "명사·형용사",
+    "ipa": "ˈfɑːloʊ ʌp",
+    "meaning": "후속(의) — 앞선 결과를 이어받아 하는 질문·작업·조치",
+    "forms": ["follow up", "followup"]
+  },
+  {
     "id": "forbidden",
     "word": "forbidden",
     "pos": "형용사",
     "ipa": "fərˈbɪdn",
     "meaning": "금지된",
-    "forms": ["forbid"]
+    "forms": ["forbid", "forbidding"]
+  },
+  {
+    "id": "force",
+    "word": "force",
+    "pos": "동사·명사",
+    "ipa": "fɔːrs",
+    "meaning": "(억지로) ~하게 만들다, 강제하다 / 힘",
+    "forms": ["forced", "forcing"]
+  },
+  {
+    "id": "force-fit",
+    "word": "force-fit",
+    "pos": "동사",
+    "ipa": "ˈfɔːrs fɪt",
+    "meaning": "(맞지 않는 것을) 억지로 끼워 맞추다",
+    "forms": ["force-fitting", "force-fitted"]
+  },
+  {
+    "id": "fork",
+    "word": "fork",
+    "pos": "동사·명사",
+    "ipa": "fɔːrk",
+    "meaning": "(세션·저장소를) 갈라 복제하다, 분기하다 / 분기본",
+    "forms": ["forked", "forking"]
+  },
+  {
+    "id": "format",
+    "word": "format",
+    "pos": "명사·동사",
+    "ipa": "ˈfɔːrmæt",
+    "meaning": "형식, 서식 / (형식에 맞게) 정리하다",
+    "forms": ["formatted", "formatting", "formatter"]
+  },
+  {
+    "id": "forward",
+    "word": "forward",
+    "pos": "부사·동사",
+    "ipa": "ˈfɔːrwərd",
+    "meaning": "앞으로, 다음 단계로 / (받은 것을) 전달하다",
+    "forms": ["forwarded", "forwarding"]
+  },
+  {
+    "id": "framework",
+    "word": "framework",
+    "pos": "명사",
+    "ipa": "ˈfreɪmwɜːrk",
+    "meaning": "① (소프트웨어) 프레임워크 — 앱의 뼈대와 규칙을 제공하는 기반 ② (생각·평가의) 틀"
+  },
+  {
+    "id": "fraud",
+    "word": "fraud",
+    "pos": "명사",
+    "ipa": "frɔːd",
+    "meaning": "사기, 부정 거래",
+    "forms": ["fraudulent"]
+  },
+  {
+    "id": "fraud-check",
+    "word": "fraud-check",
+    "pos": "명사",
+    "ipa": "ˈfrɔːd tʃek",
+    "meaning": "사기 검사 — 결제 전에 부정 거래인지 확인하는 단계"
+  },
+  {
+    "id": "free-text",
+    "word": "free-text",
+    "pos": "형용사·명사",
+    "ipa": "ˌfriː ˈtekst",
+    "meaning": "자유 형식 텍스트(의) — 정해진 구조·선택지 없이 쓴 글",
+    "forms": ["free text"]
+  },
+  {
+    "id": "frequently",
+    "word": "frequently",
+    "pos": "부사",
+    "ipa": "ˈfriːkwəntli",
+    "meaning": "자주, 빈번히",
+    "forms": ["frequent"]
+  },
+  {
+    "id": "fresh",
+    "word": "fresh",
+    "pos": "형용사",
+    "ipa": "freʃ",
+    "meaning": "① (이전 기록 없이) 새로운, 깨끗한 ② 방금 얻은, 최신의",
+    "forms": ["freshly"]
+  },
+  {
+    "id": "from-scratch",
+    "word": "from scratch",
+    "pos": "부사구",
+    "ipa": "frəm ˈskrætʃ",
+    "meaning": "처음부터, 맨바닥에서부터 (기존 결과·기반 없이)",
+    "forms": ["from-scratch"]
   },
   {
     "id": "frontmatter",
@@ -860,12 +2949,55 @@
     "forms": ["frustrated", "frustrating"]
   },
   {
+    "id": "function",
+    "word": "function",
+    "pos": "명사·동사",
+    "ipa": "ˈfʌŋkʃn",
+    "meaning": "① (프로그래밍) 함수 ② 기능, 역할 / 작동하다"
+  },
+  {
+    "id": "functionality",
+    "word": "functionality",
+    "pos": "명사",
+    "ipa": "ˌfʌŋkʃəˈnæləti",
+    "meaning": "기능 (소프트웨어가 제공하는 기능 전체)",
+    "forms": ["functionalities"]
+  },
+  {
     "id": "fundamentally",
     "word": "fundamentally",
     "pos": "부사",
     "ipa": "ˌfʌndəˈmentəli",
     "meaning": "근본적으로",
     "forms": ["fundamental"]
+  },
+  {
+    "id": "further",
+    "word": "further",
+    "pos": "부사·형용사",
+    "ipa": "ˈfɜːrðər",
+    "meaning": "더, 더 나아가 / 추가의"
+  },
+  {
+    "id": "fuzzy",
+    "word": "fuzzy",
+    "pos": "형용사",
+    "ipa": "ˈfʌzi",
+    "meaning": "퍼지(근사)의 — 정확히 같지 않아도 비슷하면 일치로 보는 / 흐릿한"
+  },
+  {
+    "id": "gap",
+    "word": "gap",
+    "pos": "명사",
+    "ipa": "ɡæp",
+    "meaning": "(정보·범위의) 빈틈, 공백 — 빠져 있는 부분"
+  },
+  {
+    "id": "garbage",
+    "word": "garbage",
+    "pos": "명사",
+    "ipa": "ˈɡɑːrbɪdʒ",
+    "meaning": "쓰레기 — (프로그램에서) 쓸모없는 엉터리 출력·데이터"
   },
   {
     "id": "gate",
@@ -876,11 +3008,97 @@
     "forms": ["gated", "gating"]
   },
   {
+    "id": "generate",
+    "word": "generate",
+    "pos": "동사",
+    "ipa": "ˈdʒenəreɪt",
+    "meaning": "생성하다, 만들어 내다",
+    "forms": ["generated", "generating", "generator"]
+  },
+  {
+    "id": "generation",
+    "word": "generation",
+    "pos": "명사",
+    "ipa": "ˌdʒenəˈreɪʃn",
+    "meaning": "① 생성 — (모델이) 텍스트·코드를 만들어 내는 것 ② 세대"
+  },
+  {
     "id": "generic",
     "word": "generic",
     "pos": "형용사",
     "ipa": "dʒəˈnerɪk",
     "meaning": "일반적인, 특정하지 않은"
+  },
+  {
+    "id": "genuine",
+    "word": "genuine",
+    "pos": "형용사",
+    "ipa": "ˈdʒenjuɪn",
+    "meaning": "진짜의, 진정한 (겉보기만 그런 것이 아닌)",
+    "forms": ["genuinely"]
+  },
+  {
+    "id": "glob",
+    "word": "glob",
+    "pos": "명사·동사",
+    "ipa": "ɡlɑːb",
+    "meaning": "글롭 — *.ts 같은 와일드카드 패턴으로 파일 경로를 찾는 방식 (Claude Code 의 Glob 도구)",
+    "forms": ["globbing"]
+  },
+  {
+    "id": "global",
+    "word": "global",
+    "pos": "형용사",
+    "ipa": "ˈɡloʊbl",
+    "meaning": "전역의, 전체에 적용되는 / 세계적인",
+    "forms": ["globally"]
+  },
+  {
+    "id": "goodwill",
+    "word": "goodwill",
+    "pos": "명사",
+    "ipa": "ˌɡʊdˈwɪl",
+    "meaning": "호의, 선의 — goodwill credit: 불편에 대한 보상으로 주는 크레딧"
+  },
+  {
+    "id": "grep",
+    "word": "grep",
+    "pos": "동사·명사",
+    "ipa": "ɡrep",
+    "meaning": "grep 검색(하다) — 파일 내용에서 문자열·정규식 패턴을 찾다",
+    "forms": ["grepping", "grepped"]
+  },
+  {
+    "id": "growth",
+    "word": "growth",
+    "pos": "명사",
+    "ipa": "ɡroʊθ",
+    "meaning": "증가, 커짐 / (grow) 커지다, 늘어나다",
+    "forms": ["grow", "growing", "grew", "grown"]
+  },
+  {
+    "id": "guarantee",
+    "word": "guarantee",
+    "pos": "동사·명사",
+    "ipa": "ˌɡærənˈtiː",
+    "meaning": "보장하다, 반드시 ~이 되게 하다 / 보장",
+    "forms": ["guaranteed", "guaranteeing"]
+  },
+  {
+    "id": "guard",
+    "word": "guard",
+    "pos": "명사·동사",
+    "ipa": "ɡɑːrd",
+    "meaning": "방지 장치, 안전장치 / 지키다, 막다",
+    "forms": ["guarded", "guarding"]
+  },
+  {
+    "id": "hallucination",
+    "word": "hallucination",
+    "pos": "명사",
+    "ipa": "həˌluːsɪˈneɪʃn",
+    "meaning": "환각 — 모델이 사실이 아닌 내용을 그럴듯하게 지어내는 것",
+    "forms": ["hallucinate", "hallucinated", "hallucinating"]
   },
   {
     "id": "halt",
@@ -891,12 +3109,66 @@
     "forms": ["halted", "halting"]
   },
   {
+    "id": "hand-written",
+    "word": "hand-written",
+    "pos": "형용사",
+    "ipa": "ˌhænd ˈrɪtn",
+    "meaning": "손으로 직접 작성한 — 라이브러리·자동 생성이 아닌",
+    "forms": ["handwritten"]
+  },
+  {
+    "id": "handle",
+    "word": "handle",
+    "pos": "동사·명사",
+    "ipa": "ˈhændl",
+    "meaning": "① 처리하다, 다루다 ② (handle time) 처리 시간",
+    "forms": ["handled", "handling"]
+  },
+  {
+    "id": "handoff",
+    "word": "handoff",
+    "pos": "명사",
+    "ipa": "ˈhændɔːf",
+    "meaning": "인계, 넘겨주기 — 작업·맥락을 다음 담당(사람·에이전트)에게 넘기는 것",
+    "forms": ["hand-off", "hand off", "handed off", "handing off"]
+  },
+  {
     "id": "hang",
     "word": "hang",
     "pos": "동사",
     "ipa": "hæŋ",
     "meaning": "(프로그램이) 응답 없이 멈춰 있다",
     "forms": ["hung", "hanging"]
+  },
+  {
+    "id": "hardcode",
+    "word": "hardcode",
+    "pos": "동사",
+    "ipa": "ˌhɑːrdˈkoʊd",
+    "meaning": "하드코딩하다 — 값을 설정·변수로 빼지 않고 코드에 직접 박아 넣다",
+    "forms": ["hardcoded", "hardcoding", "hard-code", "hard-codes", "hard-coded", "hard-coding"]
+  },
+  {
+    "id": "harness",
+    "word": "harness",
+    "pos": "명사·동사",
+    "ipa": "ˈhɑːrnɪs",
+    "meaning": "① 하네스 — 모델을 감싸 도구 실행·권한·루프를 관리하는 실행 틀 ② (힘을) 활용하다"
+  },
+  {
+    "id": "hash",
+    "word": "hash",
+    "pos": "명사·동사",
+    "ipa": "hæʃ",
+    "meaning": "해시(값) — 데이터를 고정 길이 값으로 바꾼 것 / 해시하다",
+    "forms": ["hashed", "hashing"]
+  },
+  {
+    "id": "header",
+    "word": "header",
+    "pos": "명사",
+    "ipa": "ˈhedər",
+    "meaning": "① (문서의) 머리글, 섹션 제목 ② (HTTP·파일의) 헤더 — 본문 앞에 붙는 정보"
   },
   {
     "id": "headless",
@@ -906,11 +3178,103 @@
     "meaning": "화면(UI) 없이 실행하는"
   },
   {
+    "id": "heterogeneous",
+    "word": "heterogeneous",
+    "pos": "형용사",
+    "ipa": "ˌhetərəˈdʒiːniəs",
+    "meaning": "이질적인, 서로 다른 종류(형식)가 섞인",
+    "forms": ["heterogeneity"]
+  },
+  {
     "id": "heuristic",
     "word": "heuristic",
     "pos": "명사",
     "ipa": "hjʊˈrɪstɪk",
     "meaning": "경험적 규칙, 어림 규칙"
+  },
+  {
+    "id": "high-volume",
+    "word": "high-volume",
+    "pos": "형용사",
+    "ipa": "ˌhaɪ ˈvɑːljuːm",
+    "meaning": "대량의, 처리량이 많은",
+    "forms": ["high volume"]
+  },
+  {
+    "id": "highest-impact",
+    "word": "highest-impact",
+    "pos": "형용사",
+    "ipa": "ˌhaɪɪst ˈɪmpækt",
+    "meaning": "효과가 가장 큰, 가장 큰 영향을 주는",
+    "forms": ["high-impact", "higher-impact"]
+  },
+  {
+    "id": "historical",
+    "word": "historical",
+    "pos": "형용사",
+    "ipa": "hɪˈstɔːrɪkl",
+    "meaning": "과거의, 이력의 (지난 기록에 바탕을 둔) / 역사의",
+    "forms": ["historically"]
+  },
+  {
+    "id": "hit",
+    "word": "hit",
+    "pos": "동사·명사",
+    "ipa": "hɪt",
+    "meaning": "① (요청이 대상에) 닿다, 보내지다 ② (한도에) 걸리다 / (캐시) 적중",
+    "forms": ["hitting"]
+  },
+  {
+    "id": "hold",
+    "word": "hold",
+    "pos": "동사",
+    "ipa": "hoʊld",
+    "meaning": "① (규칙·정책이) 지켜지다, 유효하다 ② 담다, 보유하다, 유지하다",
+    "forms": ["held", "holding"]
+  },
+  {
+    "id": "hook",
+    "word": "hook",
+    "pos": "명사",
+    "ipa": "hʊk",
+    "meaning": "훅 — 특정 이벤트(도구 호출 전후 등)에 자동으로 실행되는 코드·명령"
+  },
+  {
+    "id": "however",
+    "word": "however",
+    "pos": "부사",
+    "ipa": "haʊˈevər",
+    "meaning": "① 그러나, 그런데 ② (however + 형용사·부사) 아무리 ~해도"
+  },
+  {
+    "id": "hr",
+    "word": "HR",
+    "pos": "약어",
+    "ipa": "ˌeɪtʃˈɑːr",
+    "meaning": "인사(Human Resources) — 인사 부서, 직원·급여 같은 인사 정보"
+  },
+  {
+    "id": "hub",
+    "word": "hub",
+    "pos": "명사",
+    "ipa": "hʌb",
+    "meaning": "허브, 중심 — 여러 갈래를 잇고 조율하는 중앙 지점"
+  },
+  {
+    "id": "hub-and-spoke",
+    "word": "hub-and-spoke",
+    "pos": "명사구",
+    "ipa": "ˌhʌb ən ˈspoʊk",
+    "meaning": "허브 앤 스포크 — 중앙(허브) 하나가 여러 하위(스포크)를 연결·조율하는 구조",
+    "forms": ["hub and spoke"]
+  },
+  {
+    "id": "human-in-the-loop",
+    "word": "human-in-the-loop",
+    "pos": "형용사구",
+    "ipa": "ˈhjuːmən ɪn ðə ˈluːp",
+    "meaning": "사람 개입형의 — 자동 처리 중간에 사람이 확인·승인하는 (HITL)",
+    "forms": ["human in the loop", "HITL"]
   },
   {
     "id": "identical",
@@ -921,11 +3285,73 @@
     "forms": ["identically"]
   },
   {
+    "id": "identifier",
+    "word": "identifier",
+    "pos": "명사",
+    "ipa": "aɪˈdentɪfaɪər",
+    "meaning": "식별자 — 대상을 하나로 특정하는 값(고객 ID·주문 번호 등)"
+  },
+  {
+    "id": "identify",
+    "word": "identify",
+    "pos": "동사",
+    "ipa": "aɪˈdentɪfaɪ",
+    "meaning": "찾아내다, 식별하다 — 무엇인지 알아보고 짚어 내다",
+    "forms": ["identified", "identifies", "identifying", "identification"]
+  },
+  {
+    "id": "idiomatic",
+    "word": "idiomatic",
+    "pos": "형용사",
+    "ipa": "ˌɪdiəˈmætɪk",
+    "meaning": "(그 언어·프레임워크에서) 관용적인, 그 언어다운 자연스러운 방식의",
+    "forms": ["idiomatically"]
+  },
+  {
+    "id": "ignore",
+    "word": "ignore",
+    "pos": "동사",
+    "ipa": "ɪɡˈnɔːr",
+    "meaning": "무시하다, (지시·규칙을) 따르지 않다",
+    "forms": ["ignored", "ignoring"]
+  },
+  {
+    "id": "implement",
+    "word": "implement",
+    "pos": "동사",
+    "ipa": "ˈɪmplɪment",
+    "meaning": "구현하다, (방안을) 실제로 적용하다",
+    "forms": ["implemented", "implementing", "implementation"]
+  },
+  {
     "id": "implication",
     "word": "implication",
     "pos": "명사",
     "ipa": "ˌɪmplɪˈkeɪʃn",
     "meaning": "(결정이 가져올) 영향, 함의"
+  },
+  {
+    "id": "imply",
+    "word": "imply",
+    "pos": "동사",
+    "ipa": "ɪmˈplaɪ",
+    "meaning": "(직접 말하지 않고) 암시하다, 저절로 드러나게 하다",
+    "forms": ["implied", "implies", "implying"]
+  },
+  {
+    "id": "impractical",
+    "word": "impractical",
+    "pos": "형용사",
+    "ipa": "ɪmˈpræktɪkl",
+    "meaning": "비현실적인, 실제로 하기 어려운"
+  },
+  {
+    "id": "include",
+    "word": "include",
+    "pos": "동사",
+    "ipa": "ɪnˈkluːd",
+    "meaning": "포함하다, (안에) 넣다",
+    "forms": ["included", "including", "inclusion"]
   },
   {
     "id": "inconsistent",
@@ -944,6 +3370,14 @@
     "forms": ["incorporated", "incorporating"]
   },
   {
+    "id": "increase",
+    "word": "increase",
+    "pos": "동사·명사",
+    "ipa": "ɪnˈkriːs",
+    "meaning": "늘리다, 증가(시키다)",
+    "forms": ["increased", "increasing", "increasingly"]
+  },
+  {
     "id": "incrementally",
     "word": "incrementally",
     "pos": "부사",
@@ -957,6 +3391,22 @@
     "pos": "부사",
     "ipa": "ɪnˈdefɪnətli",
     "meaning": "무기한으로, 끝없이"
+  },
+  {
+    "id": "independent",
+    "word": "independent",
+    "pos": "형용사",
+    "ipa": "ˌɪndɪˈpendənt",
+    "meaning": "독립적인, 서로 의존하지 않는 — independently 따로, 스스로",
+    "forms": ["independently", "independence"]
+  },
+  {
+    "id": "index",
+    "word": "index",
+    "pos": "명사·동사",
+    "ipa": "ˈɪndeks",
+    "meaning": "① 색인, 인덱스 ② 인덱싱하다 — 빨리 찾도록 미리 정리해 두다",
+    "forms": ["indexed", "indexing", "indices"]
   },
   {
     "id": "indicate",
@@ -975,6 +3425,76 @@
     "forms": ["inferred", "inferring", "inference"]
   },
   {
+    "id": "infinite",
+    "word": "infinite",
+    "pos": "형용사",
+    "ipa": "ˈɪnfɪnət",
+    "meaning": "무한한, 끝이 없는",
+    "forms": ["infinitely"]
+  },
+  {
+    "id": "inflate",
+    "word": "inflate",
+    "pos": "동사",
+    "ipa": "ɪnˈfleɪt",
+    "meaning": "(비용·크기를) 부풀리다, 필요 이상으로 늘리다",
+    "forms": ["inflated", "inflating", "inflation"]
+  },
+  {
+    "id": "ingestion",
+    "word": "ingestion",
+    "pos": "명사",
+    "ipa": "ɪnˈdʒestʃən",
+    "meaning": "(데이터) 수집·적재 — 외부 데이터를 시스템에 받아들이는 단계",
+    "forms": ["ingest", "ingested", "ingesting"]
+  },
+  {
+    "id": "inherit",
+    "word": "inherit",
+    "pos": "동사",
+    "ipa": "ɪnˈherɪt",
+    "meaning": "물려받다, 상속하다 — (상위의 맥락·설정을) 그대로 이어받다",
+    "forms": ["inherited", "inheriting", "inheritance"]
+  },
+  {
+    "id": "initialize",
+    "word": "initialize",
+    "pos": "동사",
+    "ipa": "ɪˈnɪʃəlaɪz",
+    "meaning": "초기화하다 — 시작할 때 설정·상태를 갖춰 놓다",
+    "forms": ["initialized", "initializing", "initialization"]
+  },
+  {
+    "id": "inject",
+    "word": "inject",
+    "pos": "동사",
+    "ipa": "ɪnˈdʒekt",
+    "meaning": "(내용·값을) 주입하다, 끼워 넣다",
+    "forms": ["injected", "injecting", "injection", "re-inject", "re-injected"]
+  },
+  {
+    "id": "inline",
+    "word": "inline",
+    "pos": "부사·형용사",
+    "ipa": "ˈɪnlaɪn",
+    "meaning": "(따로 떼어 내지 않고) 그 자리에서 바로, 메인 흐름 안에서 (하는)"
+  },
+  {
+    "id": "input-to-output",
+    "word": "input-to-output",
+    "pos": "형용사구",
+    "ipa": "ˈɪnpʊt tə ˈaʊtpʊt",
+    "meaning": "입력→출력의 — 어떤 입력에 어떤 출력이 나와야 하는지 짝지어 보여 주는"
+  },
+  {
+    "id": "insert",
+    "word": "insert",
+    "pos": "동사",
+    "ipa": "ɪnˈsɜːrt",
+    "meaning": "끼워 넣다, 삽입하다",
+    "forms": ["inserted", "inserting", "insertion"]
+  },
+  {
     "id": "insightful",
     "word": "insightful",
     "pos": "형용사",
@@ -982,12 +3502,94 @@
     "meaning": "통찰력 있는, 핵심을 짚는"
   },
   {
+    "id": "inspect",
+    "word": "inspect",
+    "pos": "동사",
+    "ipa": "ɪnˈspekt",
+    "meaning": "(자세히) 검사하다, 들여다보다",
+    "forms": ["inspected", "inspecting", "inspection"]
+  },
+  {
+    "id": "instance",
+    "word": "instance",
+    "pos": "명사",
+    "ipa": "ˈɪnstəns",
+    "meaning": "① (따로 실행되는 하나의) 인스턴스 ② 사례, 경우 (for instance 예를 들어)"
+  },
+  {
+    "id": "instead",
+    "word": "instead",
+    "pos": "부사",
+    "ipa": "ɪnˈsted",
+    "meaning": "대신에 — instead of ~ : ~ 대신, ~하지 않고",
+    "forms": ["instead of"]
+  },
+  {
+    "id": "instruct",
+    "word": "instruct",
+    "pos": "동사",
+    "ipa": "ɪnˈstrʌkt",
+    "meaning": "지시하다, (하라고) 일러두다 — instruction 지시, 지침",
+    "forms": ["instructed", "instructing", "instruction", "instructions"]
+  },
+  {
+    "id": "instruction-following",
+    "word": "instruction-following",
+    "pos": "명사·형용사",
+    "ipa": "ɪnˈstrʌkʃən ˈfɑːloʊɪŋ",
+    "meaning": "지시 이행(능력) — 주어진 지시를 얼마나 잘 따르는지"
+  },
+  {
+    "id": "insurance",
+    "word": "insurance",
+    "pos": "명사",
+    "ipa": "ɪnˈʃʊrəns",
+    "meaning": "보험 — insurance claim 보험금 청구(건)"
+  },
+  {
+    "id": "intact",
+    "word": "intact",
+    "pos": "형용사",
+    "ipa": "ɪnˈtækt",
+    "meaning": "(손상·변경 없이) 그대로인, 온전한"
+  },
+  {
+    "id": "intake",
+    "word": "intake",
+    "pos": "명사",
+    "ipa": "ˈɪnteɪk",
+    "meaning": "접수, (들어오는 것을) 받아들이는 단계·창구"
+  },
+  {
+    "id": "integration",
+    "word": "integration",
+    "pos": "명사",
+    "ipa": "ˌɪntɪˈɡreɪʃən",
+    "meaning": "① 연동, 통합 — 다른 시스템·서비스에 붙여 쓰는 것 ② (CI의) 지속적 통합",
+    "forms": ["integrate", "integrated", "integrating"]
+  },
+  {
+    "id": "intent",
+    "word": "intent",
+    "pos": "명사",
+    "ipa": "ɪnˈtent",
+    "meaning": "의도 — 사용자가 실제로 원하는 것"
+  },
+  {
+    "id": "interact",
+    "word": "interact",
+    "pos": "동사",
+    "ipa": "ˌɪntərˈækt",
+    "meaning": "상호 작용하다, 서로 영향을 주고받다",
+    "forms": ["interacted", "interacting", "interaction"]
+  },
+  {
     "id": "intercept",
     "word": "intercept",
     "pos": "동사",
     "ipa": "ˌɪntərˈsept",
     "meaning": "(중간에서) 가로채다",
-    "forms": ["intercepted", "intercepting"]
+    "forms": ["intercepted", "intercepting", "interception"]
   },
   {
     "id": "intermediate",
@@ -995,6 +3597,30 @@
     "pos": "형용사",
     "ipa": "ˌɪntərˈmiːdiət",
     "meaning": "중간(단계)의"
+  },
+  {
+    "id": "intermittently",
+    "word": "intermittently",
+    "pos": "부사",
+    "ipa": "ˌɪntərˈmɪtəntli",
+    "meaning": "간헐적으로, (불규칙하게) 가끔씩",
+    "forms": ["intermittent"]
+  },
+  {
+    "id": "internal",
+    "word": "internal",
+    "pos": "형용사",
+    "ipa": "ɪnˈtɜːrnl",
+    "meaning": "내부의, 사내의 — internally 내부적으로",
+    "forms": ["internally"]
+  },
+  {
+    "id": "internalize",
+    "word": "internalize",
+    "pos": "동사",
+    "ipa": "ɪnˈtɜːrnəlaɪz",
+    "meaning": "내재화하다, 완전히 몸에 익히다",
+    "forms": ["internalized", "internalizing"]
   },
   {
     "id": "interpret",
@@ -1013,12 +3639,35 @@
     "forms": ["intervene"]
   },
   {
+    "id": "introductory",
+    "word": "introductory",
+    "pos": "형용사",
+    "ipa": "ˌɪntrəˈdʌktəri",
+    "meaning": "서두의, 도입부의 — 본론 앞에 붙는"
+  },
+  {
+    "id": "invent",
+    "word": "invent",
+    "pos": "동사",
+    "ipa": "ɪnˈvent",
+    "meaning": "① (없는 것을) 지어내다, 꾸며 내다 ② 발명하다",
+    "forms": ["invented", "inventing", "invention"]
+  },
+  {
     "id": "investigate",
     "word": "investigate",
     "pos": "동사",
     "ipa": "ɪnˈvestɪɡeɪt",
     "meaning": "(원인을) 조사하다, 파고들다",
-    "forms": ["investigated", "investigating", "investigation"]
+    "forms": ["investigated", "investigating", "investigation", "mid-investigation"]
+  },
+  {
+    "id": "invoice",
+    "word": "invoice",
+    "pos": "명사·동사",
+    "ipa": "ˈɪnvɔɪs",
+    "meaning": "송장, 청구서(인보이스) — invoicing 청구서 발행",
+    "forms": ["invoiced", "invoicing"]
   },
   {
     "id": "invoke",
@@ -1045,12 +3694,50 @@
     "forms": ["isolated", "isolating", "isolation"]
   },
   {
+    "id": "issue",
+    "word": "issue",
+    "pos": "명사·동사",
+    "ipa": "ˈɪʃuː",
+    "meaning": "① 문제, 이슈 ② (환불·호출 등을) 내주다, 발행하다",
+    "forms": ["issued", "issuing"]
+  },
+  {
     "id": "iteration",
     "word": "iteration",
     "pos": "명사",
     "ipa": "ˌɪtəˈreɪʃn",
     "meaning": "반복, (고치고 다시 해 보는) 한 회차",
     "forms": ["iterate", "iterative", "iteratively", "iterating"]
+  },
+  {
+    "id": "judge",
+    "word": "judge",
+    "pos": "동사·명사",
+    "ipa": "dʒʌdʒ",
+    "meaning": "① 판단하다, 판정하다 ② 판정자 (LLM-as-a-judge)",
+    "forms": ["judged", "judging", "judgment", "judgement"]
+  },
+  {
+    "id": "kafka",
+    "word": "Kafka",
+    "pos": "명사",
+    "ipa": "ˈkɑːfkə",
+    "meaning": "카프카(Apache Kafka) — 서비스 간 이벤트·메시지를 주고받는 분산 스트리밍 플랫폼"
+  },
+  {
+    "id": "key-facts",
+    "word": "key-facts",
+    "pos": "명사구",
+    "ipa": "ˌkiː ˈfækts",
+    "meaning": "핵심 사실 — 판단에 꼭 필요한 주요 정보(값·날짜·결론 등)",
+    "forms": ["key facts"]
+  },
+  {
+    "id": "knowledge",
+    "word": "knowledge",
+    "pos": "명사",
+    "ipa": "ˈnɑːlɪdʒ",
+    "meaning": "지식 — knowledge base 지식베이스"
   },
   {
     "id": "lack",
@@ -1061,11 +3748,65 @@
     "forms": ["lacked", "lacking"]
   },
   {
+    "id": "landscape",
+    "word": "landscape",
+    "pos": "명사",
+    "ipa": "ˈlændskeɪp",
+    "meaning": "(전체적인) 판도, 구도 — competitive landscape 경쟁 구도"
+  },
+  {
+    "id": "larger-context",
+    "word": "larger-context",
+    "pos": "형용사구",
+    "ipa": "ˈlɑːrdʒər ˈkɑːntekst",
+    "meaning": "(컨텍스트 창이) 더 큰 — 한 번에 더 많은 토큰을 담는 (모델)",
+    "forms": ["larger context"]
+  },
+  {
     "id": "latency",
     "word": "latency",
     "pos": "명사",
     "ipa": "ˈleɪtənsi",
     "meaning": "지연 시간 — 요청에서 응답까지 걸리는 시간"
+  },
+  {
+    "id": "layer",
+    "word": "layer",
+    "pos": "명사",
+    "ipa": "ˈleɪər",
+    "meaning": "계층, 층 — 시스템을 이루는 한 단계·부분",
+    "forms": ["layered"]
+  },
+  {
+    "id": "lead",
+    "word": "lead",
+    "pos": "명사·동사",
+    "ipa": "liːd",
+    "meaning": "① (팀의) 리드, 책임자 ② 이끌다, (결과로) 이어지다 ③ leading 맨 앞의",
+    "forms": ["leading", "led"]
+  },
+  {
+    "id": "leak",
+    "word": "leak",
+    "pos": "동사·명사",
+    "ipa": "liːk",
+    "meaning": "(비밀·정보가) 새어 나가다, 유출(하다)",
+    "forms": ["leaked", "leaking", "leakage"]
+  },
+  {
+    "id": "legacy",
+    "word": "legacy",
+    "pos": "형용사·명사",
+    "ipa": "ˈleɡəsi",
+    "meaning": "레거시(의) — 오래되어 바꾸기 어려운 기존 시스템·코드"
+  },
+  {
+    "id": "legal",
+    "word": "legal",
+    "pos": "형용사",
+    "ipa": "ˈliːɡl",
+    "meaning": "법률의, 법적인",
+    "forms": ["legally"]
   },
   {
     "id": "legitimate",
@@ -1076,6 +3817,139 @@
     "forms": ["legitimately"]
   },
   {
+    "id": "lightweight",
+    "word": "lightweight",
+    "pos": "형용사",
+    "ipa": "ˈlaɪtweɪt",
+    "meaning": "가벼운, 경량의 — 비용·자원이 적게 드는"
+  },
+  {
+    "id": "likely",
+    "word": "likely",
+    "pos": "형용사·부사",
+    "ipa": "ˈlaɪkli",
+    "meaning": "~할 것 같은, 가능성이 높은 — most likely 가장 가능성 높은",
+    "forms": ["likelihood"]
+  },
+  {
+    "id": "limit",
+    "word": "limit",
+    "pos": "명사·동사",
+    "ipa": "ˈlɪmɪt",
+    "meaning": "한도, 제한(하다)",
+    "forms": ["limited", "limiting", "limitation"]
+  },
+  {
+    "id": "line-item",
+    "word": "line-item",
+    "pos": "명사",
+    "ipa": "ˈlaɪn ˌaɪtəm",
+    "meaning": "(송장·청구서의) 품목 행 — 한 줄에 하나씩 적힌 개별 품목·금액",
+    "forms": ["line item"]
+  },
+  {
+    "id": "lint",
+    "word": "lint",
+    "pos": "동사·명사",
+    "ipa": "lɪnt",
+    "meaning": "린트(하다) — 코드의 스타일·잠재 오류를 정적으로 검사하다",
+    "forms": ["linting", "linted", "linter"]
+  },
+  {
+    "id": "literal",
+    "word": "literal",
+    "pos": "형용사",
+    "ipa": "ˈlɪtərəl",
+    "meaning": "글자 그대로의, 문자열이 그대로 일치하는",
+    "forms": ["literally"]
+  },
+  {
+    "id": "llm",
+    "word": "LLM",
+    "pos": "약어",
+    "ipa": "ˌel el ˈem",
+    "meaning": "대규모 언어 모델(Large Language Model)"
+  },
+  {
+    "id": "load",
+    "word": "load",
+    "pos": "동사·명사",
+    "ipa": "loʊd",
+    "meaning": "① (설정·파일이) 로드되다, 불러오다 ② 부하, 처리량",
+    "forms": ["loaded", "loading"]
+  },
+  {
+    "id": "local",
+    "word": "local",
+    "pos": "형용사",
+    "ipa": "ˈloʊkl",
+    "meaning": "로컬의 — (서버·CI가 아닌) 내 컴퓨터·환경의",
+    "forms": ["locally"]
+  },
+  {
+    "id": "locate",
+    "word": "locate",
+    "pos": "동사",
+    "ipa": "ˈloʊkeɪt",
+    "meaning": "(위치를) 찾아내다 / (be located) ~에 있다",
+    "forms": ["located", "locating"]
+  },
+  {
+    "id": "lock",
+    "word": "lock",
+    "pos": "명사·동사",
+    "ipa": "lɑːk",
+    "meaning": "락, 잠금(을 걸다) — 동시에 같은 자원을 쓰지 못하게 막는 장치",
+    "forms": ["locked", "locking"]
+  },
+  {
+    "id": "logic",
+    "word": "logic",
+    "pos": "명사",
+    "ipa": "ˈlɑːdʒɪk",
+    "meaning": "(코드의) 처리 로직, 논리"
+  },
+  {
+    "id": "long-running",
+    "word": "long-running",
+    "pos": "형용사",
+    "ipa": "ˌlɔːŋ ˈrʌnɪŋ",
+    "meaning": "장시간 실행되는, 오래 이어지는",
+    "forms": ["long running"]
+  },
+  {
+    "id": "lookup",
+    "word": "lookup",
+    "pos": "명사",
+    "ipa": "ˈlʊkʌp",
+    "meaning": "조회 — 키·ID로 데이터를 찾아오는 것 (look up: 조회하다)",
+    "forms": ["look up", "looks up", "looked up", "looking up", "look-up"]
+  },
+  {
+    "id": "loss",
+    "word": "loss",
+    "pos": "명사",
+    "ipa": "lɔːs",
+    "meaning": "손실, (데이터·상태·맥락을) 잃음",
+    "forms": ["lose", "losing", "lost"]
+  },
+  {
+    "id": "lost-in-the-middle",
+    "word": "lost-in-the-middle",
+    "pos": "명사구",
+    "ipa": "ˌlɔːst ɪn ðə ˈmɪdl",
+    "meaning": "로스트 인 더 미들 — 긴 입력의 중간에 묻힌 정보를 모델이 놓치기 쉬운 현상",
+    "forms": ["lost in the middle"]
+  },
+  {
+    "id": "maintain",
+    "word": "maintain",
+    "pos": "동사",
+    "ipa": "meɪnˈteɪn",
+    "meaning": "① 유지하다, 계속 지니다 ② (코드·시스템을) 유지보수하다",
+    "forms": ["maintained", "maintaining", "maintenance"]
+  },
+  {
     "id": "maintainable",
     "word": "maintainable",
     "pos": "형용사",
@@ -1084,11 +3958,184 @@
     "forms": ["maintainability"]
   },
   {
+    "id": "major",
+    "word": "major",
+    "pos": "형용사",
+    "ipa": "ˈmeɪdʒər",
+    "meaning": "중대한, 주요한 — major bug 심각한 버그"
+  },
+  {
+    "id": "majority",
+    "word": "majority",
+    "pos": "명사",
+    "ipa": "məˈdʒɔːrəti",
+    "meaning": "대다수, 과반 — majority vote 다수결"
+  },
+  {
+    "id": "malformed",
+    "word": "malformed",
+    "pos": "형용사",
+    "ipa": "ˌmælˈfɔːrmd",
+    "meaning": "형식이 잘못된, 형식에 맞지 않는"
+  },
+  {
+    "id": "management",
+    "word": "management",
+    "pos": "명사",
+    "ipa": "ˈmænɪdʒmənt",
+    "meaning": "관리 — context management 컨텍스트 관리",
+    "forms": ["manage", "managed", "managing"]
+  },
+  {
     "id": "mandatory",
     "word": "mandatory",
     "pos": "형용사",
     "ipa": "ˈmændətɔːri",
     "meaning": "필수의, 의무적인"
+  },
+  {
+    "id": "manifest",
+    "word": "manifest",
+    "pos": "명사·동사",
+    "ipa": "ˈmænɪfest",
+    "meaning": "① 매니페스트 — 대상 항목과 진행 상태를 적어 둔 목록(파일) ② 드러나다, 나타나다",
+    "forms": ["manifested"]
+  },
+  {
+    "id": "manually",
+    "word": "manually",
+    "pos": "부사",
+    "ipa": "ˈmænjuəli",
+    "meaning": "수동으로, 사람이 직접 (manual: 수동의)",
+    "forms": ["manual"]
+  },
+  {
+    "id": "map",
+    "word": "map",
+    "pos": "동사·명사",
+    "ipa": "mæp",
+    "meaning": "① 대응시키다, 매핑하다 (mapping: 대응 관계) ② 지도 / (구조를) 파악하다",
+    "forms": ["mapping", "mappings", "mapped"]
+  },
+  {
+    "id": "marker",
+    "word": "marker",
+    "pos": "명사",
+    "ipa": "ˈmɑːrkər",
+    "meaning": "표시, 표식 — 구간·위치를 알아보게 넣는 기호"
+  },
+  {
+    "id": "match",
+    "word": "match",
+    "pos": "동사·명사",
+    "ipa": "mætʃ",
+    "meaning": "① (조건·패턴과) 일치하다, 맞다 ② 일치하는 것, 일치 결과",
+    "forms": ["matched", "matching"]
+  },
+  {
+    "id": "matcher",
+    "word": "matcher",
+    "pos": "명사",
+    "ipa": "ˈmætʃər",
+    "meaning": "매처 — 훅이 어떤 도구에 반응할지 정하는 패턴"
+  },
+  {
+    "id": "maximum",
+    "word": "maximum",
+    "pos": "명사·형용사",
+    "ipa": "ˈmæksɪməm",
+    "meaning": "최대(의), 최댓값"
+  },
+  {
+    "id": "mcp",
+    "word": "MCP",
+    "pos": "약어",
+    "ipa": "ˌem.siːˈpiː",
+    "meaning": "Model Context Protocol — 모델에 외부 도구·데이터를 연결하는 표준 프로토콜",
+    "forms": ["Model Context Protocol"]
+  },
+  {
+    "id": "meaningful",
+    "word": "meaningful",
+    "pos": "형용사",
+    "ipa": "ˈmiːnɪŋfl",
+    "meaning": "의미 있는, 유의미한",
+    "forms": ["meaningfully"]
+  },
+  {
+    "id": "mechanism",
+    "word": "mechanism",
+    "pos": "명사",
+    "ipa": "ˈmekənɪzəm",
+    "meaning": "(무언가를 하는) 수단, 장치, 메커니즘"
+  },
+  {
+    "id": "memo",
+    "word": "memo",
+    "pos": "명사",
+    "ipa": "ˈmemoʊ",
+    "meaning": "메모, 전표 — credit memo 대변 메모(대금을 깎아 주는 전표)"
+  },
+  {
+    "id": "merge",
+    "word": "merge",
+    "pos": "동사·명사",
+    "ipa": "mɜːrdʒ",
+    "meaning": "합치다, 병합(하다)",
+    "forms": ["merged", "merging"]
+  },
+  {
+    "id": "mid-analysis",
+    "word": "mid-analysis",
+    "pos": "부사",
+    "ipa": "ˌmɪd əˈnæləsɪs",
+    "meaning": "분석 도중에"
+  },
+  {
+    "id": "mid-session",
+    "word": "mid-session",
+    "pos": "부사·형용사",
+    "ipa": "ˌmɪd ˈseʃn",
+    "meaning": "세션 도중에(의)"
+  },
+  {
+    "id": "midway",
+    "word": "midway",
+    "pos": "부사·형용사",
+    "ipa": "ˌmɪdˈweɪ",
+    "meaning": "(진행) 도중에, 중간쯤에"
+  },
+  {
+    "id": "migrate",
+    "word": "migrate",
+    "pos": "동사",
+    "ipa": "ˈmaɪɡreɪt",
+    "meaning": "(새 환경·형식으로) 옮기다, 마이그레이션하다",
+    "forms": ["migrated", "migrating", "migration", "re-migrating", "re-migrate", "re-migrated"]
+  },
+  {
+    "id": "minimum",
+    "word": "minimum",
+    "pos": "명사·형용사",
+    "ipa": "ˈmɪnɪməm",
+    "meaning": "최소(의), 최솟값 — minimum viable 최소한으로 필요한",
+    "forms": ["minimal"]
+  },
+  {
+    "id": "misclassify",
+    "word": "misclassify",
+    "pos": "동사",
+    "ipa": "ˌmɪsˈklæsɪfaɪ",
+    "meaning": "잘못 분류하다",
+    "forms": ["misclassified", "misclassifies", "misclassifying", "misclassification"]
+  },
+  {
+    "id": "misconfigured",
+    "word": "misconfigured",
+    "pos": "형용사",
+    "ipa": "ˌmɪskənˈfɪɡjərd",
+    "meaning": "설정이 잘못된",
+    "forms": ["misconfigure", "misconfiguration"]
   },
   {
     "id": "misinterpret",
@@ -1107,11 +4154,87 @@
     "forms": ["mislead", "misled"]
   },
   {
+    "id": "mismatch",
+    "word": "mismatch",
+    "pos": "명사·동사",
+    "ipa": "ˈmɪsmætʃ",
+    "meaning": "불일치, 어긋남 / (서로) 맞지 않다",
+    "forms": ["mismatched"]
+  },
+  {
+    "id": "misnamed",
+    "word": "misnamed",
+    "pos": "형용사",
+    "ipa": "ˌmɪsˈneɪmd",
+    "meaning": "이름이 잘못 붙은"
+  },
+  {
+    "id": "misread",
+    "word": "misread",
+    "pos": "동사",
+    "ipa": "ˌmɪsˈriːd",
+    "meaning": "잘못 읽다, 잘못 해석하다",
+    "forms": ["misreading"]
+  },
+  {
+    "id": "moderation",
+    "word": "moderation",
+    "pos": "명사",
+    "ipa": "ˌmɑːdəˈreɪʃn",
+    "meaning": "① (콘텐츠) 검수, 모더레이션 ② 절제, 적당함",
+    "forms": ["moderator"]
+  },
+  {
+    "id": "module",
+    "word": "module",
+    "pos": "명사",
+    "ipa": "ˈmɑːdʒuːl",
+    "meaning": "모듈 — 코드를 기능 단위로 나눈 묶음"
+  },
+  {
     "id": "monolithic",
     "word": "monolithic",
     "pos": "형용사",
     "ipa": "ˌmɑːnəˈlɪθɪk",
-    "meaning": "(나뉘지 않은) 한 덩어리의, 거대한 단일 구조의"
+    "meaning": "(나뉘지 않은) 한 덩어리의, 거대한 단일 구조의",
+    "forms": ["monolith"]
+  },
+  {
+    "id": "monorepo",
+    "word": "monorepo",
+    "pos": "명사",
+    "ipa": "ˈmɑːnoʊriːpoʊ",
+    "meaning": "모노레포 — 여러 프로젝트를 한 저장소에 모아 관리하는 방식(저장소)"
+  },
+  {
+    "id": "multi-agent",
+    "word": "multi-agent",
+    "pos": "형용사",
+    "ipa": "ˌmʌlti ˈeɪdʒənt",
+    "meaning": "멀티 에이전트의 — 여러 에이전트가 역할을 나눠 협업하는",
+    "forms": ["multi agent", "multiagent"]
+  },
+  {
+    "id": "multi-hour",
+    "word": "multi-hour",
+    "pos": "형용사",
+    "ipa": "ˌmʌlti ˈaʊər",
+    "meaning": "몇 시간에 걸친"
+  },
+  {
+    "id": "multi-step",
+    "word": "multi-step",
+    "pos": "형용사",
+    "ipa": "ˌmʌlti ˈstep",
+    "meaning": "여러 단계로 된, 다단계의",
+    "forms": ["multistep"]
+  },
+  {
+    "id": "multi-turn",
+    "word": "multi-turn",
+    "pos": "형용사",
+    "ipa": "ˌmʌlti ˈtɜːrn",
+    "meaning": "여러 턴에 걸친 (대화)"
   },
   {
     "id": "narrative",
@@ -1119,6 +4242,14 @@
     "pos": "명사·형용사",
     "ipa": "ˈnærətɪv",
     "meaning": "서술(형) — 줄글로 풀어 쓴 설명"
+  },
+  {
+    "id": "negative",
+    "word": "negative",
+    "pos": "형용사",
+    "ipa": "ˈneɡətɪv",
+    "meaning": "① 부정적인 ② 음수의, (검사가) 음성의",
+    "forms": ["negatively"]
   },
   {
     "id": "nested",
@@ -1129,12 +4260,80 @@
     "forms": ["nesting"]
   },
   {
+    "id": "no-longer",
+    "word": "no longer",
+    "pos": "부사구",
+    "ipa": "noʊ ˈlɔːŋɡər",
+    "meaning": "더 이상 ~ 않다"
+  },
+  {
+    "id": "noise",
+    "word": "noise",
+    "pos": "명사",
+    "ipa": "nɔɪz",
+    "meaning": "노이즈 — 핵심을 가리는 쓸모없는 정보·출력",
+    "forms": ["noisy"]
+  },
+  {
+    "id": "non-unique",
+    "word": "non-unique",
+    "pos": "형용사",
+    "ipa": "ˌnɑːn juˈniːk",
+    "meaning": "고유하지 않은 — 일치하는 대상이 여러 개인",
+    "forms": ["multiple-match", "non-unique-match", "non-unique match", "multiple match", "nonunique"]
+  },
+  {
     "id": "normalize",
     "word": "normalize",
     "pos": "동사",
     "ipa": "ˈnɔːrməlaɪz",
     "meaning": "(형식을) 표준 형태로 맞추다, 정규화하다",
     "forms": ["normalized", "normalizing", "normalization"]
+  },
+  {
+    "id": "notation",
+    "word": "notation",
+    "pos": "명사",
+    "ipa": "noʊˈteɪʃn",
+    "meaning": "표기(법)"
+  },
+  {
+    "id": "note",
+    "word": "note",
+    "pos": "동사·명사",
+    "ipa": "noʊt",
+    "meaning": "① 언급하다, 주목하다 ② 메모, 참고 사항",
+    "forms": ["noted", "noting"]
+  },
+  {
+    "id": "notice",
+    "word": "notice",
+    "pos": "동사·명사",
+    "ipa": "ˈnoʊtɪs",
+    "meaning": "① 알아차리다 ② 공지, 통지",
+    "forms": ["noticed", "noticing"]
+  },
+  {
+    "id": "novel",
+    "word": "novel",
+    "pos": "형용사",
+    "ipa": "ˈnɑːvl",
+    "meaning": "새로운, 처음 보는 (명사로는 '소설')"
+  },
+  {
+    "id": "null",
+    "word": "null",
+    "pos": "명사·형용사",
+    "ipa": "nʌl",
+    "meaning": "널(null) — 값이 없음을 나타내는 값 (nullable: null 허용)",
+    "forms": ["nullable"]
+  },
+  {
+    "id": "observability",
+    "word": "observability",
+    "pos": "명사",
+    "ipa": "əbˌzɜːrvəˈbɪləti",
+    "meaning": "관측성 — 로그·트레이스로 시스템 내부 동작을 들여다볼 수 있는 정도"
   },
   {
     "id": "observe",
@@ -1153,6 +4352,21 @@
     "forms": ["occasional"]
   },
   {
+    "id": "occurrence",
+    "word": "occurrence",
+    "pos": "명사",
+    "ipa": "əˈkɜːrəns",
+    "meaning": "① (문자열 등이) 나타난 곳, 출현 ② 발생",
+    "forms": ["occur", "occurred", "occurring"]
+  },
+  {
+    "id": "offending",
+    "word": "offending",
+    "pos": "형용사",
+    "ipa": "əˈfendɪŋ",
+    "meaning": "문제가 된, 문제를 일으킨 (바로 그)"
+  },
+  {
     "id": "omit",
     "word": "omit",
     "pos": "동사",
@@ -1169,12 +4383,104 @@
     "forms": ["on demand"]
   },
   {
+    "id": "on-its-own",
+    "word": "on its own",
+    "pos": "부사구",
+    "ipa": "ɑːn ɪts ˈoʊn",
+    "meaning": "① 스스로, 혼자 힘으로 ② 그것만으로",
+    "forms": ["on their own"]
+  },
+  {
+    "id": "onboard",
+    "word": "onboard",
+    "pos": "동사",
+    "ipa": "ˈɑːnbɔːrd",
+    "meaning": "(새 구성원을) 합류시키다, 적응시키다 — newly onboarded 새로 합류한",
+    "forms": ["onboarded", "onboarding"]
+  },
+  {
+    "id": "one-at-a-time",
+    "word": "one at a time",
+    "pos": "부사구",
+    "ipa": "ˌwʌn ət ə ˈtaɪm",
+    "meaning": "한 번에 하나씩"
+  },
+  {
+    "id": "one-off",
+    "word": "one-off",
+    "pos": "형용사",
+    "ipa": "ˌwʌn ˈɔːf",
+    "meaning": "일회성의, 한 번만 쓰는"
+  },
+  {
+    "id": "open-ended",
+    "word": "open-ended",
+    "pos": "형용사",
+    "ipa": "ˌoʊpən ˈendɪd",
+    "meaning": "개방형의 — 정해진 답·범위 없이 열려 있는",
+    "forms": ["open ended"]
+  },
+  {
+    "id": "operation",
+    "word": "operation",
+    "pos": "명사",
+    "ipa": "ˌɑːpəˈreɪʃn",
+    "meaning": "① 작업, 연산 ② 운영, 가동",
+    "forms": ["operational"]
+  },
+  {
     "id": "optimal",
     "word": "optimal",
     "pos": "형용사",
     "ipa": "ˈɑːptɪməl",
     "meaning": "최적의",
     "forms": ["optimally"]
+  },
+  {
+    "id": "optional",
+    "word": "optional",
+    "pos": "형용사",
+    "ipa": "ˈɑːpʃənl",
+    "meaning": "선택적인, 필수가 아닌",
+    "forms": ["optionally"]
+  },
+  {
+    "id": "orchestration",
+    "word": "orchestration",
+    "pos": "명사",
+    "ipa": "ˌɔːrkɪˈstreɪʃn",
+    "meaning": "오케스트레이션 — 여러 에이전트·작업을 나누고 배분해 전체 흐름을 조율하는 것",
+    "forms": ["orchestrator-workers", "orchestrate", "orchestrated", "orchestrating", "orchestrator"]
+  },
+  {
+    "id": "original",
+    "word": "original",
+    "pos": "형용사",
+    "ipa": "əˈrɪdʒənl",
+    "meaning": "원래의, 처음 그대로의",
+    "forms": ["originally"]
+  },
+  {
+    "id": "originate",
+    "word": "originate",
+    "pos": "동사",
+    "ipa": "əˈrɪdʒɪneɪt",
+    "meaning": "(~에서) 비롯되다, 처음 나오다",
+    "forms": ["originating", "originated"]
+  },
+  {
+    "id": "outage",
+    "word": "outage",
+    "pos": "명사",
+    "ipa": "ˈaʊtɪdʒ",
+    "meaning": "(서비스·시스템) 장애, 일시 중단"
+  },
+  {
+    "id": "overall",
+    "word": "overall",
+    "pos": "형용사·부사",
+    "ipa": "ˌoʊvərˈɔːl",
+    "meaning": "전반적인, 전체적으로"
   },
   {
     "id": "overhead",
@@ -1190,6 +4496,14 @@
     "ipa": "ˌoʊvərˈlæp",
     "meaning": "(일부가) 겹치다 / 겹침",
     "forms": ["overlapping", "overlapped"]
+  },
+  {
+    "id": "overlook",
+    "word": "overlook",
+    "pos": "동사",
+    "ipa": "ˌoʊvərˈlʊk",
+    "meaning": "(중요한 것을) 놓치다, 간과하다",
+    "forms": ["overlooking", "overlooked"]
   },
   {
     "id": "overly",
@@ -1214,12 +4528,66 @@
     "forms": ["overriding", "overridden", "overrode"]
   },
   {
+    "id": "overview",
+    "word": "overview",
+    "pos": "명사",
+    "ipa": "ˈoʊvərvjuː",
+    "meaning": "개요, 큰 그림만 훑은 요약"
+  },
+  {
+    "id": "overwrite",
+    "word": "overwrite",
+    "pos": "동사",
+    "ipa": "ˌoʊvərˈraɪt",
+    "meaning": "덮어쓰다 — 기존 내용을 지우고 새 내용으로 바꿔 쓰다",
+    "forms": ["overwritten", "overwrote", "overwriting"]
+  },
+  {
+    "id": "parallel",
+    "word": "parallel",
+    "pos": "형용사",
+    "ipa": "ˈpærəlel",
+    "meaning": "병렬의, 동시에 진행하는 (in parallel: 병렬로)",
+    "forms": ["in parallel", "parallelize", "parallelized", "parallelism"]
+  },
+  {
+    "id": "parameter",
+    "word": "parameter",
+    "pos": "명사",
+    "ipa": "pəˈræmɪtər",
+    "meaning": "매개변수, 파라미터 — 함수·도구에 넘기는 입력 항목"
+  },
+  {
+    "id": "parse",
+    "word": "parse",
+    "pos": "동사",
+    "ipa": "pɑːrs",
+    "meaning": "파싱하다 — 텍스트를 구조에 맞게 분석해 읽어 내다",
+    "forms": ["parsing", "parsed", "parser"]
+  },
+  {
     "id": "partial",
     "word": "partial",
     "pos": "형용사",
     "ipa": "ˈpɑːrʃl",
     "meaning": "부분적인, 일부만의",
     "forms": ["partially"]
+  },
+  {
+    "id": "partial-credit",
+    "word": "partial-credit",
+    "pos": "명사구",
+    "ipa": "ˌpɑːrʃl ˈkredɪt",
+    "meaning": "부분 크레딧 — 전액 환불 대신 일부 금액만 보상으로 주는 것",
+    "forms": ["partial credit"]
+  },
+  {
+    "id": "particular",
+    "word": "particular",
+    "pos": "형용사",
+    "ipa": "pərˈtɪkjələr",
+    "meaning": "특정한, 바로 그 (in particular: 특히)",
+    "forms": ["in particular"]
   },
   {
     "id": "particularly",
@@ -1237,6 +4605,21 @@
     "forms": ["partitioned", "partitioning"]
   },
   {
+    "id": "pass",
+    "word": "pass",
+    "pos": "동사",
+    "ipa": "pæs",
+    "meaning": "① (값·맥락을) 넘기다, 전달하다 ② (테스트를) 통과하다",
+    "forms": ["passed", "passing"]
+  },
+  {
+    "id": "passed-in",
+    "word": "passed-in",
+    "pos": "형용사",
+    "ipa": "ˌpæst ˈɪn",
+    "meaning": "(입력·인자로) 전달받은, 넘겨받은"
+  },
+  {
     "id": "patent",
     "word": "patent",
     "pos": "명사",
@@ -1244,11 +4627,85 @@
     "meaning": "특허"
   },
   {
+    "id": "path",
+    "word": "path",
+    "pos": "명사",
+    "ipa": "pæθ",
+    "meaning": "① (파일) 경로 ② (일이 흘러가는) 길, 경로"
+  },
+  {
+    "id": "pattern",
+    "word": "pattern",
+    "pos": "명사",
+    "ipa": "ˈpætərn",
+    "meaning": "패턴, 반복되는 형식·유형"
+  },
+  {
+    "id": "payload",
+    "word": "payload",
+    "pos": "명사",
+    "ipa": "ˈpeɪloʊd",
+    "meaning": "페이로드 — 요청·메시지에 실린 실제 데이터 본문"
+  },
+  {
+    "id": "payment",
+    "word": "payment",
+    "pos": "명사",
+    "ipa": "ˈpeɪmənt",
+    "meaning": "지급, 결제 (대금)"
+  },
+  {
+    "id": "peer-reviewed",
+    "word": "peer-reviewed",
+    "pos": "형용사",
+    "ipa": "ˌpɪr rɪˈvjuːd",
+    "meaning": "동료 심사를 거친 — 같은 분야 전문가의 검토를 통과한 (학술 문헌)",
+    "forms": ["peer-reviewed-literature", "peer reviewed"]
+  },
+  {
+    "id": "peer-to-peer",
+    "word": "peer-to-peer",
+    "pos": "형용사",
+    "ipa": "ˌpɪr tə ˈpɪr",
+    "meaning": "P2P, 대등 간 직접 연결의 — 중앙을 거치지 않고 서로 직접 주고받는",
+    "forms": ["peer to peer"]
+  },
+  {
     "id": "pending",
     "word": "pending",
     "pos": "형용사",
     "ipa": "ˈpendɪŋ",
     "meaning": "아직 처리되지 않은, 대기 중인"
+  },
+  {
+    "id": "per",
+    "word": "per",
+    "pos": "전치사",
+    "ipa": "pɜːr",
+    "meaning": "~당, ~마다"
+  },
+  {
+    "id": "per-request",
+    "word": "per-request",
+    "pos": "형용사",
+    "ipa": "pɜːr rɪˈkwest",
+    "meaning": "요청당, 요청 한 건마다의",
+    "forms": ["per request"]
+  },
+  {
+    "id": "perform",
+    "word": "perform",
+    "pos": "동사",
+    "ipa": "pərˈfɔːrm",
+    "meaning": "수행하다, (작업을) 해내다",
+    "forms": ["performed", "performing"]
+  },
+  {
+    "id": "performance",
+    "word": "performance",
+    "pos": "명사",
+    "ipa": "pərˈfɔːrməns",
+    "meaning": "① 성능 ② (업무) 성과, 수행"
   },
   {
     "id": "periodically",
@@ -1259,12 +4716,65 @@
     "forms": ["periodic"]
   },
   {
+    "id": "permission",
+    "word": "permission",
+    "pos": "명사",
+    "ipa": "pərˈmɪʃn",
+    "meaning": "권한, 허가 — 어떤 동작을 해도 되는지 정한 것"
+  },
+  {
     "id": "persistent",
     "word": "persistent",
     "pos": "형용사",
     "ipa": "pərˈsɪstənt",
     "meaning": "① 계속되는, 사라지지 않는 ② (저장되어) 유지되는",
     "forms": ["persist", "persisted", "persistence", "persistently"]
+  },
+  {
+    "id": "personal-access-token",
+    "word": "personal access token",
+    "pos": "명사구",
+    "ipa": "ˌpɜːrsənl ˈækses ˌtoʊkən",
+    "meaning": "개인 액세스 토큰(PAT) — 비밀번호 대신 API·CLI 인증에 쓰는 개인 비밀값",
+    "forms": ["personal-access token", "personal-access"]
+  },
+  {
+    "id": "phase",
+    "word": "phase",
+    "pos": "명사",
+    "ipa": "feɪz",
+    "meaning": "(작업의) 단계"
+  },
+  {
+    "id": "phrase",
+    "word": "phrase",
+    "pos": "명사·동사",
+    "ipa": "freɪz",
+    "meaning": "① 문구, 구절 ② (말로) 표현하다",
+    "forms": ["phrasing", "phrased"]
+  },
+  {
+    "id": "physically",
+    "word": "physically",
+    "pos": "부사",
+    "ipa": "ˈfɪzɪkli",
+    "meaning": "물리적으로, 실제로",
+    "forms": ["physical"]
+  },
+  {
+    "id": "pin-down",
+    "word": "pin down",
+    "pos": "동사구",
+    "ipa": "pɪn ˈdaʊn",
+    "meaning": "(정확히) 밝혀내다, 확정하다",
+    "forms": ["pinned down", "pins down", "pinning down"]
+  },
+  {
+    "id": "pipeline",
+    "word": "pipeline",
+    "pos": "명사",
+    "ipa": "ˈpaɪplaɪn",
+    "meaning": "파이프라인 — 여러 처리 단계를 차례로 이은 흐름"
   },
   {
     "id": "placeholder",
@@ -1274,12 +4784,43 @@
     "meaning": "자리 표시자 — 나중에 채울 임시 값"
   },
   {
+    "id": "plain",
+    "word": "plain",
+    "pos": "형용사",
+    "ipa": "pleɪn",
+    "meaning": "① 그냥, 아무것도 덧붙이지 않은 ② (서식 없는) 일반의 (plain text: 일반 텍스트)",
+    "forms": ["plain-text", "plain text"]
+  },
+  {
     "id": "plausible",
     "word": "plausible",
     "pos": "형용사",
     "ipa": "ˈplɔːzəbl",
     "meaning": "그럴듯한 (맞아 보이지만 확실하진 않은)",
-    "forms": ["plausibly"]
+    "forms": ["plausibly", "plausible-looking"]
+  },
+  {
+    "id": "po",
+    "word": "PO",
+    "pos": "약어",
+    "ipa": "ˌpiːˈoʊ",
+    "meaning": "구매 주문(서) — Purchase Order"
+  },
+  {
+    "id": "policy",
+    "word": "policy",
+    "pos": "명사",
+    "ipa": "ˈpɑːləsi",
+    "meaning": "정책, 규정",
+    "forms": ["policies"]
+  },
+  {
+    "id": "polite",
+    "word": "polite",
+    "pos": "형용사",
+    "ipa": "pəˈlaɪt",
+    "meaning": "정중한, 예의 바른",
+    "forms": ["politely"]
   },
   {
     "id": "poll",
@@ -1290,12 +4831,59 @@
     "forms": ["polled", "polling"]
   },
   {
+    "id": "post",
+    "word": "post",
+    "pos": "동사",
+    "ipa": "poʊst",
+    "meaning": "(댓글·메시지를) 올리다, 게시하다",
+    "forms": ["posted", "posting"]
+  },
+  {
+    "id": "post-hoc",
+    "word": "post-hoc",
+    "pos": "형용사",
+    "ipa": "ˌpoʊst ˈhɑːk",
+    "meaning": "사후의 — 일이 다 일어난 뒤에 하는",
+    "forms": ["post hoc"]
+  },
+  {
+    "id": "post-process",
+    "word": "post-process",
+    "pos": "동사",
+    "ipa": "ˌpoʊst ˈprɑːses",
+    "meaning": "후처리하다 — 출력이 나온 뒤 코드로 다듬다",
+    "forms": ["post-processing", "post-processor", "post-processed"]
+  },
+  {
+    "id": "posttooluse",
+    "word": "PostToolUse",
+    "pos": "명사",
+    "ipa": "ˌpoʊst ˈtuːl juːz",
+    "meaning": "PostToolUse 훅 — 도구 실행 직후에 실행되어 결과를 검사·가공하는 훅"
+  },
+  {
     "id": "potential",
     "word": "potential",
     "pos": "형용사",
     "ipa": "pəˈtenʃl",
     "meaning": "잠재적인, ~일 가능성이 있는",
     "forms": ["potentially"]
+  },
+  {
+    "id": "pr",
+    "word": "PR",
+    "pos": "약어",
+    "ipa": "ˌpiːˈɑːr",
+    "meaning": "풀 리퀘스트 — 코드 변경을 리뷰·병합해 달라는 요청",
+    "forms": ["pull request"]
+  },
+  {
+    "id": "practice",
+    "word": "practice",
+    "pos": "명사",
+    "ipa": "ˈpræktɪs",
+    "meaning": "① 실제 (in practice: 실제로는) ② 관행, 실무 방식",
+    "forms": ["in practice"]
   },
   {
     "id": "precedence",
@@ -1321,11 +4909,51 @@
     "forms": ["predated", "predating"]
   },
   {
+    "id": "prefer",
+    "word": "prefer",
+    "pos": "동사",
+    "ipa": "prɪˈfɜːr",
+    "meaning": "선호하다, (여럿 중) 더 원하다",
+    "forms": ["preferred", "preferring", "preference"]
+  },
+  {
+    "id": "prefix",
+    "word": "prefix",
+    "pos": "명사",
+    "ipa": "ˈpriːfɪks",
+    "meaning": "접두사, 앞부분 — 맨 앞에 붙는 고정된 부분",
+    "forms": ["prefixed"]
+  },
+  {
+    "id": "prepend",
+    "word": "prepend",
+    "pos": "동사",
+    "ipa": "priːˈpend",
+    "meaning": "앞에 덧붙이다 (↔ append)",
+    "forms": ["prepended", "prepending"]
+  },
+  {
+    "id": "preprocessing",
+    "word": "preprocessing",
+    "pos": "명사",
+    "ipa": "ˌpriːˈprɑːsesɪŋ",
+    "meaning": "전처리 — 본 처리 전에 입력을 걸러 내거나 다듬는 일",
+    "forms": ["pre-processing", "preprocess", "preprocessed"]
+  },
+  {
     "id": "prerequisite",
     "word": "prerequisite",
     "pos": "명사",
     "ipa": "ˌpriːˈrekwəzɪt",
     "meaning": "전제 조건 — 먼저 갖춰야 할 것"
+  },
+  {
+    "id": "present",
+    "word": "present",
+    "pos": "동사·형용사",
+    "ipa": "prɪˈzent · ˈpreznt",
+    "meaning": "① 제시하다, 보여 주다 ② (그 안에) 있는, 존재하는",
+    "forms": ["presented", "presenting"]
   },
   {
     "id": "preserve",
@@ -1334,6 +4962,29 @@
     "ipa": "prɪˈzɜːrv",
     "meaning": "(바뀌지 않게) 보존하다, 유지하다",
     "forms": ["preserved", "preserving", "preservation"]
+  },
+  {
+    "id": "pretooluse",
+    "word": "PreToolUse",
+    "pos": "명사",
+    "ipa": "ˌpriː ˈtuːl juːz",
+    "meaning": "PreToolUse 훅 — 도구 실행 직전에 호출을 검사·차단하는 훅"
+  },
+  {
+    "id": "prevent",
+    "word": "prevent",
+    "pos": "동사",
+    "ipa": "prɪˈvent",
+    "meaning": "막다, 방지하다 — 일어나지 않게 미리",
+    "forms": ["prevented", "preventing", "prevention"]
+  },
+  {
+    "id": "previous",
+    "word": "previous",
+    "pos": "형용사",
+    "ipa": "ˈpriːviəs",
+    "meaning": "이전의, 앞선",
+    "forms": ["previously"]
   },
   {
     "id": "prior",
@@ -1359,6 +5010,14 @@
     "forms": ["proactive"]
   },
   {
+    "id": "probe",
+    "word": "probe",
+    "pos": "동사",
+    "ipa": "proʊb",
+    "meaning": "(이것저것 시도하며) 탐색하다, 살펴보다",
+    "forms": ["probing", "probed"]
+  },
+  {
     "id": "procedure",
     "word": "procedure",
     "pos": "명사",
@@ -1375,6 +5034,45 @@
     "forms": ["proceeded", "proceeding"]
   },
   {
+    "id": "process",
+    "word": "process",
+    "pos": "동사·명사",
+    "ipa": "ˈprɑːses",
+    "meaning": "① 처리하다 ② 과정, 절차",
+    "forms": ["processed", "processing"]
+  },
+  {
+    "id": "produce",
+    "word": "produce",
+    "pos": "동사",
+    "ipa": "prəˈduːs",
+    "meaning": "만들어 내다, (결과를) 내다",
+    "forms": ["produced", "producing"]
+  },
+  {
+    "id": "production",
+    "word": "production",
+    "pos": "명사",
+    "ipa": "prəˈdʌkʃn",
+    "meaning": "운영 환경, 프로덕션 — 실제 사용자가 쓰는 서비스 (in production: 운영 중에)",
+    "forms": ["in production"]
+  },
+  {
+    "id": "productivity",
+    "word": "productivity",
+    "pos": "명사",
+    "ipa": "ˌproʊdʌkˈtɪvəti",
+    "meaning": "생산성",
+    "forms": ["productive", "productively"]
+  },
+  {
+    "id": "profile",
+    "word": "profile",
+    "pos": "명사",
+    "ipa": "ˈproʊfaɪl",
+    "meaning": "프로필 — 사용자·계정별 설정·정보 묶음"
+  },
+  {
     "id": "programmatic",
     "word": "programmatic",
     "pos": "형용사",
@@ -1383,12 +5081,27 @@
     "forms": ["programmatically"]
   },
   {
+    "id": "progress",
+    "word": "progress",
+    "pos": "명사",
+    "ipa": "ˈprɑːɡres",
+    "meaning": "진행 상황, 진척 (in progress: 진행 중)",
+    "forms": ["in progress"]
+  },
+  {
     "id": "progressive",
     "word": "progressive",
     "pos": "형용사",
     "ipa": "prəˈɡresɪv",
     "meaning": "점진적인, 단계적으로 진행되는",
     "forms": ["progressively"]
+  },
+  {
+    "id": "project-specific",
+    "word": "project-specific",
+    "pos": "형용사",
+    "ipa": "ˌprɑːdʒekt spəˈsɪfɪk",
+    "meaning": "프로젝트 전용의, 그 프로젝트에만 해당하는"
   },
   {
     "id": "promotional",
@@ -1414,11 +5127,34 @@
     "forms": ["proportional"]
   },
   {
+    "id": "propose",
+    "word": "propose",
+    "pos": "동사",
+    "ipa": "prəˈpoʊz",
+    "meaning": "제안하다",
+    "forms": ["proposed", "proposing", "proposal"]
+  },
+  {
     "id": "prose",
     "word": "prose",
     "pos": "명사",
     "ipa": "proʊz",
     "meaning": "산문 — 목록·코드가 아닌 줄글"
+  },
+  {
+    "id": "provenance",
+    "word": "provenance",
+    "pos": "명사",
+    "ipa": "ˈprɑːvənəns",
+    "meaning": "출처, 내력 — 데이터·주장이 어디서 왔는지에 대한 정보"
+  },
+  {
+    "id": "provide",
+    "word": "provide",
+    "pos": "동사",
+    "ipa": "prəˈvaɪd",
+    "meaning": "제공하다, 주다",
+    "forms": ["provided", "providing"]
   },
   {
     "id": "proxy",
@@ -1429,6 +5165,13 @@
     "forms": ["proxies", "proxied", "proxying"]
   },
   {
+    "id": "publication",
+    "word": "publication",
+    "pos": "명사",
+    "ipa": "ˌpʌblɪˈkeɪʃn",
+    "meaning": "① 발행, 게시 ② 출판물, 간행물"
+  },
+  {
     "id": "purchase",
     "word": "purchase",
     "pos": "명사·동사",
@@ -1437,11 +5180,175 @@
     "forms": ["purchased"]
   },
   {
+    "id": "purchase-order",
+    "word": "purchase order",
+    "pos": "명사구",
+    "ipa": "ˈpɜːrtʃəs ˈɔːrdər",
+    "meaning": "구매 주문서(PO) — 사는 쪽이 보내는 공식 주문 문서",
+    "forms": ["purchase-order"]
+  },
+  {
+    "id": "quality",
+    "word": "quality",
+    "pos": "명사",
+    "ipa": "ˈkwɑːləti",
+    "meaning": "품질, 질"
+  },
+  {
     "id": "quarterly",
     "word": "quarterly",
     "pos": "형용사",
     "ipa": "ˈkwɔːrtərli",
     "meaning": "분기별의 (3개월마다)"
+  },
+  {
+    "id": "query",
+    "word": "query",
+    "pos": "명사·동사",
+    "ipa": "ˈkwɪri",
+    "meaning": "① 질의, 검색어(쿼리) ② (데이터를) 조회하다",
+    "forms": ["queries", "queried", "querying"]
+  },
+  {
+    "id": "queue",
+    "word": "queue",
+    "pos": "명사",
+    "ipa": "kjuː",
+    "meaning": "대기열, 큐 — 처리 차례를 기다리는 줄",
+    "forms": ["queued", "queuing", "queueing"]
+  },
+  {
+    "id": "quote",
+    "word": "quote",
+    "pos": "동사",
+    "ipa": "kwoʊt",
+    "meaning": "① (금액·수치를) 말해 주다, 제시하다 ② 인용하다",
+    "forms": ["quoting", "quoted", "quotation"]
+  },
+  {
+    "id": "rag",
+    "word": "RAG",
+    "pos": "약어",
+    "ipa": "ræɡ",
+    "meaning": "검색 증강 생성 — 관련 문서를 검색해 프롬프트에 넣고 답하게 하는 방식",
+    "forms": ["RAG-based", "retrieval-augmented generation"]
+  },
+  {
+    "id": "raise",
+    "word": "raise",
+    "pos": "동사",
+    "ipa": "reɪz",
+    "meaning": "① (수치·한도를) 올리다 ② (문제를) 제기하다, (예외를) 발생시키다",
+    "forms": ["raising", "raised"]
+  },
+  {
+    "id": "range",
+    "word": "range",
+    "pos": "명사",
+    "ipa": "reɪndʒ",
+    "meaning": "범위, 폭"
+  },
+  {
+    "id": "rarely",
+    "word": "rarely",
+    "pos": "부사",
+    "ipa": "ˈrerli",
+    "meaning": "거의 ~하지 않는, 드물게"
+  },
+  {
+    "id": "rate",
+    "word": "rate",
+    "pos": "동사·명사",
+    "ipa": "reɪt",
+    "meaning": "① 평가하다, 점수를 매기다 ② 비율, 요금",
+    "forms": ["rated", "rating"]
+  },
+  {
+    "id": "rather",
+    "word": "rather",
+    "pos": "부사",
+    "ipa": "ˈræðər",
+    "meaning": "① (rather than) ~ 대신에, ~가 아니라 ② 꽤, 다소",
+    "forms": ["rather than"]
+  },
+  {
+    "id": "raw",
+    "word": "raw",
+    "pos": "형용사",
+    "ipa": "rɔː",
+    "meaning": "가공하지 않은, 원본 그대로의"
+  },
+  {
+    "id": "re-describe",
+    "word": "re-describe",
+    "pos": "동사",
+    "ipa": "ˌriːdɪˈskraɪb",
+    "meaning": "(처음부터) 다시 설명하다",
+    "forms": ["re-described", "re-describing"]
+  },
+  {
+    "id": "re-enable",
+    "word": "re-enable",
+    "pos": "동사",
+    "ipa": "ˌriːɪˈneɪbl",
+    "meaning": "(꺼 두었던 것을) 다시 켜다, 재활성화하다",
+    "forms": ["re-enabled", "re-enabling"]
+  },
+  {
+    "id": "re-gather",
+    "word": "re-gather",
+    "pos": "동사",
+    "ipa": "ˌriːˈɡæðər",
+    "meaning": "다시 모으다, 다시 수집하다",
+    "forms": ["re-gathered", "re-gathering"]
+  },
+  {
+    "id": "re-read",
+    "word": "re-read",
+    "pos": "동사",
+    "ipa": "ˌriːˈriːd",
+    "meaning": "다시 읽다",
+    "forms": ["re-reading", "reread", "rereading"]
+  },
+  {
+    "id": "re-run",
+    "word": "re-run",
+    "pos": "동사·명사",
+    "ipa": "ˌriːˈrʌn",
+    "meaning": "다시 실행하다, 재실행",
+    "forms": ["re-running", "re-ran", "rerun", "rerunning", "reran"]
+  },
+  {
+    "id": "reach",
+    "word": "reach",
+    "pos": "동사",
+    "ipa": "riːtʃ",
+    "meaning": "① (시스템·대상에) 닿다, 접근하다 ② (목표·결론에) 이르다",
+    "forms": ["reached", "reaching"]
+  },
+  {
+    "id": "recall",
+    "word": "recall",
+    "pos": "동사·명사",
+    "ipa": "rɪˈkɔːl",
+    "meaning": "① 떠올리다, 기억해 내다 ② 재현율 — 찾아야 할 것 중 실제로 찾아낸 비율",
+    "forms": ["recalled", "recalling"]
+  },
+  {
+    "id": "receive",
+    "word": "receive",
+    "pos": "동사",
+    "ipa": "rɪˈsiːv",
+    "meaning": "받다",
+    "forms": ["received", "receiving"]
+  },
+  {
+    "id": "recommend",
+    "word": "recommend",
+    "pos": "동사",
+    "ipa": "ˌrekəˈmend",
+    "meaning": "권하다, 추천하다 — recommended (형) 권장되는",
+    "forms": ["recommended", "recommending", "recommendation"]
   },
   {
     "id": "reconcile",
@@ -1452,12 +5359,83 @@
     "forms": ["reconciled", "reconciling", "reconciliation"]
   },
   {
+    "id": "reconstruct",
+    "word": "reconstruct",
+    "pos": "동사",
+    "ipa": "ˌriːkənˈstrʌkt",
+    "meaning": "(없어진 것을) 재구성하다, 다시 짜 맞추다",
+    "forms": ["reconstructed", "reconstructing", "reconstruction"]
+  },
+  {
+    "id": "record",
+    "word": "record",
+    "pos": "명사·동사",
+    "ipa": "ˈrekərd",
+    "meaning": "① 기록 ② (데이터) 레코드 — 데이터 한 건 ③ 기록하다",
+    "forms": ["recorded", "recording"]
+  },
+  {
+    "id": "recovery",
+    "word": "recovery",
+    "pos": "명사",
+    "ipa": "rɪˈkʌvəri",
+    "meaning": "복구, 회복 — recover (동) 되찾다, 복구하다",
+    "forms": ["recover", "recovered", "recovering", "recoverable"]
+  },
+  {
+    "id": "redirect",
+    "word": "redirect",
+    "pos": "동사",
+    "ipa": "ˌriːdəˈrekt",
+    "meaning": "(흐름·요청을) 다른 곳으로 돌리다",
+    "forms": ["redirected", "redirecting", "redirection"]
+  },
+  {
+    "id": "redis",
+    "word": "Redis",
+    "pos": "명사",
+    "ipa": "ˈredɪs",
+    "meaning": "Redis — 메모리 기반 키-값 저장소 (캐시로 많이 씀)"
+  },
+  {
+    "id": "rediscover",
+    "word": "rediscover",
+    "pos": "동사",
+    "ipa": "ˌriːdɪˈskʌvər",
+    "meaning": "(이미 찾은 것을) 다시 찾아내다",
+    "forms": ["rediscovered", "rediscovering"]
+  },
+  {
+    "id": "reduce",
+    "word": "reduce",
+    "pos": "동사",
+    "ipa": "rɪˈduːs",
+    "meaning": "줄이다, 낮추다 — reduction (명) 감소, 절감",
+    "forms": ["reduced", "reducing", "reduction"]
+  },
+  {
     "id": "redundant",
     "word": "redundant",
     "pos": "형용사",
     "ipa": "rɪˈdʌndənt",
     "meaning": "불필요하게 중복된, 쓸데없는",
     "forms": ["redundancy"]
+  },
+  {
+    "id": "refactor",
+    "word": "refactor",
+    "pos": "동사·명사",
+    "ipa": "ˌriːˈfæktər",
+    "meaning": "리팩터링(하다) — 동작은 그대로 두고 코드 구조를 고치다",
+    "forms": ["refactoring", "refactored"]
+  },
+  {
+    "id": "reference",
+    "word": "reference",
+    "pos": "동사·명사",
+    "ipa": "ˈrefrəns",
+    "meaning": "① 참조하다, 가리키다 ② 참조, 참고 자료",
+    "forms": ["referenced", "referencing"]
   },
   {
     "id": "refine",
@@ -1468,6 +5446,22 @@
     "forms": ["refined", "refining", "refinement"]
   },
   {
+    "id": "reflect",
+    "word": "reflect",
+    "pos": "동사",
+    "ipa": "rɪˈflekt",
+    "meaning": "반영하다, 나타내다",
+    "forms": ["reflected", "reflecting", "reflection"]
+  },
+  {
+    "id": "refresh",
+    "word": "refresh",
+    "pos": "동사",
+    "ipa": "rɪˈfreʃ",
+    "meaning": "새로 고치다, 최신 상태로 갱신하다",
+    "forms": ["refreshed", "refreshing"]
+  },
+  {
     "id": "refund",
     "word": "refund",
     "pos": "명사·동사",
@@ -1476,11 +5470,82 @@
     "forms": ["refunded", "refunding"]
   },
   {
+    "id": "refuse",
+    "word": "refuse",
+    "pos": "동사",
+    "ipa": "rɪˈfjuːz",
+    "meaning": "거부하다, 거절하다",
+    "forms": ["refused", "refusing", "refusal"]
+  },
+  {
     "id": "regardless",
     "word": "regardless",
     "pos": "부사",
     "ipa": "rɪˈɡɑːrdləs",
     "meaning": "(~와) 상관없이"
+  },
+  {
+    "id": "regenerate",
+    "word": "regenerate",
+    "pos": "동사",
+    "ipa": "rɪˈdʒenəreɪt",
+    "meaning": "다시 생성하다, 새로 만들어 내다",
+    "forms": ["regenerated", "regenerating", "regeneration"]
+  },
+  {
+    "id": "regex",
+    "word": "regex",
+    "pos": "명사",
+    "ipa": "ˈredʒeks",
+    "meaning": "정규 표현식 — 문자열 패턴을 기호로 적어 찾는 규칙",
+    "forms": ["regular expression", "regexp"]
+  },
+  {
+    "id": "region",
+    "word": "region",
+    "pos": "명사",
+    "ipa": "ˈriːdʒən",
+    "meaning": "지역, 영역 — regional (형) 지역별의, 지역의",
+    "forms": ["regional"]
+  },
+  {
+    "id": "register",
+    "word": "register",
+    "pos": "동사",
+    "ipa": "ˈredʒɪstər",
+    "meaning": "등록하다",
+    "forms": ["registered", "registering", "registration"]
+  },
+  {
+    "id": "registry",
+    "word": "registry",
+    "pos": "명사",
+    "ipa": "ˈredʒɪstri",
+    "meaning": "레지스트리 — 등록된 항목을 모아 둔 목록",
+    "forms": ["registries"]
+  },
+  {
+    "id": "reject",
+    "word": "reject",
+    "pos": "동사",
+    "ipa": "rɪˈdʒekt",
+    "meaning": "거부하다, 받아들이지 않다",
+    "forms": ["rejected", "rejecting", "rejection"]
+  },
+  {
+    "id": "related",
+    "word": "related",
+    "pos": "형용사",
+    "ipa": "rɪˈleɪtɪd",
+    "meaning": "관련된, 연관된"
+  },
+  {
+    "id": "release",
+    "word": "release",
+    "pos": "명사·동사",
+    "ipa": "rɪˈliːs",
+    "meaning": "① 릴리스, 출시(판) ② 내보내다, 공개하다",
+    "forms": ["released", "releasing"]
   },
   {
     "id": "relevant",
@@ -1496,7 +5561,7 @@
     "pos": "명사",
     "ipa": "rɪˌlaɪəˈbɪləti",
     "meaning": "신뢰성 — 언제나 제대로 동작하는 정도",
-    "forms": ["reliable", "reliably"]
+    "forms": ["reliable", "reliably", "unreliable"]
   },
   {
     "id": "rely",
@@ -1507,11 +5572,122 @@
     "forms": ["relies", "relied", "relying", "reliance"]
   },
   {
+    "id": "remedy",
+    "word": "remedy",
+    "pos": "명사",
+    "ipa": "ˈremədi",
+    "meaning": "해결책, 바로잡는 방법",
+    "forms": ["remedies"]
+  },
+  {
+    "id": "reminder",
+    "word": "reminder",
+    "pos": "명사",
+    "ipa": "rɪˈmaɪndər",
+    "meaning": "(잊지 않게) 다시 일러 주는 말, 알림",
+    "forms": ["remind", "reminded"]
+  },
+  {
+    "id": "remove",
+    "word": "remove",
+    "pos": "동사",
+    "ipa": "rɪˈmuːv",
+    "meaning": "없애다, 제거하다",
+    "forms": ["removing", "removed", "removal"]
+  },
+  {
+    "id": "rename",
+    "word": "rename",
+    "pos": "동사",
+    "ipa": "ˌriːˈneɪm",
+    "meaning": "이름을 바꾸다",
+    "forms": ["renamed", "renaming"]
+  },
+  {
+    "id": "reorder",
+    "word": "reorder",
+    "pos": "동사",
+    "ipa": "riˈɔːrdər",
+    "meaning": "순서를 바꾸다, 재배치하다",
+    "forms": ["reordered", "reordering"]
+  },
+  {
+    "id": "reorganize",
+    "word": "reorganize",
+    "pos": "동사",
+    "ipa": "riˈɔːrɡənaɪz",
+    "meaning": "다시 정리하다, 재구성하다",
+    "forms": ["reorganized", "reorganizing", "reorganization"]
+  },
+  {
+    "id": "repeat",
+    "word": "repeat",
+    "pos": "동사",
+    "ipa": "rɪˈpiːt",
+    "meaning": "반복하다 — repeatedly (부) 반복해서, 거듭",
+    "forms": ["repeatedly", "repeated", "repeating", "repetition"]
+  },
+  {
+    "id": "replay",
+    "word": "replay",
+    "pos": "동사",
+    "ipa": "ˌriːˈpleɪ",
+    "meaning": "(기록된 것을) 그대로 다시 재생하다",
+    "forms": ["replayed", "replaying"]
+  },
+  {
+    "id": "repo",
+    "word": "repo",
+    "pos": "명사",
+    "ipa": "ˈriːpoʊ",
+    "meaning": "저장소, 리포지토리 (repository 의 줄임말)",
+    "forms": ["repository", "repositories"]
+  },
+  {
     "id": "representative",
     "word": "representative",
     "pos": "형용사",
     "ipa": "ˌreprɪˈzentətɪv",
     "meaning": "대표적인 — 전체를 잘 보여 주는"
+  },
+  {
+    "id": "reprocess",
+    "word": "reprocess",
+    "pos": "동사",
+    "ipa": "ˌriːˈprɑːses",
+    "meaning": "다시 처리하다, 재처리하다",
+    "forms": ["reprocessed", "reprocessing"]
+  },
+  {
+    "id": "reproduce",
+    "word": "reproduce",
+    "pos": "동사",
+    "ipa": "ˌriːprəˈduːs",
+    "meaning": "(버그·현상을) 재현하다 — reproducible (형) 재현 가능한",
+    "forms": ["reproducible", "reproduced", "reproducing", "reproduction"]
+  },
+  {
+    "id": "request",
+    "word": "request",
+    "pos": "명사·동사",
+    "ipa": "rɪˈkwest",
+    "meaning": "요청(하다)",
+    "forms": ["requested", "requesting"]
+  },
+  {
+    "id": "require",
+    "word": "require",
+    "pos": "동사",
+    "ipa": "rɪˈkwaɪər",
+    "meaning": "① 요구하다, 반드시 ~하게 하다 ② 필요로 하다 — required (형) 필수의",
+    "forms": ["required", "requiring", "requirement"]
+  },
+  {
+    "id": "resident",
+    "word": "resident",
+    "pos": "형용사",
+    "ipa": "ˈrezɪdənt",
+    "meaning": "(메모리·컨텍스트에) 계속 남아 있는, 상주하는"
   },
   {
     "id": "resolution",
@@ -1520,6 +5696,28 @@
     "ipa": "ˌrezəˈluːʃn",
     "meaning": "해결, (문제를) 처리함",
     "forms": ["resolve", "resolved", "resolving"]
+  },
+  {
+    "id": "resource",
+    "word": "resource",
+    "pos": "명사",
+    "ipa": "ˈriːsɔːrs",
+    "meaning": "① 자원 ② (MCP) 리소스 — 에이전트가 읽어 가도록 노출한 데이터"
+  },
+  {
+    "id": "respond",
+    "word": "respond",
+    "pos": "동사",
+    "ipa": "rɪˈspɑːnd",
+    "meaning": "응답하다, (~에) 반응하다",
+    "forms": ["responded", "responding"]
+  },
+  {
+    "id": "response",
+    "word": "response",
+    "pos": "명사",
+    "ipa": "rɪˈspɑːns",
+    "meaning": "응답, 대답"
   },
   {
     "id": "restrict",
@@ -1538,12 +5736,60 @@
     "forms": ["restructured", "restructuring"]
   },
   {
+    "id": "resubmit",
+    "word": "resubmit",
+    "pos": "동사",
+    "ipa": "ˌriːsəbˈmɪt",
+    "meaning": "(요청·작업을) 다시 제출하다, 재제출하다",
+    "forms": ["resubmitted", "resubmitting", "resubmission"]
+  },
+  {
+    "id": "result",
+    "word": "result",
+    "pos": "명사·동사",
+    "ipa": "rɪˈzʌlt",
+    "meaning": "① 결과, 결괏값 ② (~의) 결과로 생기다",
+    "forms": ["resulted", "resulting"]
+  },
+  {
+    "id": "resume",
+    "word": "resume",
+    "pos": "동사",
+    "ipa": "rɪˈzuːm",
+    "meaning": "(중단한 작업·세션을) 재개하다, 이어서 하다",
+    "forms": ["resumed", "resuming"]
+  },
+  {
+    "id": "retain",
+    "word": "retain",
+    "pos": "동사",
+    "ipa": "rɪˈteɪn",
+    "meaning": "(잃지 않고) 유지하다, 보존하다",
+    "forms": ["retained", "retaining", "retention"]
+  },
+  {
     "id": "retrieve",
     "word": "retrieve",
     "pos": "동사",
     "ipa": "rɪˈtriːv",
     "meaning": "(저장된 것을) 찾아서 가져오다 — retrieval (명) 조회, 검색",
     "forms": ["retrieved", "retrieving", "retrieval"]
+  },
+  {
+    "id": "retry",
+    "word": "retry",
+    "pos": "동사·명사",
+    "ipa": "ˌriːˈtraɪ",
+    "meaning": "재시도하다 / 재시도",
+    "forms": ["retries", "retrying", "retried"]
+  },
+  {
+    "id": "return",
+    "word": "return",
+    "pos": "동사·명사",
+    "ipa": "rɪˈtɜːrn",
+    "meaning": "① (값·결과를) 반환하다, 돌려주다 ② 돌아오다",
+    "forms": ["returned", "returning"]
   },
   {
     "id": "reveal",
@@ -1554,12 +5800,59 @@
     "forms": ["revealed", "revealing"]
   },
   {
+    "id": "review",
+    "word": "review",
+    "pos": "명사·동사",
+    "ipa": "rɪˈvjuː",
+    "meaning": "검토, 리뷰 / 검토하다 — reviewer 검토자",
+    "forms": ["reviewer", "reviewers", "reviewing", "reviewed"]
+  },
+  {
     "id": "revise",
     "word": "revise",
     "pos": "동사",
     "ipa": "rɪˈvaɪz",
     "meaning": "수정하다, 고쳐 쓰다",
     "forms": ["revised", "revising", "revision"]
+  },
+  {
+    "id": "rewrite",
+    "word": "rewrite",
+    "pos": "동사",
+    "ipa": "ˌriːˈraɪt",
+    "meaning": "다시 쓰다, 고쳐 쓰다",
+    "forms": ["rewrote", "rewritten", "rewriting"]
+  },
+  {
+    "id": "rise",
+    "word": "rise",
+    "pos": "동사·명사",
+    "ipa": "raɪz",
+    "meaning": "(수치가) 오르다, 늘어나다 / 증가",
+    "forms": ["risen", "rising"]
+  },
+  {
+    "id": "risk",
+    "word": "risk",
+    "pos": "명사·동사",
+    "ipa": "rɪsk",
+    "meaning": "위험(성), 리스크 / ~할 위험이 있다",
+    "forms": ["risky"]
+  },
+  {
+    "id": "robust",
+    "word": "robust",
+    "pos": "형용사",
+    "ipa": "roʊˈbʌst",
+    "meaning": "견고한 — 예외·변화가 있어도 쉽게 깨지지 않는",
+    "forms": ["robustness", "robustly"]
+  },
+  {
+    "id": "role",
+    "word": "role",
+    "pos": "명사",
+    "ipa": "roʊl",
+    "meaning": "역할, 맡은 일"
   },
   {
     "id": "root-cause",
@@ -1573,7 +5866,22 @@
     "word": "rotation",
     "pos": "명사",
     "ipa": "roʊˈteɪʃn",
-    "meaning": "순환 — 돌아가며 순서를 바꿈"
+    "meaning": "순환 — 돌아가며 순서를 바꿈",
+    "forms": ["rotate"]
+  },
+  {
+    "id": "roughly",
+    "word": "roughly",
+    "pos": "부사",
+    "ipa": "ˈrʌfli",
+    "meaning": "대략, 약"
+  },
+  {
+    "id": "round",
+    "word": "round",
+    "pos": "명사",
+    "ipa": "raʊnd",
+    "meaning": "(되풀이되는 과정의) 한 차례, 회, 라운드"
   },
   {
     "id": "round-trip",
@@ -1584,11 +5892,65 @@
     "forms": ["round-trip"]
   },
   {
+    "id": "route",
+    "word": "route",
+    "pos": "동사·명사",
+    "ipa": "ruːt",
+    "meaning": "(알맞은 곳으로) 보내다, 라우팅하다 / 경로 — router 라우터",
+    "forms": ["routed", "router", "routing"]
+  },
+  {
     "id": "routine",
     "word": "routine",
     "pos": "형용사·명사",
     "ipa": "ruːˈtiːn",
     "meaning": "일상적인, 평범한 / 정해진 일과"
+  },
+  {
+    "id": "rubric",
+    "word": "rubric",
+    "pos": "명사",
+    "ipa": "ˈruːbrɪk",
+    "meaning": "평가 기준표, 채점 기준(루브릭)"
+  },
+  {
+    "id": "runner",
+    "word": "runner",
+    "pos": "명사",
+    "ipa": "ˈrʌnər",
+    "meaning": "러너, 실행기 — CI job·테스트를 실제로 돌리는 서버·프로그램"
+  },
+  {
+    "id": "salary",
+    "word": "salary",
+    "pos": "명사",
+    "ipa": "ˈsæləri",
+    "meaning": "급여, 월급·연봉",
+    "forms": ["salaries"]
+  },
+  {
+    "id": "sandbox",
+    "word": "sandbox",
+    "pos": "명사·동사",
+    "ipa": "ˈsændbɑːks",
+    "meaning": "샌드박스 — 바깥과 격리된 안전한 실행 환경 / 격리하다",
+    "forms": ["sandboxing", "sandboxed"]
+  },
+  {
+    "id": "satisfy",
+    "word": "satisfy",
+    "pos": "동사",
+    "ipa": "ˈsætɪsfaɪ",
+    "meaning": "(조건·규칙을) 충족하다, 만족시키다",
+    "forms": ["satisfies", "satisfied", "satisfying", "satisfaction"]
+  },
+  {
+    "id": "saturation",
+    "word": "saturation",
+    "pos": "명사",
+    "ipa": "ˌsætʃəˈreɪʃn",
+    "meaning": "포화 — 더 담을 수 없을 만큼 가득 찬 상태",
+    "forms": ["saturated", "saturate"]
   },
   {
     "id": "scaffold",
@@ -1599,12 +5961,57 @@
     "forms": ["scaffolded", "scaffolding"]
   },
   {
+    "id": "scan",
+    "word": "scan",
+    "pos": "동사·명사",
+    "ipa": "skæn",
+    "meaning": "① (보안·오류를) 훑어 검사하다, 스캔 ② (종이 문서를) 스캔하다",
+    "forms": ["scanned", "scanning", "scanner"]
+  },
+  {
+    "id": "schema",
+    "word": "schema",
+    "pos": "명사",
+    "ipa": "ˈskiːmə",
+    "meaning": "스키마 — 데이터의 구조·형식을 정한 정의",
+    "forms": ["schema-based", "schema-compliant", "schema-level"]
+  },
+  {
     "id": "scope",
     "word": "scope",
     "pos": "명사",
     "ipa": "skoʊp",
     "meaning": "범위, (설정이) 적용되는 범위",
-    "forms": ["scoped", "scoping"]
+    "forms": ["scoped", "scoping", "project-scoped", "user-scoped"]
+  },
+  {
+    "id": "scrape",
+    "word": "scrape",
+    "pos": "동사",
+    "ipa": "skreɪp",
+    "meaning": "(웹페이지 내용을) 긁어 오다, 스크레이핑하다",
+    "forms": ["scraped", "scraping", "scraper"]
+  },
+  {
+    "id": "scratchpad",
+    "word": "scratchpad",
+    "pos": "명사",
+    "ipa": "ˈskrætʃpæd",
+    "meaning": "스크래치패드 — 작업 중 메모·진행 상황을 적어 두는 임시 기록"
+  },
+  {
+    "id": "sdk",
+    "word": "SDK",
+    "pos": "약어",
+    "ipa": "ˌes.diːˈkeɪ",
+    "meaning": "소프트웨어 개발 키트 — 프로그램 개발용 라이브러리·도구 묶음"
+  },
+  {
+    "id": "section",
+    "word": "section",
+    "pos": "명사",
+    "ipa": "ˈsekʃn",
+    "meaning": "(문서·설정의) 부분, 섹션, 항목"
   },
   {
     "id": "sector",
@@ -1614,11 +6021,87 @@
     "meaning": "분야, 부문"
   },
   {
+    "id": "security",
+    "word": "security",
+    "pos": "명사",
+    "ipa": "sɪˈkjʊrəti",
+    "meaning": "보안"
+  },
+  {
+    "id": "segment",
+    "word": "segment",
+    "pos": "명사·동사",
+    "ipa": "ˈseɡmənt",
+    "meaning": "(전체를 나눈) 조각, 구간 / 나누다",
+    "forms": ["segmented", "segmentation"]
+  },
+  {
+    "id": "select",
+    "word": "select",
+    "pos": "동사",
+    "ipa": "sɪˈlekt",
+    "meaning": "(여럿 중에서) 고르다, 선택하다",
+    "forms": ["selected", "selecting"]
+  },
+  {
+    "id": "selection",
+    "word": "selection",
+    "pos": "명사",
+    "ipa": "sɪˈlekʃn",
+    "meaning": "선택, 고르기"
+  },
+  {
+    "id": "selective",
+    "word": "selective",
+    "pos": "형용사",
+    "ipa": "sɪˈlektɪv",
+    "meaning": "선택적인, (일부만) 골라서 하는",
+    "forms": ["selectively"]
+  },
+  {
+    "id": "self-correct",
+    "word": "self-correct",
+    "pos": "동사",
+    "ipa": "ˌself kəˈrekt",
+    "meaning": "(스스로 오류를 찾아) 바로잡다, 자기 교정하다",
+    "forms": ["self-corrected", "self-correcting", "self-correction"]
+  },
+  {
+    "id": "self-review",
+    "word": "self-review",
+    "pos": "명사",
+    "ipa": "ˌself rɪˈvjuː",
+    "meaning": "자기 검토 — 만든 쪽이 자기 결과물을 스스로 리뷰하는 것"
+  },
+  {
+    "id": "semantic",
+    "word": "semantic",
+    "pos": "형용사",
+    "ipa": "sɪˈmæntɪk",
+    "meaning": "의미의, 의미상의 — 글자 모양이 아니라 뜻을 기준으로 한",
+    "forms": ["semantically"]
+  },
+  {
     "id": "sentiment",
     "word": "sentiment",
     "pos": "명사",
     "ipa": "ˈsentɪmənt",
     "meaning": "감정, (글에 담긴) 정서"
+  },
+  {
+    "id": "separate",
+    "word": "separate",
+    "pos": "형용사·동사",
+    "ipa": "ˈsepərət",
+    "meaning": "① 별개의, 따로 떨어진 ② 분리하다, 떼어 놓다",
+    "forms": ["separated", "separately", "separating", "separation"]
+  },
+  {
+    "id": "sequence",
+    "word": "sequence",
+    "pos": "명사",
+    "ipa": "ˈsiːkwəns",
+    "meaning": "순서, 차례 / (순서대로 이어진) 연속"
   },
   {
     "id": "sequential",
@@ -1627,6 +6110,21 @@
     "ipa": "sɪˈkwenʃl",
     "meaning": "순차적인 — 하나씩 차례로 하는",
     "forms": ["sequentially"]
+  },
+  {
+    "id": "session",
+    "word": "session",
+    "pos": "명사",
+    "ipa": "ˈseʃn",
+    "meaning": "세션 — (대화·작업이) 시작부터 끝까지 이어지는 한 단위"
+  },
+  {
+    "id": "severe",
+    "word": "severe",
+    "pos": "형용사",
+    "ipa": "sɪˈvɪr",
+    "meaning": "심각한, 극심한",
+    "forms": ["severely"]
   },
   {
     "id": "severity",
@@ -1645,6 +6143,37 @@
     "forms": ["shipped", "shipping"]
   },
   {
+    "id": "short-lived",
+    "word": "short-lived",
+    "pos": "형용사",
+    "ipa": "ˌʃɔːrt ˈlɪvd",
+    "meaning": "수명이 짧은, 잠깐만 유지되는"
+  },
+  {
+    "id": "shrink",
+    "word": "shrink",
+    "pos": "동사",
+    "ipa": "ʃrɪŋk",
+    "meaning": "줄이다, 줄어들다",
+    "forms": ["shrank", "shrunk", "shrinking"]
+  },
+  {
+    "id": "sign-off",
+    "word": "sign-off",
+    "pos": "명사",
+    "ipa": "ˈsaɪn ɔːf",
+    "meaning": "① (대화·메일 끝의) 맺음말, 끝인사 ② (최종) 승인",
+    "forms": ["sign off", "signoff", "signed off"]
+  },
+  {
+    "id": "signal",
+    "word": "signal",
+    "pos": "동사·명사",
+    "ipa": "ˈsɪɡnəl",
+    "meaning": "(상태·의도를) 알리다, 신호를 보내다 / 신호",
+    "forms": ["signaling", "signaled", "signalling", "signalled"]
+  },
+  {
     "id": "significant",
     "word": "significant",
     "pos": "형용사",
@@ -1661,6 +6190,90 @@
     "forms": ["silent"]
   },
   {
+    "id": "similarity",
+    "word": "similarity",
+    "pos": "명사",
+    "ipa": "ˌsɪməˈlerəti",
+    "meaning": "유사성, 유사도",
+    "forms": ["name-similarity", "similarities"]
+  },
+  {
+    "id": "skip",
+    "word": "skip",
+    "pos": "동사",
+    "ipa": "skɪp",
+    "meaning": "건너뛰다, 빠뜨리다",
+    "forms": ["skipping", "skipped"]
+  },
+  {
+    "id": "slash",
+    "word": "slash",
+    "pos": "명사",
+    "ipa": "slæʃ",
+    "meaning": "슬래시(/) — slash command: / 로 시작하는 명령",
+    "forms": ["slash command"]
+  },
+  {
+    "id": "snippet",
+    "word": "snippet",
+    "pos": "명사",
+    "ipa": "ˈsnɪpɪt",
+    "meaning": "(글·코드의) 짧은 조각, 발췌"
+  },
+  {
+    "id": "so-that",
+    "word": "so that",
+    "pos": "접속사",
+    "ipa": "soʊ ðæt",
+    "meaning": "~하도록, ~하기 위해 (목적)"
+  },
+  {
+    "id": "source",
+    "word": "source",
+    "pos": "명사",
+    "ipa": "sɔːrs",
+    "meaning": "① 출처, 근거 자료 ② 소스 코드, 원본"
+  },
+  {
+    "id": "source-of-truth",
+    "word": "source of truth",
+    "pos": "명사구",
+    "ipa": "ˌsɔːrs əv ˈtruːθ",
+    "meaning": "기준 원본 — 여러 사본 중 정답으로 삼는 단 하나의 출처",
+    "forms": ["single source of truth"]
+  },
+  {
+    "id": "spawn",
+    "word": "spawn",
+    "pos": "동사",
+    "ipa": "spɔːn",
+    "meaning": "(하위 작업·프로세스를) 새로 띄우다, 생성하다",
+    "forms": ["spawned", "spawning"]
+  },
+  {
+    "id": "specialist",
+    "word": "specialist",
+    "pos": "명사",
+    "ipa": "ˈspeʃəlɪst",
+    "meaning": "전문가 / 전문 담당(의)"
+  },
+  {
+    "id": "specialize",
+    "word": "specialize",
+    "pos": "동사",
+    "ipa": "ˈspeʃəlaɪz",
+    "meaning": "(특정 일에) 특화하다, 전문화하다",
+    "forms": ["specialized", "specializing", "specialization", "specialised"]
+  },
+  {
+    "id": "specific",
+    "word": "specific",
+    "pos": "형용사",
+    "ipa": "spəˈsɪfɪk",
+    "meaning": "① 구체적인 ② 특정한, ~에 한정된",
+    "forms": ["specifically", "specificity"]
+  },
+  {
     "id": "speculative",
     "word": "speculative",
     "pos": "형용사",
@@ -1669,11 +6282,113 @@
     "forms": ["speculate", "speculation"]
   },
   {
+    "id": "spin-up",
+    "word": "spin up",
+    "pos": "동사구",
+    "ipa": "ˌspɪn ˈʌp",
+    "meaning": "(서버·인스턴스·에이전트를) 새로 띄우다, 가동하다",
+    "forms": ["spins up", "spun up", "spinning up", "spin-up"]
+  },
+  {
+    "id": "split",
+    "word": "split",
+    "pos": "동사·명사",
+    "ipa": "splɪt",
+    "meaning": "나누다, 쪼개다 / 분할",
+    "forms": ["splitting"]
+  },
+  {
+    "id": "stable",
+    "word": "stable",
+    "pos": "형용사",
+    "ipa": "ˈsteɪbl",
+    "meaning": "안정된, (실행마다) 달라지지 않고 일정한",
+    "forms": ["stability"]
+  },
+  {
+    "id": "stage",
+    "word": "stage",
+    "pos": "명사·동사",
+    "ipa": "steɪdʒ",
+    "meaning": "① (처리 과정의) 단계 ② (git) 변경을 스테이징하다",
+    "forms": ["staged", "staging"]
+  },
+  {
     "id": "stakeholder",
     "word": "stakeholder",
     "pos": "명사",
     "ipa": "ˈsteɪkhoʊldər",
     "meaning": "이해관계자"
+  },
+  {
+    "id": "stale",
+    "word": "stale",
+    "pos": "형용사",
+    "ipa": "steɪl",
+    "meaning": "(시간이 지나) 낡은, 최신이 아닌",
+    "forms": ["staleness"]
+  },
+  {
+    "id": "standalone",
+    "word": "standalone",
+    "pos": "형용사·부사",
+    "ipa": "ˈstændəloʊn",
+    "meaning": "단독의, 단독으로 — 다른 구성 요소 없이 그것 하나만으로",
+    "forms": ["stand-alone"]
+  },
+  {
+    "id": "standardize",
+    "word": "standardize",
+    "pos": "동사",
+    "ipa": "ˈstændərdaɪz",
+    "meaning": "표준화하다, (방식을) 하나로 통일하다",
+    "forms": ["standardized", "standardizing", "standardization"]
+  },
+  {
+    "id": "startup",
+    "word": "startup",
+    "pos": "명사",
+    "ipa": "ˈstɑːrtʌp",
+    "meaning": "① (프로그램·세션의) 시작, 시작 시점 ② 스타트업, 신생 기업",
+    "forms": ["start-up"]
+  },
+  {
+    "id": "state",
+    "word": "state",
+    "pos": "동사·명사",
+    "ipa": "steɪt",
+    "meaning": "① (분명히) 밝히다, 명시하다 ② 상태",
+    "forms": ["stated", "stating"]
+  },
+  {
+    "id": "static",
+    "word": "static",
+    "pos": "형용사",
+    "ipa": "ˈstætɪk",
+    "meaning": "정적인, 고정된 — 요청마다 바뀌지 않고 늘 같은",
+    "forms": ["statically"]
+  },
+  {
+    "id": "statistic",
+    "word": "statistic",
+    "pos": "명사",
+    "ipa": "stəˈtɪstɪk",
+    "meaning": "통계 수치, 통계 자료 (하나)",
+    "forms": ["statistical", "statistically"]
+  },
+  {
+    "id": "stdin",
+    "word": "stdin",
+    "pos": "약어",
+    "ipa": "ˌstændərd ˈɪn",
+    "meaning": "표준 입력 (standard input) — 프로그램이 입력을 받는 기본 통로"
+  },
+  {
+    "id": "stdout",
+    "word": "stdout",
+    "pos": "약어",
+    "ipa": "ˌstændərd ˈaʊt",
+    "meaning": "표준 출력 (standard output) — 프로그램이 결과를 내보내는 기본 통로"
   },
   {
     "id": "steer",
@@ -1684,6 +6399,30 @@
     "forms": ["steered", "steering"]
   },
   {
+    "id": "stern",
+    "word": "stern",
+    "pos": "형용사",
+    "ipa": "stɜːrn",
+    "meaning": "엄격한, 단호한 (말투가 강하고 딱딱한)",
+    "forms": ["sternly"]
+  },
+  {
+    "id": "stick",
+    "word": "stick",
+    "pos": "동사",
+    "ipa": "stɪk",
+    "meaning": "① (be stuck) 갇히다, 빠져서 꼼짝 못 하다 ② 붙다, (stick to) 고수하다",
+    "forms": ["stuck", "sticking"]
+  },
+  {
+    "id": "store",
+    "word": "store",
+    "pos": "동사·명사",
+    "ipa": "stɔːr",
+    "meaning": "저장하다, 보관하다 / 저장소",
+    "forms": ["stored", "storing", "storage"]
+  },
+  {
     "id": "straightforward",
     "word": "straightforward",
     "pos": "형용사",
@@ -1691,12 +6430,68 @@
     "meaning": "간단한, 복잡하지 않은"
   },
   {
+    "id": "strategy",
+    "word": "strategy",
+    "pos": "명사",
+    "ipa": "ˈstrætədʒi",
+    "meaning": "전략, (문제를 푸는) 방식",
+    "forms": ["strategies", "strategic"]
+  },
+  {
+    "id": "stream",
+    "word": "stream",
+    "pos": "동사·명사",
+    "ipa": "striːm",
+    "meaning": "스트리밍하다 — 응답을 다 만들기 전에 생성되는 대로 조금씩 보내다 / 흐름",
+    "forms": ["streaming", "streamed"]
+  },
+  {
+    "id": "strengthen",
+    "word": "strengthen",
+    "pos": "동사",
+    "ipa": "ˈstreŋθən",
+    "meaning": "강화하다, 더 강하게 만들다",
+    "forms": ["strengthened", "strengthening"]
+  },
+  {
     "id": "strict",
     "word": "strict",
     "pos": "형용사",
     "ipa": "strɪkt",
     "meaning": "엄격한",
-    "forms": ["strictly", "strictness"]
+    "forms": ["strictly", "strictness", "stricter"]
+  },
+  {
+    "id": "strip",
+    "word": "strip",
+    "pos": "동사",
+    "ipa": "strɪp",
+    "meaning": "벗겨 내다, (불필요한 부분을) 걷어 내다·제거하다",
+    "forms": ["stripped", "stripping"]
+  },
+  {
+    "id": "structure",
+    "word": "structure",
+    "pos": "명사·동사",
+    "ipa": "ˈstrʌktʃər",
+    "meaning": "구조 / 구조화하다 — structured: 정해진 형식을 갖춘, 구조화된",
+    "forms": ["structural", "structured", "structuring", "structurally"]
+  },
+  {
+    "id": "subagent",
+    "word": "subagent",
+    "pos": "명사",
+    "ipa": "ˈsʌbˌeɪdʒənt",
+    "meaning": "서브에이전트 — 상위(코디네이터) 에이전트가 일을 맡기려고 띄우는 하위 에이전트",
+    "forms": ["sub-agent", "sub-agents"]
+  },
+  {
+    "id": "submit",
+    "word": "submit",
+    "pos": "동사",
+    "ipa": "səbˈmɪt",
+    "meaning": "제출하다, (요청·작업을) 넣다",
+    "forms": ["submitted", "submitting", "submission"]
   },
   {
     "id": "subsequent",
@@ -1714,12 +6509,49 @@
     "meaning": "일부, 부분집합"
   },
   {
+    "id": "substitution",
+    "word": "substitution",
+    "pos": "명사",
+    "ipa": "ˌsʌbstɪˈtuːʃn",
+    "meaning": "치환, 대체 — 찾은 문자열을 다른 문자열로 바꿔 넣기",
+    "forms": ["substitute", "substituted", "substituting"]
+  },
+  {
+    "id": "subsystem",
+    "word": "subsystem",
+    "pos": "명사",
+    "ipa": "ˈsʌbsɪstəm",
+    "meaning": "하위 시스템 — 큰 시스템 안에서 한 기능을 맡은 부분"
+  },
+  {
+    "id": "subtask",
+    "word": "subtask",
+    "pos": "명사",
+    "ipa": "ˈsʌbtæsk",
+    "meaning": "하위 작업 — 큰 작업을 쪼갠 작은 작업 하나"
+  },
+  {
     "id": "subtle",
     "word": "subtle",
     "pos": "형용사",
     "ipa": "ˈsʌtl",
     "meaning": "미묘한, 알아차리기 어려운",
     "forms": ["subtly", "subtlety"]
+  },
+  {
+    "id": "subtopic",
+    "word": "subtopic",
+    "pos": "명사",
+    "ipa": "ˈsʌbtɑːpɪk",
+    "meaning": "하위 주제, 세부 주제"
+  },
+  {
+    "id": "succeed",
+    "word": "succeed",
+    "pos": "동사",
+    "ipa": "səkˈsiːd",
+    "meaning": "① 성공하다 ② (뒤를) 잇다",
+    "forms": ["succeeded", "succeeding"]
   },
   {
     "id": "suite",
@@ -1729,12 +6561,59 @@
     "meaning": "(테스트 등의) 묶음, 모음"
   },
   {
+    "id": "sum",
+    "word": "sum",
+    "pos": "명사·동사",
+    "ipa": "sʌm",
+    "meaning": "합계 / (sum to) 합이 ~이 되다",
+    "forms": ["summed", "summing"]
+  },
+  {
+    "id": "summarize",
+    "word": "summarize",
+    "pos": "동사",
+    "ipa": "ˈsʌməraɪz",
+    "meaning": "요약하다 — summarization: 요약",
+    "forms": ["re-summarize", "summarization", "summarizing", "summarized"]
+  },
+  {
+    "id": "summary",
+    "word": "summary",
+    "pos": "명사",
+    "ipa": "ˈsʌməri",
+    "meaning": "요약(본)",
+    "forms": ["summaries"]
+  },
+  {
     "id": "superficial",
     "word": "superficial",
     "pos": "형용사",
     "ipa": "ˌsuːpərˈfɪʃl",
     "meaning": "피상적인, 겉핥기의",
     "forms": ["superficially"]
+  },
+  {
+    "id": "superseded",
+    "word": "superseded",
+    "pos": "형용사",
+    "ipa": "ˌsuːpərˈsiːdɪd",
+    "meaning": "(더 새로운 것으로) 대체된, 이제는 낡은",
+    "forms": ["supersede", "supersedes", "superseding"]
+  },
+  {
+    "id": "supply",
+    "word": "supply",
+    "pos": "동사",
+    "ipa": "səˈplaɪ",
+    "meaning": "(필요한 것을) 제공하다, 대다, 공급하다",
+    "forms": ["supplied", "supplying", "supplies"]
+  },
+  {
+    "id": "supposed",
+    "word": "supposed",
+    "pos": "형용사",
+    "ipa": "səˈpoʊzd",
+    "meaning": "(be supposed to) ~하기로 되어 있다, ~해야 한다"
   },
   {
     "id": "suppress",
@@ -1753,12 +6632,83 @@
     "forms": ["surfaced", "surfacing"]
   },
   {
+    "id": "surround",
+    "word": "surround",
+    "pos": "동사",
+    "ipa": "səˈraʊnd",
+    "meaning": "둘러싸다 — surrounding: 주변의, 앞뒤의",
+    "forms": ["surrounding", "surrounded"]
+  },
+  {
+    "id": "survive",
+    "word": "survive",
+    "pos": "동사",
+    "ipa": "sərˈvaɪv",
+    "meaning": "(변화를 겪고도) 살아남다, 사라지지 않고 유지되다",
+    "forms": ["survived", "surviving", "survival"]
+  },
+  {
+    "id": "swap",
+    "word": "swap",
+    "pos": "동사",
+    "ipa": "swɑːp",
+    "meaning": "(두 개를) 맞바꾸다, 서로 뒤바꾸다",
+    "forms": ["swapped", "swapping"]
+  },
+  {
+    "id": "switch",
+    "word": "switch",
+    "pos": "동사·명사",
+    "ipa": "swɪtʃ",
+    "meaning": "(다른 것으로) 바꾸다, 전환하다 / 전환",
+    "forms": ["switched", "switching"]
+  },
+  {
+    "id": "symbol",
+    "word": "symbol",
+    "pos": "명사",
+    "ipa": "ˈsɪmbl",
+    "meaning": "① 심볼 — 코드 속 함수·클래스·변수 같은 이름 ② 기호"
+  },
+  {
+    "id": "symlink",
+    "word": "symlink",
+    "pos": "명사·동사",
+    "ipa": "ˈsɪmlɪŋk",
+    "meaning": "심볼릭 링크(를 걸다) — 다른 파일을 가리키는 바로 가기 파일",
+    "forms": ["symlinked", "symlinking", "symbolic link"]
+  },
+  {
+    "id": "sync",
+    "word": "sync",
+    "pos": "동사·명사",
+    "ipa": "sɪŋk",
+    "meaning": "동기화(하다) — 두 곳의 내용을 같게 맞추다",
+    "forms": ["synced", "syncing", "synchronize", "synchronized", "synchronization"]
+  },
+  {
     "id": "synchronous",
     "word": "synchronous",
     "pos": "형용사",
     "ipa": "ˈsɪŋkrənəs",
     "meaning": "동기의 — 결과가 올 때까지 기다렸다 다음으로 넘어가는",
     "forms": ["synchronously"]
+  },
+  {
+    "id": "synonym",
+    "word": "synonym",
+    "pos": "명사",
+    "ipa": "ˈsɪnənɪm",
+    "meaning": "동의어, 같은 뜻의 다른 말",
+    "forms": ["synonymous"]
+  },
+  {
+    "id": "syntax",
+    "word": "syntax",
+    "pos": "명사",
+    "ipa": "ˈsɪntæks",
+    "meaning": "구문, 문법 — 형식이 맞는지에 관한 규칙",
+    "forms": ["syntactic", "syntactically"]
   },
   {
     "id": "synthesis",
@@ -1769,11 +6719,48 @@
     "forms": ["synthesize", "synthesized", "synthesizing"]
   },
   {
+    "id": "target",
+    "word": "target",
+    "pos": "명사·동사",
+    "ipa": "ˈtɑːrɡɪt",
+    "meaning": "① 대상, 목표 ② 겨냥하다, 대상으로 삼다",
+    "forms": ["targeted", "targeting"]
+  },
+  {
+    "id": "tautological",
+    "word": "tautological",
+    "pos": "형용사",
+    "ipa": "ˌtɔːtəˈlɑːdʒɪkl",
+    "meaning": "동어반복적인 — 늘 참이라 실제로는 아무것도 검증하지 못하는",
+    "forms": ["tautology"]
+  },
+  {
     "id": "technical-debt",
     "word": "technical debt",
     "pos": "명사구",
     "ipa": "ˌteknɪkl ˈdet",
     "meaning": "기술 부채 — 빨리 하려고 미뤄 둔, 나중에 고쳐야 할 코드 문제"
+  },
+  {
+    "id": "technique",
+    "word": "technique",
+    "pos": "명사",
+    "ipa": "tekˈniːk",
+    "meaning": "기법, (일을 처리하는) 방법"
+  },
+  {
+    "id": "telemetry",
+    "word": "telemetry",
+    "pos": "명사",
+    "ipa": "təˈlemətri",
+    "meaning": "텔레메트리 — 사용·동작 데이터를 자동으로 모아 보내는 것(그 데이터)"
+  },
+  {
+    "id": "temperature",
+    "word": "temperature",
+    "pos": "명사",
+    "ipa": "ˈtemprətʃər",
+    "meaning": "temperature — 출력의 무작위성(다양성)을 정하는 샘플링 값"
   },
   {
     "id": "temporarily",
@@ -1799,12 +6786,26 @@
     "meaning": "용어, (특정 분야·맥락에서 쓰는) 어휘"
   },
   {
+    "id": "text-only",
+    "word": "text-only",
+    "pos": "형용사",
+    "ipa": "ˌtekst ˈoʊnli",
+    "meaning": "텍스트만 있는 (도구 호출 같은 다른 블록 없이)"
+  },
+  {
     "id": "thorough",
     "word": "thorough",
     "pos": "형용사",
     "ipa": "ˈθɜːroʊ",
     "meaning": "철저한, 빈틈없는",
     "forms": ["thoroughly", "thoroughness"]
+  },
+  {
+    "id": "thread",
+    "word": "thread",
+    "pos": "명사",
+    "ipa": "θred",
+    "meaning": "① (이야기·작업의) 흐름, 맥락 ② 스레드 — 대화 묶음 또는 실행 단위"
   },
   {
     "id": "threshold",
@@ -1821,6 +6822,14 @@
     "meaning": "~ 내내, ~ 전체에 걸쳐"
   },
   {
+    "id": "tie",
+    "word": "tie",
+    "pos": "동사",
+    "ipa": "taɪ",
+    "meaning": "묶다, (tied to) ~에 연결되다·딸리다",
+    "forms": ["tied", "tying"]
+  },
+  {
     "id": "tier",
     "word": "tier",
     "pos": "명사",
@@ -1829,11 +6838,87 @@
     "forms": ["tiered", "higher-tier"]
   },
   {
+    "id": "tight",
+    "word": "tight",
+    "pos": "형용사",
+    "ipa": "taɪt",
+    "meaning": "① 촘촘한, 빈틈없는 (tight loop: 쉬지 않고 도는 루프) ② (tighten) 조이다, 군더더기 없이 다듬다",
+    "forms": ["tightens", "tighten", "tightened", "tightening", "tightly"]
+  },
+  {
+    "id": "timeout",
+    "word": "timeout",
+    "pos": "명사",
+    "ipa": "ˈtaɪmaʊt",
+    "meaning": "타임아웃 — 응답을 기다리는 제한 시간(이 지나 끊기는 것)",
+    "forms": ["time-out", "timed out"]
+  },
+  {
+    "id": "timestamp",
+    "word": "timestamp",
+    "pos": "명사",
+    "ipa": "ˈtaɪmstæmp",
+    "meaning": "타임스탬프 — 일이 일어난 시각을 적은 값",
+    "forms": ["timestamped"]
+  },
+  {
+    "id": "toolset",
+    "word": "toolset",
+    "pos": "명사",
+    "ipa": "ˈtuːlset",
+    "meaning": "도구 모음 — (에이전트가) 쓸 수 있는 도구 목록"
+  },
+  {
+    "id": "topical",
+    "word": "topical",
+    "pos": "형용사",
+    "ipa": "ˈtɑːpɪkl",
+    "meaning": "주제(상)의, 주제에 관한"
+  },
+  {
+    "id": "topology",
+    "word": "topology",
+    "pos": "명사",
+    "ipa": "təˈpɑːlədʒi",
+    "meaning": "토폴로지 — 구성 요소들이 서로 연결된 구조(누가 누구와 통신하는지)",
+    "forms": ["topologies"]
+  },
+  {
+    "id": "trace",
+    "word": "trace",
+    "pos": "명사·동사",
+    "ipa": "treɪs",
+    "meaning": "① 추적 기록, 트레이스 ② 추적하다, (흐름을) 따라가 보다",
+    "forms": ["tracing", "traced"]
+  },
+  {
+    "id": "track",
+    "word": "track",
+    "pos": "명사·동사",
+    "ipa": "træk",
+    "meaning": "① (on track) 제 궤도, 정상 진행 ② 추적하다, 기록해 관리하다",
+    "forms": ["tracked", "tracking"]
+  },
+  {
+    "id": "trail",
+    "word": "trail",
+    "pos": "명사",
+    "ipa": "treɪl",
+    "meaning": "자취, 흔적 — audit trail: (나중에 확인할 수 있는) 감사 추적 기록"
+  },
+  {
     "id": "transactional",
     "word": "transactional",
     "pos": "형용사",
     "ipa": "trænˈzækʃənl",
     "meaning": "거래(처리)에 관한"
+  },
+  {
+    "id": "transcript",
+    "word": "transcript",
+    "pos": "명사",
+    "ipa": "ˈtrænskrɪpt",
+    "meaning": "(대화) 기록 전문, 녹취록 — 주고받은 메시지를 그대로 적은 것"
   },
   {
     "id": "transient",
@@ -1844,12 +6929,84 @@
     "forms": ["transiently"]
   },
   {
+    "id": "treat",
+    "word": "treat",
+    "pos": "동사",
+    "ipa": "triːt",
+    "meaning": "(~로) 여기다, 다루다, 취급하다",
+    "forms": ["treating", "treated", "treatment"]
+  },
+  {
     "id": "trigger",
     "word": "trigger",
     "pos": "동사·명사",
     "ipa": "ˈtrɪɡər",
     "meaning": "(어떤 동작을) 일으키다, 실행시키다 / 계기, 발동 조건",
     "forms": ["triggered", "triggering"]
+  },
+  {
+    "id": "trim",
+    "word": "trim",
+    "pos": "동사",
+    "ipa": "trɪm",
+    "meaning": "(불필요한 부분을) 잘라 내다, 다듬다",
+    "forms": ["trimmed", "trimming"]
+  },
+  {
+    "id": "trivial",
+    "word": "trivial",
+    "pos": "형용사",
+    "ipa": "ˈtrɪviəl",
+    "meaning": "① 사소한, 하찮은 ② 아주 쉬운, 뻔한",
+    "forms": ["trivially"]
+  },
+  {
+    "id": "truncate",
+    "word": "truncate",
+    "pos": "동사",
+    "ipa": "ˈtrʌŋkeɪt",
+    "meaning": "(뒷부분을) 잘라 내다, 잘리다 — truncation: 잘림",
+    "forms": ["truncating", "truncation", "truncated"]
+  },
+  {
+    "id": "trust",
+    "word": "trust",
+    "pos": "동사·명사",
+    "ipa": "trʌst",
+    "meaning": "신뢰(하다) — trusted: 믿을 수 있는, 검증된",
+    "forms": ["trusted", "trusting", "trustworthy"]
+  },
+  {
+    "id": "ttl",
+    "word": "TTL",
+    "pos": "약어",
+    "ipa": "ˌtiː.tiːˈel",
+    "meaning": "TTL(time to live) — 캐시·데이터가 만료되기 전까지 유지되는 시간",
+    "forms": ["time to live", "time-to-live"]
+  },
+  {
+    "id": "turn",
+    "word": "turn",
+    "pos": "명사·동사",
+    "ipa": "tɜːrn",
+    "meaning": "① (대화의) 턴 — 사용자와 모델이 한 번 주고받는 차례 ② 돌다, 바뀌다",
+    "forms": ["turned", "turning"]
+  },
+  {
+    "id": "turn-away",
+    "word": "turn away",
+    "pos": "동사구",
+    "ipa": "tɜːrn əˈweɪ",
+    "meaning": "(찾아온 사람을) 돌려보내다, 받아 주지 않다",
+    "forms": ["turned away", "turning away", "turns away"]
+  },
+  {
+    "id": "tweak",
+    "word": "tweak",
+    "pos": "동사·명사",
+    "ipa": "twiːk",
+    "meaning": "(조금) 손보다, 미세 조정(하다)",
+    "forms": ["tweaked", "tweaking"]
   },
   {
     "id": "unambiguous",
@@ -1866,6 +7023,13 @@
     "ipa": "ʌnˈsɜːrtnti",
     "meaning": "불확실성",
     "forms": ["uncertain", "uncertainties"]
+  },
+  {
+    "id": "unchanged",
+    "word": "unchanged",
+    "pos": "형용사",
+    "ipa": "ʌnˈtʃeɪndʒd",
+    "meaning": "바뀌지 않은, 그대로인"
   },
   {
     "id": "undermine",
@@ -1899,6 +7063,57 @@
     "meaning": "의도하지 않은"
   },
   {
+    "id": "unique",
+    "word": "unique",
+    "pos": "형용사",
+    "ipa": "juˈniːk",
+    "meaning": "고유한, 하나뿐인 — 딱 한 곳만 특정되는",
+    "forms": ["uniquely", "uniqueness"]
+  },
+  {
+    "id": "unit",
+    "word": "unit",
+    "pos": "명사",
+    "ipa": "ˈjuːnɪt",
+    "meaning": "① (측정·금액의) 단위 ② (작업·기능의) 단위, 한 묶음"
+  },
+  {
+    "id": "unreachable",
+    "word": "unreachable",
+    "pos": "형용사",
+    "ipa": "ʌnˈriːtʃəbl",
+    "meaning": "접속할 수 없는, 연결이 닿지 않는"
+  },
+  {
+    "id": "unrelated",
+    "word": "unrelated",
+    "pos": "형용사",
+    "ipa": "ˌʌnrɪˈleɪtɪd",
+    "meaning": "관계없는, 무관한"
+  },
+  {
+    "id": "unsuccessful",
+    "word": "unsuccessful",
+    "pos": "형용사",
+    "ipa": "ˌʌnsəkˈsesfl",
+    "meaning": "실패한, 성공하지 못한",
+    "forms": ["unsuccessfully"]
+  },
+  {
+    "id": "untrimmed",
+    "word": "untrimmed",
+    "pos": "형용사",
+    "ipa": "ʌnˈtrɪmd",
+    "meaning": "잘라 내지 않은, 원본 그대로의"
+  },
+  {
+    "id": "untrusted",
+    "word": "untrusted",
+    "pos": "형용사",
+    "ipa": "ʌnˈtrʌstɪd",
+    "meaning": "신뢰할 수 없는, 검증되지 않은 (외부 입력 등)"
+  },
+  {
     "id": "upfront",
     "word": "upfront",
     "pos": "부사·형용사",
@@ -1907,11 +7122,26 @@
     "forms": ["up-front"]
   },
   {
+    "id": "upper-bound",
+    "word": "upper bound",
+    "pos": "명사구",
+    "ipa": "ˈʌpər baʊnd",
+    "meaning": "상한 — 넘을 수 없는 최대 한도",
+    "forms": ["upper-bound"]
+  },
+  {
     "id": "upstream",
     "word": "upstream",
     "pos": "형용사·부사",
     "ipa": "ˌʌpˈstriːm",
     "meaning": "(처리 흐름의) 앞 단계의, 상위의"
+  },
+  {
+    "id": "usage",
+    "word": "usage",
+    "pos": "명사",
+    "ipa": "ˈjuːsɪdʒ",
+    "meaning": "① 사용법, 쓰는 방식 ② 사용량 (토큰 usage 등)"
   },
   {
     "id": "vague",
@@ -1922,12 +7152,63 @@
     "forms": ["vaguely"]
   },
   {
+    "id": "valid",
+    "word": "valid",
+    "pos": "형용사",
+    "ipa": "ˈvælɪd",
+    "meaning": "① 유효한, 형식에 맞는 (valid JSON) ② 타당한, 근거 있는",
+    "forms": ["validity"]
+  },
+  {
+    "id": "validation",
+    "word": "validation",
+    "pos": "명사",
+    "ipa": "ˌvælɪˈdeɪʃn",
+    "meaning": "검증 — 값·형식이 규칙에 맞는지 확인하는 것",
+    "forms": ["validation-retry", "validate", "validated", "validating", "validator"]
+  },
+  {
+    "id": "value",
+    "word": "value",
+    "pos": "명사",
+    "ipa": "ˈvæljuː",
+    "meaning": "① 값, 수치 ② 가치"
+  },
+  {
+    "id": "variable",
+    "word": "variable",
+    "pos": "명사·형용사",
+    "ipa": "ˈveriəbl",
+    "meaning": "① 변수 (environment variable: 환경 변수) ② 변하기 쉬운, 가변적인"
+  },
+  {
+    "id": "variant",
+    "word": "variant",
+    "pos": "명사",
+    "ipa": "ˈveriənt",
+    "meaning": "변형, (조금씩 다른) 버전"
+  },
+  {
     "id": "vary",
     "word": "vary",
     "pos": "동사",
     "ipa": "ˈveri",
     "meaning": "(서로) 다르다, 달라지다",
     "forms": ["varies", "varied", "varying", "variation"]
+  },
+  {
+    "id": "vcs",
+    "word": "VCS",
+    "pos": "약어",
+    "ipa": "ˌviː.siːˈes",
+    "meaning": "버전 관리 시스템(version control system) — git 등"
+  },
+  {
+    "id": "vendor",
+    "word": "vendor",
+    "pos": "명사",
+    "ipa": "ˈvendər",
+    "meaning": "공급업체, 판매업체 (거래처)"
   },
   {
     "id": "verbatim",
@@ -1945,6 +7226,13 @@
     "forms": ["verbosity"]
   },
   {
+    "id": "verdict",
+    "word": "verdict",
+    "pos": "명사",
+    "ipa": "ˈvɜːrdɪkt",
+    "meaning": "판정, (최종) 판단 결과"
+  },
+  {
     "id": "verification",
     "word": "verification",
     "pos": "명사",
@@ -1953,11 +7241,20 @@
     "forms": ["verify", "verifies", "verified", "verifying"]
   },
   {
+    "id": "version-controlled",
+    "word": "version-controlled",
+    "pos": "형용사",
+    "ipa": "ˈvɜːrʒn kənˈtroʊld",
+    "meaning": "버전 관리되는 — git 등에 커밋되어 변경 이력이 남는",
+    "forms": ["version controlled", "version control"]
+  },
+  {
     "id": "versus",
     "word": "versus",
     "pos": "전치사",
     "ipa": "ˈvɜːrsəs",
-    "meaning": "~ 대(對), ~와 비교하여"
+    "meaning": "~ 대(對), ~와 비교하여",
+    "forms": ["vs"]
   },
   {
     "id": "via",
@@ -1967,11 +7264,183 @@
     "meaning": "~을 통해, ~을 거쳐"
   },
   {
+    "id": "viable",
+    "word": "viable",
+    "pos": "형용사",
+    "ipa": "ˈvaɪəbl",
+    "meaning": "실행 가능한, 제 역할을 할 만한 — minimum viable: 꼭 필요한 것만 갖춘",
+    "forms": ["viability"]
+  },
+  {
+    "id": "vice-versa",
+    "word": "vice versa",
+    "pos": "부사구",
+    "ipa": "ˌvaɪs ˈvɜːrsə",
+    "meaning": "거꾸로도 마찬가지로, 그 반대도",
+    "forms": ["vice-versa"]
+  },
+  {
+    "id": "violate",
+    "word": "violate",
+    "pos": "동사",
+    "ipa": "ˈvaɪəleɪt",
+    "meaning": "(규칙·제약을) 어기다, 위반하다",
+    "forms": ["violations", "violated", "violating", "violation"]
+  },
+  {
+    "id": "visibility",
+    "word": "visibility",
+    "pos": "명사",
+    "ipa": "ˌvɪzəˈbɪləti",
+    "meaning": "가시성 — (내부 동작·상태를) 들여다볼 수 있는 정도"
+  },
+  {
+    "id": "visible",
+    "word": "visible",
+    "pos": "형용사",
+    "ipa": "ˈvɪzəbl",
+    "meaning": "보이는, 드러나 있는",
+    "forms": ["visibly"]
+  },
+  {
     "id": "volunteer",
     "word": "volunteer",
     "pos": "동사",
     "ipa": "ˌvɑːlənˈtɪr",
     "meaning": "(묻지 않았는데) 자진해서 말하다, 먼저 제공하다",
     "forms": ["volunteered", "volunteering"]
+  },
+  {
+    "id": "vote",
+    "word": "vote",
+    "pos": "명사·동사",
+    "ipa": "voʊt",
+    "meaning": "투표(하다) — majority vote: 다수결",
+    "forms": ["voted", "voting"]
+  },
+  {
+    "id": "wander",
+    "word": "wander",
+    "pos": "동사",
+    "ipa": "ˈwɑːndər",
+    "meaning": "(방향을 잃고) 헤매다, 본래 목표에서 벗어나다",
+    "forms": ["wandered", "wandering"]
+  },
+  {
+    "id": "warrant",
+    "word": "warrant",
+    "pos": "동사",
+    "ipa": "ˈwɔːrənt",
+    "meaning": "(조치를) 정당화하다 — warranted: 그럴 만한, 필요하고 타당한",
+    "forms": ["warranted"]
+  },
+  {
+    "id": "webhook",
+    "word": "webhook",
+    "pos": "명사",
+    "ipa": "ˈwebhʊk",
+    "meaning": "웹훅 — 이벤트가 생기면 지정한 URL로 HTTP 요청을 보내 알려 주는 방식"
+  },
+  {
+    "id": "well-structured",
+    "word": "well-structured",
+    "pos": "형용사",
+    "ipa": "ˌwel ˈstrʌktʃərd",
+    "meaning": "구조가 잘 잡힌, 짜임새 있는",
+    "forms": ["well structured"]
+  },
+  {
+    "id": "whatever",
+    "word": "whatever",
+    "pos": "대명사·형용사",
+    "ipa": "wʌtˈevər",
+    "meaning": "무엇이든, 어떤 ~이든 (상관없이)"
+  },
+  {
+    "id": "whether",
+    "word": "whether",
+    "pos": "접속사",
+    "ipa": "ˈweðər",
+    "meaning": "~인지 (아닌지), ~이든 아니든"
+  },
+  {
+    "id": "whichever",
+    "word": "whichever",
+    "pos": "대명사·형용사",
+    "ipa": "wɪtʃˈevər",
+    "meaning": "어느 것이든, 어느 ~이든"
+  },
+  {
+    "id": "whose",
+    "word": "whose",
+    "pos": "대명사",
+    "ipa": "huːz",
+    "meaning": "① (관계사) 그것의 ~가 ② (의문) 누구의"
+  },
+  {
+    "id": "widely-used",
+    "word": "widely-used",
+    "pos": "형용사",
+    "ipa": "ˈwaɪdli juːzd",
+    "meaning": "널리 쓰이는",
+    "forms": ["widely used"]
+  },
+  {
+    "id": "window",
+    "word": "window",
+    "pos": "명사",
+    "ipa": "ˈwɪndoʊ",
+    "meaning": "① (컨텍스트) 창 — context window: 모델이 한 번에 담을 수 있는 토큰 범위 ② (시간의) 구간"
+  },
+  {
+    "id": "within",
+    "word": "within",
+    "pos": "전치사",
+    "ipa": "wɪˈðɪn",
+    "meaning": "~ 안에서, ~ 이내에"
+  },
+  {
+    "id": "workflow",
+    "word": "workflow",
+    "pos": "명사",
+    "ipa": "ˈwɜːrkfloʊ",
+    "meaning": "워크플로 — 작업이 정해진 단계·순서로 이어지는 흐름"
+  },
+  {
+    "id": "workload",
+    "word": "workload",
+    "pos": "명사",
+    "ipa": "ˈwɜːrkloʊd",
+    "meaning": "작업량, (처리해야 할) 작업의 성격·부하"
+  },
+  {
+    "id": "wrap",
+    "word": "wrap",
+    "pos": "동사",
+    "ipa": "ræp",
+    "meaning": "감싸다, (앞뒤로) 둘러싸다",
+    "forms": ["wrapped", "wrapping"]
+  },
+  {
+    "id": "wrapper",
+    "word": "wrapper",
+    "pos": "명사",
+    "ipa": "ˈræpər",
+    "meaning": "래퍼 — 기존 기능을 감싸 동작을 덧붙이거나 제어하는 코드 층"
+  },
+  {
+    "id": "yield",
+    "word": "yield",
+    "pos": "동사",
+    "ipa": "jiːld",
+    "meaning": "① (결과를) 낳다, 내놓다 ② 양보하다, (제어권을) 넘기다",
+    "forms": ["yielded", "yielding"]
+  },
+  {
+    "id": "zod",
+    "word": "Zod",
+    "pos": "명사",
+    "ipa": "zɑːd",
+    "meaning": "Zod — TypeScript용 스키마 선언·검증 라이브러리"
   }
 ]
