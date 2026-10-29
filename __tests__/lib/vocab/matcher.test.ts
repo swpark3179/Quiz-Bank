@@ -88,6 +88,22 @@ describe('createVocabMatcher', () => {
     expect(marked('Use C++ or c++ here', [entry('C++')])).toEqual(['C++', 'c++']);
   });
 
+  it('등록 표현이 수천 개여도 빠르게, 같은 규칙으로 찾는다', () => {
+    // 한 정규식에 몰아 넣던 방식은 이 규모에서 수백 배 느려졌다
+    const many = Array.from({ length: 3000 }, (_, i) => entry(`term${i.toString(36)}x`));
+    const entries = [...many, entry('backoff'), entry('exponential backoff'), entry('Context')];
+    const text = 'Use EXPONENTIAL backoff, term1x and term2s-x; context windowing. '.repeat(2000);
+    const started = Date.now();
+    const segments = createVocabMatcher(entries).split(text);
+    expect(Date.now() - started).toBeLessThan(3000);
+    expect(segments.map((s) => s.text).join('')).toBe(text);
+    expect(segments.filter((s) => s.entry).slice(0, 3).map((s) => s.text)).toEqual([
+      'EXPONENTIAL backoff',
+      'term1x',
+      'context',
+    ]);
+  });
+
   it('한 표현이 두 항목에 있으면 먼저 등록된 항목을 쓴다', () => {
     const first = { ...entry('fork'), id: 'first' };
     const second = { ...entry('fork'), id: 'second' };

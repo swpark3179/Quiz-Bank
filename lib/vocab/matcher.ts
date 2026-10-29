@@ -64,17 +64,25 @@ export function createVocabMatcher(entries: VocabEntry[]): VocabMatcher {
     return { split: (text) => [{ text }] };
   }
 
-  const alternatives = [...lookup.keys()]
-    .sort((a, b) => b.length - a.length)
-    .map((surface) => {
-      // 구 안의 공백은 줄바꿈·여러 칸도 허용, 글자로 끝나면 -s / -es 를 덧붙여 인식
-      const body = surface.split(' ').map(escapeRegExp).join('\\s+');
-      return /[a-z]$/.test(surface) ? `${body}(?:e?s)?` : body;
-    });
+  // 표현을 첫 글자별 정규식으로 나눈다. 수천 개를 한 정규식에 넣으면 패턴이 커져
+  // 엔진이 최적화를 포기하고 수백 배 느려진다 (V8 은 약 20KB 부터).
+  // 한 위치에서 맞을 수 있는 표현은 첫 글자가 같으므로, 그룹 안에서만 긴 순서를 지키면 된다.
+  const alternativesByFirst = new Map<string, string[]>();
+  for (const surface of [...lookup.keys()].sort((a, b) => b.length - a.length)) {
+    // 구 안의 공백은 줄바꿈·여러 칸도 허용, 글자로 끝나면 -s / -es 를 덧붙여 인식
+    const body = surface.split(' ').map(escapeRegExp).join('\\s+');
+    const alternative = /[a-z]$/.test(surface) ? `${body}(?:e?s)?` : body;
+    const group = alternativesByFirst.get(surface[0]);
+    if (group) group.push(alternative);
+    else alternativesByFirst.set(surface[0], [alternative]);
+  }
   // 뒤쪽 경계는 정규식 안에서 확인해, 긴 표현이 단어 중간에서 끊기면 짧은 표현을 이어서 시도하게 한다
   // ("context window" 가 "context windowing" 에서 실패하면 "context" 를 맞춘다).
-  // 앞쪽 경계는 lookbehind 대신 아래에서 직접 확인한다.
-  const pattern = new RegExp(`(?:${alternatives.join('|')})(?![A-Za-z0-9_-])`, 'gi');
+  // 앞쪽 경계는 아래에서 직접 확인하고, sticky(y) 로 그 위치에서만 맞춘다.
+  const patterns = new Map<string, RegExp>();
+  for (const [first, alternatives] of alternativesByFirst) {
+    patterns.set(first, new RegExp(`(?:${alternatives.join('|')})(?![A-Za-z0-9_-])`, 'iy'));
+  }
 
   const findEntry = (matched: string): VocabEntry | undefined => {
     const key = normalize(matched);
@@ -89,23 +97,22 @@ export function createVocabMatcher(entries: VocabEntry[]): VocabMatcher {
     split(text) {
       const segments: VocabSegment[] = [];
       let cursor = 0;
-      pattern.lastIndex = 0;
 
-      let m: RegExpExecArray | null;
-      while ((m = pattern.exec(text)) !== null) {
-        const start = m.index;
-        const end = start + m[0].length;
-        const entry = findEntry(m[0]);
+      for (let start = 0; start < text.length; start++) {
+        // 다른 단어 중간에서는 시작하지 않는다
+        if (isWordChar(text[start - 1])) continue;
+        const pattern = patterns.get(text[start].toLowerCase());
+        if (!pattern) continue;
 
-        if (!entry || isWordChar(text[start - 1])) {
-          // 다른 단어 중간에서 시작했다 — 한 글자 뒤부터 다시 찾는다
-          pattern.lastIndex = start + 1;
-          continue;
-        }
+        pattern.lastIndex = start;
+        const m = pattern.exec(text);
+        const entry = m ? findEntry(m[0]) : undefined;
+        if (!m || !entry) continue;
 
         if (start > cursor) segments.push({ text: text.slice(cursor, start) });
         segments.push({ text: m[0], entry });
-        cursor = end;
+        cursor = start + m[0].length;
+        start = cursor - 1;
       }
 
       if (cursor < text.length || segments.length === 0) {
