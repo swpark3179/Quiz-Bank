@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 시작하기</span></div>
+    <h1>레슨 안내와 도메인 지도</h1>
+    <p class="sub">시험 구조 · 5개 도메인 배점 · 6개 시나리오 · 30개 레슨 지도 · 학습 순서</p>
+    <p class="meta">근거 · <a href="https://everpath-course-content.s3-accelerate.amazonaws.com/instructor%2F6nizmqk8tpzpfjvt6qmmav7rh%2Fpublic%2F1783542750%2FClaude+Certified+Architect+%E2%80%93+Foundations+Exam+Guide.pdf" target="_blank" rel="noopener">CCAR-F 공식 시험 가이드 (PDF)</a> &nbsp;|&nbsp; 레슨 구성 참고 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a></p>
+    <div class="secrow">
+      <span class="s on">⓪ 안내</span><span class="s">도메인 1 · 27%</span><span class="s">도메인 2 · 18%</span><span class="s">도메인 3 · 20%</span><span class="s">도메인 4 · 20%</span><span class="s">도메인 5 · 15%</span>
+    </div>
+  </header>
+
+  <p class="lede">CCAR-F 공식 시험 가이드는 시험 범위를 5개 도메인, 30개 과제(Task Statement)로 나눈다. 이 가이드는 <strong>과제 하나를 레슨 한 페이지로</strong> 다루고, 페이지마다 습득 포인트 → 단원별 정리 → 시험 함정 → 자가 점검 6문항 순서로 구성했다. 내용은 Anthropic 공식 문서를 근거로 2026년 10월 기준으로 새로 썼다.</p>
+
+  <div class="obj"><span class="lbl">이 가이드 사용법</span>
+    <ul>
+      <li>왼쪽 메뉴에서 레슨을 고른다. 번호(1.1~5.6)는 공식 시험 가이드의 과제 번호와 같다.</li>
+      <li>레슨 맨 위 <strong>습득 포인트</strong>는 시험 가이드의 Knowledge / Skills 항목을 줄인 것이다. 먼저 훑어보고, 다 읽은 뒤 각 항목을 스스로 설명할 수 있는지 확인한다.</li>
+      <li><strong>시험 함정</strong>과 판단 축 박스에는 오답 보기에 자주 쓰이는 생각을 모았다.</li>
+      <li>자가 점검 퀴즈는 보기를 누르는 즉시 채점된다. 틀린 문항은 해당 단원으로 돌아가 근거를 다시 읽는다.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>시험 구조</h3><span class="unit-en">Exam details at a glance</span></div>
+    <table class="t">
+      <thead><tr><th style="width:24%">항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>문항 수 · 시간</td><td>60문항 · 120분</td></tr>
+        <tr><td>문항 형식</td><td>객관식. <strong>하나를 고르는 문항과 여러 개를 고르는 문항</strong>이 섞여 있고, 문항마다 고를 개수가 적혀 있다</td></tr>
+        <tr><td>출제 구성</td><td>시나리오 6개 중 <strong>4개</strong>가 무작위로 나오고, 시나리오 하나에 여러 문항이 묶인다</td></tr>
+        <tr><td>합격 기준</td><td>100~1,000 환산 점수에서 720점</td></tr>
+        <tr><td>결과</td><td>합격/불합격과 환산 점수, 성적표에 도메인별 정답률</td></tr>
+        <tr><td>응시 방식</td><td>감독 시험 (온라인 감독 또는 시험 센터)</td></tr>
+        <tr><td>응시료 · 유효기간</td><td>USD 125 · 취득일로부터 12개월</td></tr>
+      </tbody>
+    </table>
+    <p class="cap">공식 시험 가이드 기준. 응시 전에 최신 가이드로 다시 확인한다.</p>
+    <div class="note"><span class="lbl">교재 가이드와 다른 점</span><p>이 저장소의 <em>CCA-F 교재 자습 가이드</em>(⓪ 시험 개요)는 교재 집필 시점(2026년 6월) 기준이라 '4지선다', 'USD 99'로 적혀 있다. 현재 공식 가이드에는 <strong>복수 선택 문항</strong>과 <strong>USD 125</strong>가 명시되어 있으니, 응시 준비에는 이쪽 값을 쓴다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>도메인과 배점</h3><span class="unit-en">Content domains &amp; weights</span></div>
+    <div class="dom">
+      <div class="row"><div class="dn">1. 에이전트 아키텍처·오케스트레이션<span class="dc">Agentic Architecture &amp; Orchestration · 레슨 1.1~1.7</span></div><div class="bar"><i style="width:100%"></i></div><div class="pct">27%</div></div>
+      <div class="row"><div class="dn">2. 도구 설계·MCP 연동<span class="dc">Tool Design &amp; MCP Integration · 레슨 2.1~2.5</span></div><div class="bar"><i style="width:66.7%"></i></div><div class="pct">18%</div></div>
+      <div class="row"><div class="dn">3. Claude Code 설정·워크플로<span class="dc">Claude Code Configuration &amp; Workflows · 레슨 3.1~3.6</span></div><div class="bar"><i style="width:74.1%"></i></div><div class="pct">20%</div></div>
+      <div class="row"><div class="dn">4. 프롬프트 엔지니어링·구조화 출력<span class="dc">Prompt Engineering &amp; Structured Output · 레슨 4.1~4.6</span></div><div class="bar"><i style="width:74.1%"></i></div><div class="pct">20%</div></div>
+      <div class="row"><div class="dn">5. 컨텍스트 관리·신뢰성<span class="dc">Context Management &amp; Reliability · 레슨 5.1~5.6</span></div><div class="bar"><i style="width:55.6%"></i></div><div class="pct">15%</div></div>
+    </div>
+    <div class="axis"><span class="lbl">배점을 읽는 법</span><ul><li>배점은 채점 문항 중 그 도메인에서 나오는 <strong>대략적인 비율</strong>이다. 60문항이면 도메인 1에서 16문항 안팎, 도메인 5에서 9문항 안팎이 나온다.</li><li>문항은 시나리오에 묶여 나오므로 한 문항이 여러 도메인 지식을 함께 요구하는 경우가 많다. 도메인 하나를 건너뛰면 다른 도메인 문항에서도 점수를 잃는다.</li><li>에이전트 루프(1.1)와 도구 설명(2.1)은 거의 모든 시나리오의 전제 지식이다. 처음 공부한다면 이 두 레슨부터 읽는다.</li></ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>6개 시나리오와 관련 레슨</h3><span class="unit-en">Exam scenarios</span></div>
+    <p>시험에는 아래 6개 중 4개가 나온다. 시나리오 설명은 문제의 무대일 뿐이고, 실제로 묻는 것은 그 무대에서 내려야 하는 <strong>설계 판단</strong>이다. 시나리오별로 자주 엮이는 레슨을 함께 적었다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">시나리오</th><th>상황</th><th style="width:14%">주 도메인</th><th style="width:19%">관련 레슨</th></tr></thead>
+      <tbody>
+        <tr><td><strong>① 고객 지원 해결 에이전트</strong></td><td>Agent SDK와 MCP 도구(<code>get_customer</code>, <code>lookup_order</code>, <code>process_refund</code>, <code>escalate_to_human</code>)로 반품·결제 분쟁·계정 문의를 처리한다. 첫 응대 해결률 80% 이상이 목표이고, 언제 사람에게 넘길지 알아야 한다</td><td>1 · 2 · 5</td><td>1.1 · 1.4 · 1.5 · 2.2 · 5.1 · 5.2</td></tr>
+        <tr><td><strong>② Claude Code로 코드 생성</strong></td><td>코드 생성·리팩터링·디버깅·문서화에 Claude Code를 쓴다. 커스텀 슬래시 명령, CLAUDE.md 설정, 플랜 모드와 직접 실행의 선택이 핵심이다</td><td>3 · 5</td><td>3.1 · 3.2 · 3.3 · 3.4 · 3.5 · 5.4</td></tr>
+        <tr><td><strong>③ 멀티에이전트 리서치 시스템</strong></td><td>코디네이터가 웹 검색·문서 분석·종합·보고서 작성 서브에이전트에 일을 나눠 주고, 출처가 달린 보고서를 만든다</td><td>1 · 2 · 5</td><td>1.2 · 1.3 · 1.6 · 2.3 · 5.3 · 5.6</td></tr>
+        <tr><td><strong>④ Claude로 개발자 생산성</strong></td><td>Agent SDK로 낯선 코드베이스 탐색, 레거시 이해, 보일러플레이트 생성, 반복 작업 자동화 도구를 만든다. 내장 도구와 MCP 서버를 함께 쓴다</td><td>2 · 3 · 1</td><td>1.7 · 2.4 · 2.5 · 3.1 · 5.4</td></tr>
+        <tr><td><strong>⑤ CI용 Claude Code</strong></td><td>CI/CD 파이프라인에서 자동 코드 리뷰, 테스트 생성, PR 피드백을 돌린다. 실행 가능한 피드백을 주면서 오탐을 줄이는 프롬프트가 필요하다</td><td>3 · 4</td><td>3.6 · 4.1 · 4.2 · 4.6</td></tr>
+        <tr><td><strong>⑥ 구조화 데이터 추출</strong></td><td>비정형 문서에서 정보를 뽑아 JSON 스키마로 검증하고 하위 시스템에 넘긴다. 높은 정확도와 예외 상황 처리가 필요하다</td><td>4 · 5</td><td>4.2 · 4.3 · 4.4 · 4.5 · 5.5</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>30개 레슨 지도</h3><span class="unit-en">Lesson map</span></div>
+    <p>레슨 이름을 누르면 해당 레슨으로 이동한다.</p>
+    <table class="t">
+      <caption>도메인 1 · 에이전트 아키텍처·오케스트레이션 (27%)</caption>
+      <thead><tr><th style="width:10%">번호</th><th style="width:40%">레슨</th><th>핵심 키워드</th></tr></thead>
+      <tbody>
+        <tr><td>1.1</td><td><a href="ccar-f-lessons.dc.html#l1-1" target="_top">에이전트 루프와 stop_reason 제어</a></td><td><code>tool_use</code> / <code>end_turn</code> 분기, 도구 결과를 이력에 붙이기, 종료 판단 안티패턴</td></tr>
+        <tr><td>1.2</td><td><a href="ccar-f-lessons.dc.html#l1-2" target="_top">코디네이터-서브에이전트 오케스트레이션</a></td><td>허브 앤 스포크, 서브에이전트 선택, 범위 분할, 반복 보완 루프</td></tr>
+        <tr><td>1.3</td><td><a href="ccar-f-lessons.dc.html#l1-3" target="_top">서브에이전트 생성과 컨텍스트 전달</a></td><td>Agent(구 Task) 도구, AgentDefinition, 명시적 컨텍스트 전달, 병렬 생성</td></tr>
+        <tr><td>1.4</td><td><a href="ccar-f-lessons.dc.html#l1-4" target="_top">선행 조건 게이트와 사람 핸드오프</a></td><td>프로그램으로 강제하는 순서, 다중 요청 분해, 구조화된 핸드오프 요약</td></tr>
+        <tr><td>1.5</td><td><a href="ccar-f-lessons.dc.html#l1-5" target="_top">Agent SDK 훅: 도구 호출 차단과 결과 정규화</a></td><td>PreToolUse 차단, PostToolUse 정규화, 훅 vs 프롬프트</td></tr>
+        <tr><td>1.6</td><td><a href="ccar-f-lessons.dc.html#l1-6" target="_top">작업 분해: 프롬프트 체이닝 vs 동적 분해</a></td><td>고정 파이프라인, 적응형 분해, 파일별 분석 + 통합 패스</td></tr>
+        <tr><td>1.7</td><td><a href="ccar-f-lessons.dc.html#l1-7" target="_top">세션 재개·포크·새로 시작하기</a></td><td><code>--resume</code>, <code>fork_session</code>, 오래된 도구 결과, 요약 주입</td></tr>
+      </tbody>
+    </table>
+    <table class="t">
+      <caption>도메인 2 · 도구 설계·MCP 연동 (18%)</caption>
+      <thead><tr><th style="width:10%">번호</th><th style="width:40%">레슨</th><th>핵심 키워드</th></tr></thead>
+      <tbody>
+        <tr><td>2.1</td><td><a href="ccar-f-lessons.dc.html#l2-1" target="_top">도구 설명: Claude가 도구를 고르는 방식</a></td><td>설명이 선택을 좌우, 겹치는 도구 정리, 이름 변경·분할</td></tr>
+        <tr><td>2.2</td><td><a href="ccar-f-lessons.dc.html#l2-2" target="_top">MCP 도구의 구조화된 오류 응답</a></td><td><code>isError</code>, 오류 분류, 재시도 가능 여부, 빈 결과와 실패 구분</td></tr>
+        <tr><td>2.3</td><td><a href="ccar-f-lessons.dc.html#l2-3" target="_top">에이전트별 도구 범위와 tool_choice</a></td><td>역할별 도구 제한, 제약된 대체 도구, <code>auto</code> / <code>any</code> / 강제 지정</td></tr>
+        <tr><td>2.4</td><td><a href="ccar-f-lessons.dc.html#l2-4" target="_top">Claude Code의 MCP 서버 설정과 연동</a></td><td>프로젝트 <code>.mcp.json</code> vs 사용자 범위, 환경 변수 확장, MCP 리소스</td></tr>
+        <tr><td>2.5</td><td><a href="ccar-f-lessons.dc.html#l2-5" target="_top">내장 도구 고르기: Read·Write·Edit·Bash·Grep·Glob</a></td><td>내용 검색 vs 경로 검색, Edit 실패 시 대안, 점진적 탐색</td></tr>
+      </tbody>
+    </table>
+    <table class="t">
+      <caption>도메인 3 · Claude Code 설정·워크플로 (20%)</caption>
+      <thead><tr><th style="width:10%">번호</th><th style="width:40%">레슨</th><th>핵심 키워드</th></tr></thead>
+      <tbody>
+        <tr><td>3.1</td><td><a href="ccar-f-lessons.dc.html#l3-1" target="_top">CLAUDE.md 계층·범위·모듈화</a></td><td>사용자·프로젝트·디렉터리 범위, <code>@import</code>, 규칙 파일</td></tr>
+        <tr><td>3.2</td><td><a href="ccar-f-lessons.dc.html#l3-2" target="_top">커스텀 슬래시 명령과 스킬</a></td><td>프로젝트 vs 개인 범위, SKILL.md 프론트매터, 포크 컨텍스트</td></tr>
+        <tr><td>3.3</td><td><a href="ccar-f-lessons.dc.html#l3-3" target="_top">경로 한정 규칙: .claude/rules/와 paths</a></td><td><code>paths</code> 글롭, 조건부 로딩, 디렉터리 CLAUDE.md와 비교</td></tr>
+        <tr><td>3.4</td><td><a href="ccar-f-lessons.dc.html#l3-4" target="_top">플랜 모드 vs 직접 실행</a></td><td>작업 범위로 고르기, Explore 서브에이전트, 계획 후 실행</td></tr>
+        <tr><td>3.5</td><td><a href="ccar-f-lessons.dc.html#l3-5" target="_top">반복 개선: 예시·테스트·인터뷰</a></td><td>입출력 예시, 테스트 먼저, 인터뷰 패턴, 한 번에 vs 순차 수정</td></tr>
+        <tr><td>3.6</td><td><a href="ccar-f-lessons.dc.html#l3-6" target="_top">CI/CD의 Claude Code: -p·권한·JSON 출력</a></td><td><code>-p</code>, <code>--output-format json</code>, <code>--json-schema</code>, 독립 리뷰 인스턴스</td></tr>
+      </tbody>
+    </table>
+    <table class="t">
+      <caption>도메인 4 · 프롬프트 엔지니어링·구조화 출력 (20%)</caption>
+      <thead><tr><th style="width:10%">번호</th><th style="width:40%">레슨</th><th>핵심 키워드</th></tr></thead>
+      <tbody>
+        <tr><td>4.1</td><td><a href="ccar-f-lessons.dc.html#l4-1" target="_top">명시적 기준으로 오탐 줄이기</a></td><td>모호한 지시 vs 구체 기준, 심각도 정의, 오탐이 신뢰에 주는 영향</td></tr>
+        <tr><td>4.2</td><td><a href="ccar-f-lessons.dc.html#l4-2" target="_top">퓨샷 프롬프팅으로 일관성 높이기</a></td><td>모호한 사례 예시, 판단 이유 보여 주기, 형식 일관성</td></tr>
+        <tr><td>4.3</td><td><a href="ccar-f-lessons.dc.html#l4-3" target="_top">도구 사용·JSON 스키마로 구조화 출력 강제</a></td><td>추출 도구, <code>tool_choice</code>, 스키마 설계, 문법 오류 vs 의미 오류</td></tr>
+        <tr><td>4.4</td><td><a href="ccar-f-lessons.dc.html#l4-4" target="_top">검증·재시도·피드백 루프</a></td><td>오류를 담은 재시도, 재시도가 안 통하는 경우, 자기 교정 필드</td></tr>
+        <tr><td>4.5</td><td><a href="ccar-f-lessons.dc.html#l4-5" target="_top">Message Batches API와 배치 전략</a></td><td>비용 절감, 처리 시간, <code>custom_id</code>, 실패 요청 재제출</td></tr>
+        <tr><td>4.6</td><td><a href="ccar-f-lessons.dc.html#l4-6" target="_top">독립 리뷰어와 다중 패스 리뷰</a></td><td>자기 검토의 한계, 독립 인스턴스, 파일별 + 통합 패스</td></tr>
+      </tbody>
+    </table>
+    <table class="t">
+      <caption>도메인 5 · 컨텍스트 관리·신뢰성 (15%)</caption>
+      <thead><tr><th style="width:10%">번호</th><th style="width:40%">레슨</th><th>핵심 키워드</th></tr></thead>
+      <tbody>
+        <tr><td>5.1</td><td><a href="ccar-f-lessons.dc.html#l5-1" target="_top">긴 대화에서 핵심 정보 보존</a></td><td>요약에서 사라지는 수치, 사실 블록, 중간 정보 누락, 도구 결과 다듬기</td></tr>
+        <tr><td>5.2</td><td><a href="ccar-f-lessons.dc.html#l5-2" target="_top">에스컬레이션과 모호성 해소</a></td><td>명시적 요청, 정책 공백, 감정·자기 평가 신뢰도의 함정, 다중 일치</td></tr>
+        <tr><td>5.3</td><td><a href="ccar-f-lessons.dc.html#l5-3" target="_top">멀티에이전트 시스템의 오류 전파</a></td><td>구조화된 오류 맥락, 조용한 실패 금지, 부분 결과와 범위 표시</td></tr>
+        <tr><td>5.4</td><td><a href="ccar-f-lessons.dc.html#l5-4" target="_top">대규모 코드베이스 탐색의 컨텍스트 관리</a></td><td>컨텍스트 저하, <code>/compact</code>, 스크래치패드 파일, 서브에이전트 위임</td></tr>
+        <tr><td>5.5</td><td><a href="ccar-f-lessons.dc.html#l5-5" target="_top">사람 검토 라우팅과 신뢰도 보정</a></td><td>집계 정확도의 함정, 층화 표본, 필드별 신뢰도, 검토 대기열</td></tr>
+        <tr><td>5.6</td><td><a href="ccar-f-lessons.dc.html#l5-6" target="_top">다중 소스 종합의 출처 보존</a></td><td>주장-출처 매핑, 상충 자료 표시, 날짜 맥락, 확정 vs 논쟁 구분</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>추천 학습 순서</h3><span class="unit-en">Study path</span></div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">1단계</div><div class="ft">기초 두 레슨<br><span style="font-weight:400;font-size:12px;color:var(--soft)">1.1 에이전트 루프 · 2.1 도구 설명</span></div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2단계</div><div class="ft">도메인 순서대로<br><span style="font-weight:400;font-size:12px;color:var(--soft)">레슨마다 퀴즈 6문항까지</span></div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">3단계</div><div class="ft">시나리오별 복습<br><span style="font-weight:400;font-size:12px;color:var(--soft)">위 표의 관련 레슨 묶음</span></div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">4단계</div><div class="ft">모의고사<br><span style="font-weight:400;font-size:12px;color:var(--soft)">앱 CCAR-F 카테고리</span></div></div>
+    </div>
+    <ul>
+      <li>레슨을 한 번 다 읽었다면 문제은행 앱의 <strong>CCAR-F 카테고리</strong>(샘플문제1, 실전모의고사4)로 시나리오형 문항을 실전처럼 푼다. 틀린 문항의 과제 번호를 이 지도에서 찾아 해당 레슨을 다시 읽는다.</li>
+      <li>Claude Code·MCP·Agent Skills를 강의 단위로 다시 정리하고 싶다면 같은 사이트의 <em>Claude Certified Architect</em>(Anthropic Academy 4개 강의) 가이드를 함께 본다.</li>
+      <li>공식 문서는 자주 바뀐다. 레슨의 <em>"시험 가이드 표현 vs 현재 문서"</em> 메모는 시험 가이드 용어(예: Task 도구)와 현재 문서 용어가 다른 곳을 짚은 것이다. 시험 문항은 시험 가이드 용어로 나올 수 있으니 두 이름을 함께 기억한다.</li>
+    </ul>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://everpath-course-content.s3-accelerate.amazonaws.com/instructor%2F6nizmqk8tpzpfjvt6qmmav7rh%2Fpublic%2F1783542750%2FClaude+Certified+Architect+%E2%80%93+Foundations+Exam+Guide.pdf" target="_blank" rel="noopener">Claude Certified Architect – Foundations Exam Guide</a> (시험 개요·배점·시나리오·과제 목록)</p></div>
+
+  <p class="cap" style="margin-top:40px">이 가이드는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 시험 가이드와 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시는 이 가이드에서 새로 작성했습니다. 시험 사양은 바뀔 수 있으니 응시 전 공식 시험 가이드로 최종 확인하세요.</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

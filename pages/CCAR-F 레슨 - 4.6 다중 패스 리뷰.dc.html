@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 4 · 서브도메인 4.6</span></div>
+    <h1>독립 리뷰어와 다중 패스 리뷰</h1>
+    <p class="sub">자기 리뷰의 한계 · 독립 인스턴스 · /code-review · 파일별 패스 + 통합 패스 · 신뢰도 보고 · 검증 패스</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/independent-review-instances-vs-self-review" target="_blank" rel="noopener">CertSafari 4.6</a> &nbsp;|&nbsp; 출제 도메인: 도메인 4 · Prompt Engineering &amp; Structured Output (20%)</p>
+    <div class="secrow">
+      <span class="s">4.1 명시적 기준</span><span class="s">4.2 퓨샷</span><span class="s">4.3 구조화 출력</span><span class="s">4.4 검증·재시도</span><span class="s">4.5 배치 처리</span><span class="s on">4.6 다중 리뷰</span>
+    </div>
+  </header>
+
+  <p class="lede">코드를 쓴 세션에게 "방금 쓴 코드를 리뷰해 줘"라고 하면, 리뷰어는 작성할 때의 추론을 그대로 들고 있어 같은 가정을 다시 받아들이기 쉽다. 이 서브도메인은 리뷰를 작성 맥락에서 떼어 내는 방법(독립 인스턴스), 큰 변경을 쪼개서 보는 방법(파일별 패스 + 통합 패스), 지적마다 신뢰도를 붙여 검증과 라우팅에 쓰는 방법을 다룬다. <strong>좋은 리뷰어의 조건은 더 큰 모델이 아니라, 작성자의 추론을 보지 않은 깨끗한 컨텍스트다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>같은 세션의 자기 리뷰가 약한 이유: 생성 때의 추론이 컨텍스트에 남아 자기 결정을 의심하지 않는다</li>
+      <li>작성자의 대화·추론 없이 산출물과 기준만 받는 두 번째 Claude 인스턴스로 리뷰한다</li>
+      <li>큰 리뷰는 파일별 로컬 패스와 파일 간 통합 패스로 나눠 주의 분산과 모순된 지적을 줄인다</li>
+      <li>지적마다 신뢰도·심각도를 보고하게 하고, 별도 검증 패스에서 걸러 사람·자동 게시로 나눈다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>작성한 세션이 약한 리뷰어인 이유</h3><span class="unit-en">Same context, same blind spots</span></div>
+    <p>코드를 쓰는 동안 모델은 "이 함수는 null을 받지 않는다", "이 순서면 락이 필요 없다" 같은 판단을 쌓는다. 같은 대화에서 리뷰를 시키면 그 판단들이 근거처럼 컨텍스트에 남아 있어, 리뷰는 새 시선이 아니라 기존 결정의 재확인이 되기 쉽다. 같은 컨텍스트에서 더 오래 생각하게 하는 것도 그 전제들을 지우지는 않는다.</p>
+    <div class="tri">
+      <div class="pane"><div class="pt">같은 세션 자기 리뷰</div><div class="pd">작성 추론이 그대로 보인다. 오타·명백한 누락은 잡지만 설계 가정은 잘 의심하지 않는다.</div></div>
+      <div class="pane"><div class="pt">독립 리뷰 인스턴스</div><div class="pd">산출물·스펙·기준만 받는다. 작성자가 왜 그렇게 했는지 모르므로 결과만 보고 판단한다.</div></div>
+      <div class="pane"><div class="pt">사람 리뷰</div><div class="pd">최종 책임. 독립 리뷰가 거른 지적과 신뢰도 낮은 지적을 받는다(5.5와 연결).</div></div>
+    </div>
+    <p>공식 문서도 같은 이유를 든다. Claude Code의 <code>/code-review</code>는 대화를 본 적 없는 새 subagent에서 diff를 리뷰해 "코드를 만든 추론에 흔들리지 않는다"고 설명하고, 같은 작업을 subagent에 넘긴다고 답이 나아지지는 않지만 <strong>추론을 보지 않은 새 리뷰어는 도움이 된다</strong>고 구분한다. Managed Agents의 outcome grader도 메인 에이전트의 구현 선택에 영향받지 않도록 별도 컨텍스트 창을 쓴다.</p>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 독립 인스턴스가 "자기 리뷰 지시나 extended thinking보다" 효과적이라고 쓴다. 현재 문서도 독립 리뷰어를 권하지만, 자기 점검 지시("끝내기 전에 [기준]으로 답을 검증하라")가 코딩·수학 오류를 잘 잡는다고도 적고, Claude Opus 5는 지시 없이도 스스로 잘 검증해 이런 지시가 오히려 과잉 검증을 부른다고 설명한다. 정리하면 자기 점검은 쓸모없는 것이 아니라 <strong>독립 리뷰를 대신하지 못하는 것</strong>이다. 또 최신 모델은 extended thinking 대신 adaptive thinking과 effort로 사고량을 조절한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>독립 리뷰 인스턴스 만들기</h3><span class="unit-en">Fresh context, explicit criteria</span></div>
+    <table class="t">
+      <thead><tr><th style="width:20%">환경</th><th style="width:44%">방법</th><th>메모</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Code 기본</td><td><code>/code-review</code>(별칭 <code>/review</code>) — 백그라운드 subagent가 자기 컨텍스트 창으로 브랜치 변경을 리뷰한다</td><td><code>--fix</code>로 반영, <code>--comment</code>로 PR 인라인 코멘트. <code>CLAUDE.md</code>를 따른다</td></tr>
+        <tr><td>Claude Code 커스텀</td><td><code>.claude/agents/reviewer.md</code>에 <code>tools: Read, Grep, Glob</code>만 준 리뷰어 subagent</td><td>편집 불가가 프롬프트 요청이 아니라 Claude Code가 강제하는 제한이 된다</td></tr>
+        <tr><td>두 번째 세션</td><td>다른 세션에서 파일을 지정해 리뷰하고, 지적을 첫 세션에 붙여 넣는다</td><td>가장 간단한 독립 리뷰</td></tr>
+        <tr><td>API 파이프라인</td><td>작성 대화를 복사하지 않은 새 <code>messages</code> 배열에 diff·스펙·리뷰 기준만 넣는다</td><td>출력은 구조화된 지적 목록으로 받는다(4.3)</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 작성 대화에 리뷰를 덧붙임</div><div class="code">messages.append({"role": "user",
+  "content": "좋아. 이제 위에서 쓴 마이그레이션을
+              아주 비판적으로 리뷰해 줘."})</div><p>작성 중 내린 가정이 모두 컨텍스트에 남아 있다. 말투를 세게 해도 컨텍스트는 그대로다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 새 요청, 산출물과 기준만</div><div class="code">client.messages.create(model=..., system=REVIEWER,
+  messages=[{"role": "user", "content":
+    "&lt;spec&gt;" + spec + "&lt;/spec&gt;\n"
+    "&lt;diff&gt;" + diff + "&lt;/diff&gt;\n"
+    "정확성에 영향을 주는 문제만 보고하고 스타일은 건너뛴다."}])</div><p>작성자의 설명이나 사고 과정은 넣지 않는다. 그것이 바로 편향을 옮기는 통로다.</p></div>
+    </div>
+    <p>Claude Code 문서는 리뷰 프롬프트에서 "스타일은 건너뛰라"는 부분을 빼지 말라고 한다. 문제를 찾으라고 하면 리뷰어는 항상 무언가를 찾아내고, 그 지적을 다 고치면 불필요한 추상화와 일어날 수 없는 경우의 테스트가 늘어나기 때문이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>다중 패스: 파일별 로컬 패스 + 통합 패스</h3><span class="unit-en">Local passes, then an integration pass</span></div>
+    <p>예를 들어 환불 로직을 리팩터링한 PR이 18개 파일(API 핸들러, 서비스, 저장소 계층, DB 마이그레이션, 테스트)을 건드렸다. 한 번에 전부 넣고 리뷰하면 주의가 흩어져 어떤 파일은 피상적인 지적만 받고, 서로 모순되는 지적이 나오기도 한다. 한 지적은 필드를 nullable로 바꾸라 하고, 다른 파일에 대한 지적은 그 필드가 항상 있다고 가정하는 식이다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">1 · 로컬 패스 ×18</div><div class="ft">파일 하나씩, 병렬. 지적 + 이 파일이 노출·소비하는 계약 요약</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2 · 통합 패스</div><div class="ft">계약 요약들 + 호출 관계로 파일 간 데이터 흐름 점검</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">3 · 정리</div><div class="ft">중복 제거, 모순된 지적 해소</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">4 · 검증 패스</div><div class="ft">신뢰도 구간별 재확인·라우팅</div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:14%">패스</th><th style="width:28%">입력</th><th style="width:30%">잘 찾는 것</th><th>못 찾는 것</th></tr></thead>
+      <tbody>
+        <tr><td>로컬</td><td>파일 하나의 diff와 주변 코드</td><td>null 처리, 경계값, 예외 처리, 리소스 누수 같은 파일 내부 결함</td><td>다른 파일과의 계약 불일치</td></tr>
+        <tr><td>통합</td><td>파일별 계약 요약, 호출 관계, 변경 목록</td><td>바뀐 시그니처를 따라가지 않은 호출부, 단위·통화 변환 누락, 트랜잭션 경계·순서</td><td>파일 내부의 세부 버그</td></tr>
+      </tbody>
+    </table>
+    <p>Anthropic의 <em>Building effective agents</em>는 고려할 점이 여럿인 복잡한 작업은 각 고려 사항을 별도 LLM 호출로 처리할 때 대체로 성능이 낫다고 설명한다(sectioning). 같은 코드를 서로 다른 프롬프트로 여러 번 검사해 하나라도 문제를 찾으면 표시하는 voting도 취약점 리뷰의 예로 든다. 파일별 + 통합 구성은 sectioning을 리뷰에 적용한 것이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>신뢰도 보고와 검증 패스</h3><span class="unit-en">Find for coverage, verify for precision</span></div>
+    <p>찾기 단계에서 "높은 심각도만", "보수적으로"라고 요구하면 최신 모델은 이 지시를 충실히 따른다. Claude Opus 4.8 프롬프트 가이드는 이때 모델이 똑같이 깊게 조사하고도 기준 아래로 판단한 지적을 보고하지 않아, 정밀도는 오르지만 측정된 재현율은 떨어질 수 있다고 설명한다. 권장 구성은 찾기 단계는 <strong>커버리지</strong>를 목표로 불확실한 것까지 모두 보고하되 지적마다 신뢰도와 심각도를 붙이고, 거르는 일은 별도 검증·중복 제거·순위 단계에 맡기는 것이다.</p>
+    <div class="code">{"file": "refunds/service.py", "line": 88,
+ "issue": "부분 환불에서 결제 수수료가 두 번 차감된다",
+ "severity": "high", "confidence": 0.62,
+ "evidence": "calc_fee()가 L74의 사전 계산과 L88에서 모두 호출된다"}</div>
+    <table class="t">
+      <caption>라우팅 예시 (임계값은 팀이 정한다)</caption>
+      <thead><tr><th style="width:30%">구간</th><th>처리</th></tr></thead>
+      <tbody>
+        <tr><td>신뢰도 높음 + 근거 있음</td><td>PR 인라인 코멘트로 바로 게시</td></tr>
+        <tr><td>중간</td><td>독립 검증 패스: 다른 인스턴스가 <code>evidence</code>를 따라가 재현·확인한 것만 게시</td></tr>
+        <tr><td>낮음</td><td>게시하지 않고 기록만 남겨 패턴 분석에 사용(4.4)</td></tr>
+      </tbody>
+    </table>
+    <p>모델이 적어 낸 신뢰도를 그대로 확률로 믿으면 안 된다. 과거 지적이 실제로 맞았는지를 구간별로 대조해 임계값을 보정한다(5.5). 단일 패스에서 스스로 거르게 해야 한다면, 가이드는 "중요한"처럼 막연한 말 대신 "잘못된 동작·테스트 실패·오해를 부르는 결과를 낳는 버그는 보고하고, 순수 스타일·명명 취향만 생략"처럼 보고 기준을 구체적으로 쓰라고 권한다. Claude Code의 <code>/code-review</code>도 effort가 <code>low</code>면 가장 확신하는 지적만 내 오탐을 줄이고, <code>medium</code>~<code>max</code>로 갈수록 범위를 넓힌다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>리뷰 구성 고르기</h3><span class="unit-en">Pick the architecture for the change</span></div>
+    <table class="t">
+      <thead><tr><th style="width:30%">상황</th><th style="width:34%">구성</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>파일 몇 개의 작은 변경</td><td>독립 인스턴스 1회</td><td>패스를 나눌 만큼 주의가 흩어지지 않는다</td></tr>
+        <tr><td>여러 계층에 걸친 큰 PR</td><td>파일별 로컬 패스 + 통합 패스 + 정리</td><td>깊이와 파일 간 관점을 함께 확보</td></tr>
+        <tr><td>놓치면 비싼 결함(보안·결제)</td><td>서로 다른 관점의 프롬프트로 여러 번(voting)</td><td>재현율을 높이는 대신 비용이 늘어난다</td></tr>
+        <tr><td>지적이 많아 노이즈가 큰 봇</td><td>커버리지 찾기 + 검증 패스 + 신뢰도 라우팅</td><td>재현율을 지키며 게시되는 오탐을 줄인다</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험 판단 기준</span><ul>
+      <li>"같은 세션에서 리뷰했더니 놓쳤다" → 강한 말투나 더 긴 사고가 아니라 <strong>컨텍스트 분리</strong></li>
+      <li>"리뷰어에게 무엇을 주나" → 산출물·스펙·기준. 작성자의 추론과 변명은 주지 않는다</li>
+      <li>"파일이 많아 지적이 얕고 서로 모순된다" → 로컬 패스 + 통합 패스</li>
+      <li>"찾기 단계에서 보수적으로" → 재현율 하락. 거르기는 검증 단계로 옮긴다</li>
+      <li>비용: subagent마다 토큰이 들고, 기본적으로 같은(또는 더 작은) 모델이다. 얻는 것은 더 똑똑한 답이 아니라 새로운 시선과 병렬성이다</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>같은 세션에 "아주 비판적으로 리뷰하라"고 강하게 지시하면 독립 리뷰와 같은 효과가 난다.</div><div class="f"><span class="k">사실</span>지시를 바꿔도 작성 추론은 컨텍스트에 그대로 남는다. 작성 대화를 보지 않은 별도 인스턴스가 필요하다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>리뷰를 subagent에 맡기면 더 똑똑한 답이 나온다.</div><div class="f"><span class="k">사실</span>Claude Code 문서는 위임만으로 답이 나아지지 않는다고 말한다. 이득은 작성 추론을 보지 않은 새 시선에서 온다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>파일 간 문제를 잡으려면 모든 파일을 한 번에 넣고 리뷰해야 한다.</div><div class="f"><span class="k">사실</span>파일 간 문제는 계약 요약을 받는 통합 패스가 맡고, 파일 내부 결함은 파일별 패스가 맡는다. 한 번에 넣으면 주의가 흩어진다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>오탐을 줄이려면 찾기 단계에서 "확실한 것만 보고하라"고 하는 것이 최선이다.</div><div class="f"><span class="k">사실</span>재현율이 떨어질 수 있다. 찾기는 커버리지 위주로 신뢰도를 붙여 보고하고, 거르기는 검증 패스에 맡긴다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">자기 리뷰</span></div>
+      <div class="qq"><span class="sc">에이전트가 DB 마이그레이션 스크립트를 작성한 뒤 같은 대화에서 "검토해 줘"라는 요청을 받고 "문제 없음"이라고 답했다. 배포 후 기존 행의 NULL 값 때문에 마이그레이션이 실패했다.</span>가장 효과적인 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>같은 대화에서 effort를 높여 다시 검토시킨다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>검토 요청 문구를 "매우 비판적으로, 모든 가능성을 의심하라"로 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>작성 에이전트가 자신의 설계 의도 설명을 리뷰 요청에 함께 붙인다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>작성 대화 없이 스크립트·요구사항·리뷰 기준만 받는 별도 인스턴스로 리뷰한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>문제는 리뷰어가 작성 추론을 공유한다는 데 있다. A·B는 같은 컨텍스트를 유지하고, C는 오히려 작성자의 가정을 리뷰어에게 옮긴다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">다중 패스</span></div>
+      <div class="qq"><span class="sc">22개 파일을 바꾼 PR을 한 번에 리뷰했더니 일부 파일은 피상적인 지적만 받았고, 두 파일에 대한 지적이 서로 모순됐다.</span>가장 적절한 재구성은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>더 큰 컨텍스트 창을 가진 모델로 한 번에 다시 리뷰한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>파일별 로컬 패스로 내부 결함을 보고, 파일 간 인터페이스·데이터 흐름은 별도 통합 패스로 본다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>파일별 패스만 돌리고 결과를 이어 붙인다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>변경량이 큰 상위 5개 파일만 리뷰한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>주의 분산과 모순된 지적은 범위를 나누고 파일 간 관점을 별도 패스로 맡겨 해결한다. A는 같은 분산 문제를 남기고, C는 파일 간 결함을 놓치며, D는 리뷰 범위를 임의로 줄인다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">리뷰어 입력</span></div>
+      <div class="qq">독립 리뷰 인스턴스에 넘기지 <strong>말아야</strong> 할 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>작성 에이전트의 사고 과정과 "이렇게 구현한 이유" 설명</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>리뷰 대상 diff</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>원래 요구사항이나 스펙 문서</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>보고할 것과 건너뛸 것을 정한 리뷰 기준과 출력 형식</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>작성자의 추론을 넘기면 독립성이 사라진다. 스펙 대비 리뷰는 Claude Code 문서가 권하는 방식이고, 명시적 기준과 출력 형식은 일관된 지적에 필요하다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">찾기 vs 거르기</span></div>
+      <div class="qq"><span class="sc">이전 모델에 맞춰 만든 리뷰 하네스는 "높은 심각도만 보고하고 보수적으로 판단하라"고 지시한다. 최신 모델로 바꾼 뒤 보고되는 지적 수가 줄었고, 놓친 버그가 늘었다. 하네스에는 별도 검증 단계가 있다.</span>가장 적절한 프롬프트 변경은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>"더 보수적으로"를 추가해 오탐을 확실히 막는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>지적에서 신뢰도 필드를 없애 출력을 단순하게 만든다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>찾기 단계에서는 불확실하거나 심각도가 낮은 것도 모두 보고하고 각각 신뢰도·심각도를 붙이게 한 뒤, 거르는 일은 검증 단계에 맡긴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>이전 모델로 되돌린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>최신 모델은 보고 기준을 충실히 따르므로 기준 아래 지적을 조사하고도 보고하지 않을 수 있다. 공식 가이드는 찾기 단계의 목표를 커버리지로 두고 필터링을 다음 단계로 옮기라고 권한다. A는 같은 문제를 키운다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">읽기 전용 리뷰어</span></div>
+      <div class="qq"><span class="sc">Claude Code에서 코드를 읽기만 하고 절대 수정하지 못하는 리뷰어가 필요하다. "수정하지 마"라는 부탁이 아니라 도구 수준에서 강제되기를 원한다.</span>가장 적절한 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>.claude/agents/reviewer.md</code>에 <code>tools: Read, Grep, Glob</code>만 지정한 리뷰어 subagent를 만든다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>CLAUDE.md</code>에 "리뷰할 때는 파일을 수정하지 않는다"를 적는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>같은 세션에서 <code>/clear</code> 후 리뷰를 요청한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>리뷰 프롬프트에 "절대 수정 금지"를 대문자로 강조한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>subagent 정의의 <code>tools</code> 목록은 Claude Code가 강제하는 제한이라 편집 도구가 아예 없다. B·D는 모델에게 하는 부탁일 뿐이고, C는 컨텍스트를 비울 뿐 도구 권한을 바꾸지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">신뢰도 라우팅</span></div>
+      <div class="qq">리뷰 지적의 자기 보고 신뢰도를 활용하는 방식으로 가장 적절한 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모델이 쓴 신뢰도를 확률로 보고 0.5 이상만 그대로 게시한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>신뢰도가 낮은 지적은 기록 없이 즉시 버린다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>신뢰도를 받았으니 별도 검증 패스는 필요 없다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>지적마다 신뢰도와 근거를 받아, 높은 구간은 게시하고 중간 구간은 독립 검증 패스로 재확인하며, 구간 임계값은 과거 지적의 실제 정답률로 보정한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>자기 보고 신뢰도는 보정 없이 확률로 쓸 수 없다. 라우팅 신호로 쓰고 임계값은 실제 결과로 맞춘다. B는 패턴 분석에 쓸 기록까지 버리고, C는 검증 단계의 역할을 없앤다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a> · <a href="https://code.claude.com/docs/en/code-review-local" target="_blank" rel="noopener">Review locally with /code-review</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-4-8" target="_blank" rel="noopener">Prompting Claude Opus 4.8 (Code review harnesses)</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices (self-check)</a> · <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a> · <a href="https://platform.claude.com/docs/en/managed-agents/define-outcomes" target="_blank" rel="noopener">Managed Agents: Define outcomes</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

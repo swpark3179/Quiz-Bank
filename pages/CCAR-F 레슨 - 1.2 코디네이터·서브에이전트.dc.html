@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.2</span></div>
+    <h1>코디네이터-서브에이전트 오케스트레이션</h1>
+    <p class="sub">허브 앤 스포크 · 컨텍스트 격리 · 동적 서브에이전트 선택 · 범위 분할 · 반복 개선 루프</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/coordinator-task-decomposition-delegation-and-refinement-loops" target="_blank" rel="noopener">CertSafari 1.2</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agentic Architecture &amp; Orchestration (27%)</p>
+    <div class="secrow">
+      <span class="s">1.1 에이전트 루프</span><span class="s on">1.2 코디네이터</span><span class="s">1.3 서브에이전트 생성</span><span class="s">1.4 게이트·핸드오프</span><span class="s">1.5 SDK 훅</span><span class="s">1.6 작업 분해</span><span class="s">1.7 세션 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">에이전트 하나로 버거운 일 — 여러 갈래를 동시에 파야 하는 조사, 한 컨텍스트 창에 다 담기지 않는 자료 — 은 코디네이터(coordinator)가 일을 나눠 서브에이전트(subagent)에게 맡기는 구조로 푼다. 이 구조의 성패는 모델 성능보다 코디네이터 설계, 즉 무엇을 누구에게 얼마나 맡기고 돌아온 결과를 어떻게 검토하느냐에 달려 있다. <strong>서브에이전트는 서로를 모르고 코디네이터가 건넨 것만 안다. 그래서 분해·전달·검토는 모두 코디네이터의 책임이다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>허브 앤 스포크(hub-and-spoke) 구조에서 코디네이터가 맡는 일: 분해, 위임, 결과 취합, 오류 처리, 정보 라우팅</li>
+      <li>서브에이전트의 격리된 컨텍스트 — 부모 대화를 자동으로 물려받지 않는다</li>
+      <li>질의 복잡도를 보고 필요한 서브에이전트만 고르는 동적 선택</li>
+      <li>중복과 누락을 함께 줄이는 범위 분할(하위 주제별·출처 유형별)</li>
+      <li>종합 결과의 빈틈을 찾아 표적 재위임하고 다시 종합하는 반복 개선 루프</li>
+      <li>모든 통신을 코디네이터로 모으는 이유: 관측 가능성, 일관된 오류 처리, 정보 흐름 통제</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>허브가 하는 일, 스포크가 하는 일</h3><span class="unit-en">Who owns what</span></div>
+    <p>허브 앤 스포크에서는 코디네이터 하나가 중심에 있고 서브에이전트들은 코디네이터와만 연결된다. Anthropic의 Research 기능도 이 형태(orchestrator-worker)다. 리드 에이전트가 질의를 분석해 전략을 세우고, 서로 다른 측면을 맡은 서브에이전트를 병렬로 띄운 뒤, 돌아온 결과를 종합한다. 단순 병렬화와 다른 점은 하위 과제가 미리 정해져 있지 않고 입력을 본 코디네이터가 런타임에 정한다는 것이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:18%">책임</th><th style="width:44%">코디네이터</th><th>서브에이전트</th></tr></thead>
+      <tbody>
+        <tr><td>분해</td><td>질의를 분석해 하위 과제로 나눈다</td><td>—</td></tr>
+        <tr><td>선택</td><td>어떤 서브에이전트를 몇 개 부를지 정한다</td><td>맡은 범위만 자기 컨텍스트에서 수행</td></tr>
+        <tr><td>전달</td><td>각자 필요한 맥락을 위임 프롬프트에 넣는다</td><td>받은 프롬프트와 자기 정의만 안다</td></tr>
+        <tr><td>취합</td><td>보고를 검토·종합하고 빈틈이면 재위임</td><td>최종 메시지(요약) 하나만 반환</td></tr>
+        <tr><td>오류</td><td>실패한 과제를 재시도·대체·보고하는 정책을 적용</td><td>자기 범위 안에서만 복구</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">통신을 전부 허브로 모으는 이유</span><ul>
+      <li><strong>관측 가능성</strong>: 누가 무엇을 받고 무엇을 돌려줬는지가 코디네이터의 대화 한곳에 남아 추적·디버깅이 된다</li>
+      <li><strong>일관된 오류 처리</strong>: 실패 판단, 재시도, 사용자 보고를 한 정책으로 처리한다</li>
+      <li><strong>정보 흐름 통제</strong>: 어느 서브에이전트가 어떤 정보를 보는지 코디네이터가 정한다 — 민감 정보 노출과 중복 작업을 막는다</li>
+    </ul></div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 코디네이터가 서브에이전트 간 통신을 '모두' 관리하는 평면 구조를 전제한다. 현재 Claude Code 문서에는 이름 붙은 에이전트끼리 메시지를 보내는 <code>SendMessage</code> 도구와 agent teams 기능이 있고, 서브에이전트가 기본적으로 자기 서브에이전트를 3단계 깊이까지 만들 수 있다(<code>CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH</code>, <code>1</code>이면 중첩 금지). 시험 문항은 가이드의 원칙, 즉 '코디네이터 경유'를 기준으로 답한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>격리된 컨텍스트: 서브에이전트가 모르는 것</h3><span class="unit-en">Context isolation</span></div>
+    <p>포크(fork)가 아닌 서브에이전트는 새 컨텍스트 창에서 시작한다. Agent SDK 문서 기준으로 부모가 넘길 수 있는 내용은 Agent 도구의 <code>prompt</code> 문자열 하나뿐이다. 파일 경로, 오류 메시지, 앞서 내린 결정처럼 서브에이전트가 알아야 할 것은 그 프롬프트에 직접 써야 한다. 자기 몫의 하위 과제만이 아니라 원래 질문도 함께 넣어야 서브에이전트가 전체 목적에 맞게 판단한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:50%">서브에이전트가 받는 것</th><th>받지 않는 것</th></tr></thead>
+      <tbody>
+        <tr><td>자기 시스템 프롬프트(<code>AgentDefinition.prompt</code>)와 위임 프롬프트</td><td>부모의 대화 이력과 도구 결과</td></tr>
+        <tr><td>프로젝트 CLAUDE.md(설정 소스로 불러올 때)</td><td>부모의 시스템 프롬프트</td></tr>
+        <tr><td>도구 정의(상속, 또는 <code>tools</code>로 지정한 부분집합)</td><td><code>skills</code> 필드에 없는 스킬 내용</td></tr>
+      </tbody>
+    </table>
+    <p>반대 방향도 좁다. 서브에이전트의 중간 도구 호출과 결과는 서브에이전트 안에 머물고 부모에게는 최종 메시지만 돌아온다. 이것이 메인 컨텍스트를 깨끗하게 유지하는 장점이자, 보고가 빈약하면 코디네이터가 근거를 잃는 약점이다. 그래서 위임할 때 '무엇을 어떤 형식으로 보고할지'까지 정해 준다.</p>
+    <div class="note tip"><span class="lbl">보고를 다루는 법</span><p>코디네이터는 서브에이전트 보고를 자기 말로 요약할 수 있다. 원문을 사용자 응답에 그대로 살려야 한다면 메인 프롬프트에 그렇게 지시한다. 큰 산출물(코드, 데이터, 보고서)은 서브에이전트가 외부 저장소에 쓰고 가벼운 참조만 코디네이터에 넘기는 방식도 Anthropic이 소개한다. 여러 단계를 거치며 내용이 깎이는 것을 줄인다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>질의에 맞춰 고르기</h3><span class="unit-en">Select per query, not the full pipeline</span></div>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 고정 파이프라인</div><div class="code">모든 질의 → 검색 → 분석 → 종합 → 검증
+"올해 공휴일이 며칠이야?"도 4단계 전부</div><p>단순한 질문에도 비용과 지연이 최대치로 든다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 코디네이터가 판단</div><div class="code">단순 사실   → 검색 1개
+비교 질문   → 검색 2~3개 + 종합
+광범위 조사 → 범위별 검색 여럿 + 분석 + 종합</div><p>질의 요구를 먼저 분석하고 필요한 서브에이전트만 부른다.</p></div>
+    </div>
+    <p>Anthropic은 초기 리서치 에이전트가 단순한 질의에도 서브에이전트를 50개씩 띄우는 실패를 겪었고, 규모 규칙을 프롬프트에 넣어 해결했다고 밝힌다. 단순 사실 확인은 에이전트 1개와 도구 호출 3~10회, 직접 비교는 서브에이전트 2~4개, 복잡한 조사는 10개 이상에 역할을 분명히 나누는 식이다. Claude Code와 Agent SDK에서는 각 서브에이전트 정의의 <code>description</code>을 보고 Claude가 위임 대상을 고르므로, description을 '언제 쓰는가' 중심으로 쓰는 것이 동적 선택의 출발점이다.</p>
+    <div class="note best"><span class="lbl">비용 감각과 상한</span><p>Anthropic 측정에서 에이전트는 채팅보다 약 4배, 멀티에이전트 시스템은 약 15배의 토큰을 쓴다. 모든 에이전트가 같은 맥락을 공유해야 하거나 에이전트 간 의존이 많은 작업(대부분의 코딩 작업 등)은 아직 멀티에이전트에 잘 맞지 않는다. Agent SDK에서는 중첩 깊이(기본 3), 동시 실행 수(<code>CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS</code>, 기본 20), 비용(<code>max_budget_usd</code>)으로 상한을 건다. Managed Agents의 서브에이전트 위임은 한 단계 깊이이고 세션당 하위 스레드는 동시에 25개까지다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>범위 분할: 겹치지 않게, 빠짐없이</h3><span class="unit-en">Partition the scope</span></div>
+    <p>분해는 두 방향으로 실패한다. 경계가 모호하면 서브에이전트들이 같은 검색을 반복하고(<strong>중복</strong>), 분해가 지나치게 좁으면 질문의 일부가 아무에게도 배정되지 않는다(<strong>누락</strong>). Anthropic은 서브에이전트마다 목표, 출력 형식, 쓸 도구와 출처에 대한 안내, 명확한 과제 경계를 주라고 권한다. 짧고 모호한 지시는 서브에이전트들이 같은 일을 하게 만든다.</p>
+    <p>질문 예: "국내 전기차 충전 인프라의 현황과 향후 3년 전망"</p>
+    <table class="t">
+      <thead><tr><th style="width:20%">분할 방식</th><th style="width:44%">배정 예</th><th>잘 맞는 경우</th></tr></thead>
+      <tbody>
+        <tr><td>하위 주제별</td><td>설치 현황 / 요금 체계 / 정부 정책 / 사업자 경쟁 구도</td><td>질문이 여러 측면을 요구할 때</td></tr>
+        <tr><td>출처 유형별</td><td>정부 통계 / 업계 보고서 / 뉴스·공시</td><td>같은 주제를 교차 검증해야 할 때</td></tr>
+        <tr><td>너무 좁은 분할 ✗</td><td>급속 충전기 수 / 급속 충전 요금</td><td>'전망'과 '정책'이 누구에게도 배정되지 않아 보고서에 구멍이 난다</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">분할 점검표</span><ul>
+      <li>원래 질문의 모든 요구(현황 + 전망)가 어느 서브에이전트엔가 배정됐는가</li>
+      <li>범위가 맞닿는 곳은 경계를 문장으로 밝혔는가 — "요금은 B 담당, A는 다루지 않음"</li>
+      <li>모두 같은 출력 형식으로 돌려줘 종합하기 쉬운가</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>반복 개선 루프</h3><span class="unit-en">Evaluate, re-delegate, re-synthesize</span></div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">DELEGATE</div><div class="ft">분해·병렬 위임</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">SYNTHESIZE</div><div class="ft">결과 종합</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">EVALUATE</div><div class="ft">요구 대비 빈틈 점검</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">RE-DELEGATE</div><div class="ft">빈틈만 표적 재위임 → 재종합</div></div>
+    </div>
+    <p>한 번의 팬아웃(fan-out)으로 끝내지 않는다. Research 시스템의 리드 에이전트도 결과를 종합한 뒤 조사가 더 필요한지 판단하고, 필요하면 서브에이전트를 더 만들거나 전략을 고친다. 생성과 평가를 번갈아 돌리는 evaluator-optimizer 패턴과 같은 발상이다.</p>
+    <ol class="proc blue">
+      <li>종합 결과를 원래 질문의 요구 목록과 대조한다 — 빠진 측면, 출처가 하나뿐인 주장, 서로 충돌하는 수치</li>
+      <li>빈틈마다 구체적인 질의를 만든다 — "더 조사해" 대신 "2027년 이후 충전 요금 정책 변경안, 정부 발표 자료 위주"</li>
+      <li>그 빈틈을 맡을 서브에이전트에만 재위임하고, 이미 찾은 내용은 프롬프트에 넣어 중복을 막는다</li>
+      <li>새 결과를 기존 종합본과 합쳐 다시 종합하고, 기준을 채우면 끝낸다</li>
+    </ol>
+    <div class="note"><span class="lbl">종료 기준을 미리 적는다</span><p>"요구 항목마다 독립 출처 2개 이상", "수치마다 기준일 표기"처럼 충분함의 기준을 코디네이터 프롬프트에 적어 둔다. 기준이 없으면 Anthropic의 초기 사례처럼 존재하지 않는 자료를 끝없이 찾거나, 반대로 너무 일찍 멈춘다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>서브에이전트는 코디네이터와 같은 대화를 보고 일한다.</div><div class="f"><span class="k">사실</span>포크가 아니면 새 컨텍스트로 시작한다. 부모 이력은 자동으로 넘어가지 않고, 위임 프롬프트에 쓴 것만 전달된다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>서브에이전트를 많이 띄울수록 품질이 오른다.</div><div class="f"><span class="k">사실</span>토큰이 채팅의 약 15배까지 늘고 조정 비용도 커진다. 질의 복잡도에 맞춰 개수를 정한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>잘게 나눌수록 커버리지가 넓어진다.</div><div class="f"><span class="k">사실</span>지나치게 좁은 분해는 질문의 일부를 아무에게도 배정하지 않는 누락을 만든다. 분할은 원래 질문 전체를 덮어야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>서브에이전트끼리 결과를 직접 주고받게 하면 더 효율적이다.</div><div class="f"><span class="k">사실</span>시험이 묻는 원칙은 코디네이터 경유다. 관측 가능성, 일관된 오류 처리, 정보 흐름 통제를 잃는다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">동적 선택</span></div>
+      <div class="qq"><span class="sc">사내 리서치 시스템이 "회사 창립 연도가 언제야?" 같은 단순한 질문에도 검색·분석·종합·검증 서브에이전트 네 개를 매번 모두 돌려 비용과 지연이 크다.</span>가장 알맞은 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>네 서브에이전트를 더 작은 모델로 바꾼다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>코디네이터가 질의의 요구와 복잡도를 먼저 분석해 필요한 서브에이전트만 호출하게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>네 단계를 서브에이전트 하나로 합친다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>검증 단계만 빼고 나머지는 항상 실행한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>코디네이터의 역할에는 질의 복잡도에 따라 어떤 서브에이전트를 부를지 정하는 일이 포함된다. A·D는 고정 파이프라인을 유지한 채 비용만 조금 깎고, C는 복잡한 질의에서 병렬성과 전문화를 잃는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">컨텍스트 격리</span></div>
+      <div class="qq"><span class="sc">코디네이터가 검색 결과를 충분히 모은 뒤 종합 서브에이전트에 "지금까지 찾은 자료로 보고서를 써라"라고만 위임했다. 보고서는 근거 없이 일반론만 담고 있다.</span>가장 가능성 높은 원인은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>종합 서브에이전트의 모델이 너무 작다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>검색 서브에이전트가 결과를 공유 메모리에 저장하지 않았다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>코디네이터의 <code>max_turns</code>가 너무 낮다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>서브에이전트는 코디네이터의 대화를 물려받지 않으므로, 찾은 자료를 위임 프롬프트에 직접 넣었어야 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>서브에이전트가 받는 맥락은 자기 정의와 위임 프롬프트뿐이다. '지금까지 찾은 자료'는 코디네이터의 대화에만 있다. B의 공유 메모리는 서브에이전트 사이에 기본으로 존재하지 않으며, A·C는 원인과 무관하다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">범위 분할</span></div>
+      <div class="qq"><span class="sc">코디네이터가 세 서브에이전트에 모두 "전기차 충전 시장을 조사하라"고 위임했더니 셋이 같은 기사들을 찾아왔다.</span>가장 알맞은 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>하위 주제나 출처 유형별로 경계를 밝혀 나누고, 각자에게 목표와 출력 형식을 준다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>서브에이전트 수를 여섯으로 늘린다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>세 결과에서 중복을 지우는 후처리 단계를 추가한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>서브에이전트들이 서로 결과를 확인하도록 직접 연결한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>중복의 원인은 모호한 과제 경계다. 범위를 겹치지 않게 나누고 경계를 명시해야 한다. B는 중복을 키우고, C는 낭비된 비용을 되돌리지 못한다. D는 코디네이터 경유 원칙에 어긋난다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">허브 경유</span></div>
+      <div class="qq">서브에이전트 간 통신을 모두 코디네이터를 거치게 하는 주된 이유로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>서브에이전트가 도구를 쓸 수 없기 때문이다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>토큰 사용량이 항상 가장 적기 때문이다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>정보 흐름을 한곳에서 관찰·통제하고 오류 처리를 일관되게 적용할 수 있기 때문이다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>서브에이전트는 결과를 반환할 수 없기 때문이다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>허브 경유의 이점은 관측 가능성, 일관된 오류 처리, 통제된 정보 흐름이다. A·D는 사실이 아니고(서브에이전트는 도구를 쓰고 최종 메시지를 반환한다), B는 보장되지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">반복 개선</span></div>
+      <div class="qq"><span class="sc">"전기차 충전 시장의 현황과 규제 동향"을 물었는데 최종 보고서에 규제 동향이 빠졌다. 코디네이터는 처음에 '시장 규모'와 '주요 사업자'로만 과제를 나눴다.</span>가장 근본적인 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>종합 서브에이전트에 "빠짐없이 써라"를 추가한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>모든 서브에이전트를 처음부터 다시 실행한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>보고서에 '규제 정보 없음'이라고 표시하고 마친다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>종합본을 원래 질문의 요구와 대조해 빈틈을 찾고, 그 부분만 표적 질의로 재위임한 뒤 다시 종합하는 루프를 둔다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>누락은 분해 단계에서 생겼고, 이를 잡는 장치는 코디네이터의 평가-재위임 루프다. A는 없는 자료를 종합에게 요구할 뿐이고, B는 이미 확보한 부분까지 반복해 비용을 낭비한다. C는 요구를 충족하지 못한 채 끝낸다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">적합성</span></div>
+      <div class="qq">Anthropic의 경험에 비춰 멀티에이전트 구조가 가장 덜 맞는 작업은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>독립적인 여러 방향을 동시에 조사하는 폭넓은 리서치</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>모든 단계가 같은 맥락을 공유해야 하고 단계 사이 의존이 많은 작업</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>한 컨텍스트 창에 담기지 않는 대량의 자료를 훑는 작업</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>성격이 다른 여러 복잡한 도구를 다뤄야 하는 가치가 높은 작업</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>Anthropic은 맥락 공유가 필수이거나 에이전트 간 의존이 많은 영역(대부분의 코딩 작업 등)은 아직 멀티에이전트에 잘 맞지 않는다고 정리한다. A·C·D는 병렬화, 단일 컨텍스트를 넘는 정보량, 다양한 도구라는 '잘 맞는' 조건에 해당한다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/agent-sdk/subagents" target="_blank" rel="noopener">Subagents in the SDK</a> · <a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener">Create custom subagents (Claude Code)</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a> · <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a> · <a href="https://platform.claude.com/cookbook/patterns-agents-orchestrator-workers" target="_blank" rel="noopener">Orchestrator-workers (Cookbook)</a> · <a href="https://platform.claude.com/docs/en/managed-agents/multiagent-orchestration" target="_blank" rel="noopener">Multiagent orchestration (Managed Agents)</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

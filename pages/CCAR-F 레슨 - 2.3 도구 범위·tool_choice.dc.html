@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 2 · 서브도메인 2.3</span></div>
+    <h1>에이전트별 도구 범위와 tool_choice</h1>
+    <p class="sub">역할별 도구 범위 · tools / disallowedTools · 제약형 도구 · 교차 역할 도구 · tool_choice · 강제 호출 제약</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/scoped-tool-access-for-multi-agent-systems" target="_blank" rel="noopener">CertSafari 2.3</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 · Tool Design &amp; MCP Integration (18%)</p>
+    <div class="secrow">
+      <span class="s">2.1 도구 설명</span><span class="s">2.2 오류 응답</span><span class="s on">2.3 도구 범위</span><span class="s">2.4 MCP 서버</span><span class="s">2.5 내장 도구</span>
+    </div>
+  </header>
+
+  <p class="lede">도구를 많이 줄수록 에이전트가 유능해질 것 같지만, 실제로는 턴마다 비교할 후보가 늘어 선택이 흔들리고 자기 역할 밖의 도구를 집어 드는 일이 생긴다. <strong>각 에이전트에는 역할에 필요한 도구만 주고, 다른 역할의 일이 자주 필요하면 좁게 잘린 도구 하나로만 연다.</strong> 뒷부분은 호출 자체를 제어하는 <code>tool_choice</code>와, 2026년 10월 현재 일부 모델에서 강제 호출이 막혀 있다는 점을 다룬다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>도구 수가 늘 때 선택 신뢰도가 떨어지는 이유와 역할 밖 도구의 오용</li>
+      <li>Agent SDK·Claude Code의 서브에이전트 도구 범위(<code>tools</code>, <code>disallowedTools</code>)와 <code>allowedTools</code>의 차이</li>
+      <li>범용 도구를 제약형 도구로 바꾸기, 좁은 교차 역할 도구 제공</li>
+      <li><code>tool_choice</code>의 <code>auto</code> · <code>any</code> · <code>tool</code> · <code>none</code>과 <code>disable_parallel_tool_use</code></li>
+      <li>첫 호출을 강제한 뒤 후속 턴에서 풀어 주는 패턴과 현재 모델 제약</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>도구가 많을수록 선택이 흔들린다</h3><span class="unit-en">More tools, worse choices</span></div>
+    <p>Claude는 턴마다 등록된 도구 정의를 읽고 고른다. 후보가 늘면 비슷한 도구끼리 구분하기 어려워지고, 정의 자체가 컨텍스트를 차지한다. Agent SDK의 tool search 문서는 도구 50개의 정의가 10~20K 토큰을 쓰고, 한 번에 30~50개를 넘게 실으면 선택 정확도가 떨어진다고 적는다. <em>Advanced tool use</em> 글도 큰 도구 라이브러리에서 가장 흔한 실패로 잘못된 도구 선택과 틀린 파라미터를 꼽는다.</p>
+    <p>역할 밖의 도구는 오용을 부른다. 넘겨받은 자료로 보고서를 써야 할 종합(synthesis) 에이전트에게 웹 검색을 주면, 직접 검색을 시작해 범위를 넓히고 출처 관리가 흐트러진다. 프롬프트로 "검색은 자제하라"고 해도 도구가 손에 있는 한 확률적으로 쓰인다.</p>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 "18개 대신 4~5개"를 예로 든다. 현재 문서의 수치는 "30~50개를 넘으면 정확도 저하"(Agent SDK tool search)이고, 도구가 매우 많을 때 정의를 미리 다 싣지 않고 필요할 때 검색해 불러오는 tool search가 Agent SDK에서 기본으로 켜져 있다. 숫자는 다르지만 결론은 같다. 한 에이전트가 한 번에 비교하는 도구를 줄이는 것이다. tool search는 컨텍스트와 대규모 카탈로그 문제를 덜어 줄 뿐이므로 역할에 맞는 범위는 여전히 설계자가 정한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>역할별로 도구 범위 정하기</h3><span class="unit-en">Scope tools per role</span></div>
+    <p>예: 시장 조사 시스템을 코디네이터와 세 서브에이전트로 나눈다.</p>
+    <table class="t">
+      <thead><tr><th style="width:15%">에이전트</th><th style="width:31%">줄 도구</th><th style="width:22%">주지 않을 도구</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>코디네이터</td><td><code>Agent</code>(서브에이전트 호출)</td><td>웹 검색, 파일 편집</td><td>직접 일하지 않고 분해·위임·통합</td></tr>
+        <tr><td>searcher</td><td><code>web_search</code>, <code>fetch_source</code></td><td>파일 쓰기</td><td>출처 수집과 발췌만</td></tr>
+        <tr><td>analyst</td><td><code>Read</code>, <code>Grep</code>, <code>parse_pdf</code></td><td>웹 검색, 편집</td><td>넘겨받은 문서 분석</td></tr>
+        <tr><td>writer</td><td><code>Write</code>, <code>verify_claim</code></td><td>웹 검색, <code>fetch_source</code></td><td>받은 자료로만 작성, 사실 확인은 좁은 도구로</td></tr>
+      </tbody>
+    </table>
+    <div class="code">agents = {
+  "searcher": AgentDefinition(
+      description="외부 공개 자료를 찾아 출처 URL과 발췌를 돌려준다",
+      prompt="...",
+      tools=["mcp__web__search", "mcp__web__fetch_source"]),   <span class="c"># 허용 목록</span>
+  "analyst": AgentDefinition(
+      description="수집된 PDF·문서를 분석한다",
+      prompt="...",
+      disallowedTools=["mcp__web", "Write", "Edit"]),           <span class="c"># 거부 목록 (서버 단위 가능)</span>
+  "writer": AgentDefinition(
+      description="코디네이터가 준 자료만으로 보고서 초안을 쓴다",
+      prompt="...",
+      tools=["Write", "mcp__factcheck__verify_claim"]),
+}
+options = ClaudeAgentOptions(agents=agents, allowed_tools=["Agent"])   <span class="c"># 자동 승인일 뿐</span></div>
+    <table class="t">
+      <caption>가용성(availability)과 권한(permission)은 다른 층이다 — Agent SDK custom tools 문서</caption>
+      <thead><tr><th style="width:34%">옵션</th><th style="width:14%">층</th><th>효과</th></tr></thead>
+      <tbody>
+        <tr><td>AgentDefinition <code>tools</code></td><td>가용성</td><td>나열한 도구만 서브에이전트 세션에 존재. 빠진 도구는 아예 없어 시도도, 권한 프롬프트도 없다. 생략하면 서브에이전트가 쓸 수 있는 도구를 모두 물려받는다</td></tr>
+        <tr><td><code>disallowedTools</code> (맨 이름, <code>mcp__server</code>)</td><td>가용성</td><td>해당 도구나 서버의 도구 전체를 컨텍스트에서 뺀다</td></tr>
+        <tr><td><code>allowedTools</code></td><td>권한</td><td>나열한 도구를 묻지 않고 실행한다. <strong>다른 도구를 막지 않는다</strong></td></tr>
+        <tr><td>범위 규칙 <code>Bash(rm *)</code> 등</td><td>권한</td><td>도구는 보이고 일치하는 호출만 거부. 시도하느라 턴을 낭비할 수 있다</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">이름 변경과 생성 제한</span><p>Claude Code 2.1.63에서 Task 도구가 <strong>Agent</strong>로 바뀌었다. 기존 <code>Task(...)</code> 표기는 별칭으로 계속 동작하고, SDK의 <code>system:init</code> 도구 목록에는 여전히 <code>"Task"</code>로 나오므로 감지 코드는 두 이름을 모두 확인하라는 것이 문서 안내다. <code>claude --agent</code>로 메인 스레드에서 도는 에이전트는 <code>tools: Agent(worker, researcher)</code>처럼 생성할 수 있는 서브에이전트 종류를 허용 목록으로 제한할 수 있다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>제약형 도구와 좁은 교차 역할 도구</h3><span class="unit-en">Constrained and cross-role tools</span></div>
+    <p><code>fetch_url(url)</code>, <code>run_sql(query)</code>, <code>http_request(method, url, body)</code> 같은 범용 도구는 무엇이든 할 수 있다는 점이 문제다. 에이전트가 의도 밖의 대상에 접근할 수 있고, 설명만으로는 언제 써야 하는지 경계를 긋기 어렵다. 역할에 필요한 동작만 하는 도구로 바꾼다. <em>Writing tools for agents</em>도 API를 그대로 감싼 도구보다 영향이 큰 특정 워크플로를 겨냥한 소수의 도구를 권하고, 멀티에이전트 리서치 글은 에이전트에게 "범용 도구보다 전문 도구를 우선하라"는 휴리스틱을 줬다고 한다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 무엇이든 되는 범용 도구</div><div class="code">http_request(method, url, body)</div><p>배송 조회 에이전트가 사내 관리 API까지 부를 수 있다. 설명에 쓸 "언제"가 없다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 역할에 맞춘 제약형 도구</div><div class="code">shipping_get_status(tracking_no)
+  - 형식 검사: ^[A-Z]{2}\d{9}KR$
+  - 내부에서 배송사 API 한 곳만 호출
+  - 반환: {status, last_scan_at, location}</div><p>입력 검증과 접근 대상이 도구 안에 고정된다.</p></div>
+    </div>
+    <p>교차 역할 도구는 반대 방향의 문제를 푼다. writer가 문장 하나의 근거를 확인하려고 매번 코디네이터를 거치면 왕복이 많아진다. 이런 <em>잦고 단순한</em> 필요에는 이미 수집된 출처 안에서만 확인해 <code>supported</code> / <code>unsupported</code> / <code>unclear</code>만 돌려주는 <code>verify_claim(claim, source_id)</code> 같은 좁은 도구를 준다. 새 자료가 필요하거나 출처끼리 충돌하는 <em>복잡한</em> 경우는 writer가 직접 풀지 않고 코디네이터에 돌려보내 searcher에게 재위임하게 한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:52%">필요</th><th>처리</th></tr></thead>
+      <tbody>
+        <tr><td>이미 모은 출처로 문장 하나 확인 (잦음 · 단순)</td><td>writer의 <code>verify_claim</code></td></tr>
+        <tr><td>새 출처 탐색, 출처 간 충돌 해결 (드묾 · 복잡)</td><td>코디네이터 → searcher 재위임</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>tool_choice: 맡길지, 요구할지, 막을지</h3><span class="unit-en">auto · any · tool · none</span></div>
+    <table class="t">
+      <thead><tr><th style="width:29%">값</th><th style="width:31%">의미</th><th style="width:15%">기본값일 때</th><th>쓰는 때</th></tr></thead>
+      <tbody>
+        <tr><td><code>{"type": "auto"}</code></td><td>도구를 부를지 말지 Claude가 판단</td><td><code>tools</code>가 있을 때</td><td>대부분의 에이전트 턴</td></tr>
+        <tr><td><code>{"type": "any"}</code></td><td>도구 하나는 반드시 부르되, 어느 것인지는 Claude가 선택</td><td>—</td><td>텍스트 답이 허용되지 않는 턴 (예: 모든 응답이 라우팅 도구 중 하나여야 할 때)</td></tr>
+        <tr><td><code>{"type": "tool", "name": "…"}</code></td><td>지정한 도구를 반드시 호출</td><td>—</td><td>특정 단계를 먼저 실행해야 할 때</td></tr>
+        <tr><td><code>{"type": "none"}</code></td><td>도구 호출 금지</td><td><code>tools</code>가 없을 때</td><td>도구 정의는 둔 채 이번 턴은 텍스트로만</td></tr>
+      </tbody>
+    </table>
+    <p><code>any</code>나 <code>tool</code>이면 API가 assistant 메시지를 미리 채워 도구 호출을 강제한다. 그래서 요청해도 <code>tool_use</code> 블록 앞에 설명 텍스트가 나오지 않고, 강제를 받아들이는 모델에서도 thinking을 건너뛴다. 설명이나 사고 과정이 필요하면 <code>auto</code>에 "get_x 도구를 써서 답해" 같은 지시를 사용자 메시지로 넣는다.</p>
+    <p>병렬 호출은 <code>tool_choice</code> 안의 <code>disable_parallel_tool_use: true</code>로 끈다(최상위 파라미터가 아니다). <code>auto</code>와 함께면 응답당 도구 호출이 <em>최대 하나</em>, <code>any</code>·<code>tool</code>과 함께면 <em>정확히 하나</em>다. 또 <code>tool_choice</code>를 바꾸면 프롬프트 캐시의 메시지 블록이 무효화된다(도구 정의와 시스템 프롬프트 캐시는 유지).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>첫 호출을 강제하고, 다음 턴에 풀어 준다</h3><span class="unit-en">Force first, then release</span></div>
+    <p>계약서 처리 에이전트가 어떤 보강(enrichment) 도구보다 먼저 <code>extract_metadata</code>를 실행해야 한다고 하자. 강제 호출을 지원하는 모델이라면 첫 요청에만 그 도구를 지정하고, 결과를 돌려준 뒤 이어지는 요청은 <code>auto</code>로 되돌린다. 매 턴 강제하면 에이전트는 같은 도구만 계속 불러야 해서 보강 도구로 넘어가지도, 텍스트로 끝내지도 못한다.</p>
+    <div class="code"><span class="c"># 1턴: 메타데이터 추출을 강제 (강제 호출을 지원하는 모델에서)</span>
+r1 = client.messages.create(model=MODEL, max_tokens=1024, tools=TOOLS, messages=msgs,
+        tool_choice={"type": "tool", "name": "extract_metadata"})
+msgs += [{"role": "assistant", "content": r1.content},
+         {"role": "user", "content": run_tools(r1)}]          <span class="c"># tool_result 블록들</span>
+
+<span class="c"># 2턴부터: 어떤 보강 도구를 쓸지는 Claude에게</span>
+r2 = client.messages.create(model=MODEL, max_tokens=1024, tools=TOOLS, messages=msgs,
+        tool_choice={"type": "auto"})</div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 강제 선택(<code>{"type": "tool", …}</code>)과 <code>"any"</code>를 도구 호출 보장 수단으로 다룬다. 2026년 10월 현재 문서 기준으로 <strong>Claude Opus 5.5, Claude Sonnet 5.5, Claude Fable 5.1, Claude Mythos 5.1은 <code>any</code>와 <code>tool</code>을 지원하지 않으며</strong>, 보내면 토큰 카운팅 요청까지 포함해 400 <code>invalid_request_error</code>가 난다. 수동 extended thinking(<code>thinking: {type: "enabled"}</code>)을 켠 요청도 <code>any</code>·<code>tool</code>을 받지 않는다. 이런 경우 문서는 <code>auto</code> + strict tool use(입력의 스키마 준수 보장)로 쓰고 프롬프트로 원하는 도구를 유도하거나, 응답 자체가 고정 JSON이어야 하면 structured outputs를 쓰라고 안내한다. thinking이 기본으로 켜진 Claude Opus 5 같은 모델은 강제 호출을 받아들이되, 그때는 thinking 없이 도구 호출로 바로 시작한다.</p></div>
+    <div class="axis"><span class="lbl">시험 판단 기준</span><ul><li>"어떤 도구든 반드시 하나" → <code>any</code> · "반드시 이 도구" → <code>tool</code> · "이번 턴은 도구 금지" → <code>none</code></li><li>순서 보장이 필요하면 첫 턴만 강제하고 이후는 <code>auto</code></li><li>강제 호출을 받지 않는 모델이면 <code>auto</code> + strict + 명시적 지시. 반드시 지켜야 하는 순서라면 첫 호출이 기대한 도구인지 코드에서 검사해 다시 요청하는 애플리케이션 측 게이트를 더한다(설계 선택)</li><li>역할 밖 도구 오용은 <code>tool_choice</code>가 아니라 도구 범위로 푼다</li></ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>모든 에이전트에게 같은 전체 도구 세트를 주는 편이 유연하고 안전하다.</div><div class="f"><span class="k">사실</span>후보가 늘수록 선택 정확도가 떨어지고, 역할 밖 도구를 오용한다. 역할별로 범위를 좁힌다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>allowedTools</code>에 넣지 않은 도구는 에이전트가 쓸 수 없다.</div><div class="f"><span class="k">사실</span><code>allowedTools</code>는 자동 승인 목록(권한 층)이다. 도구를 컨텍스트에서 빼려면 <code>tools</code>나 맨 이름의 <code>disallowedTools</code>를 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>tool_choice: any</code>는 특정 도구를 강제한다.</div><div class="f"><span class="k">사실</span><code>any</code>는 "어떤 도구든 하나"다. 특정 도구는 <code>{"type": "tool", "name": …}</code>로 지정한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>강제 호출은 모든 모델과 설정에서 동작한다.</div><div class="f"><span class="k">사실</span>현재 Opus 5.5·Sonnet 5.5·Fable 5.1·Mythos 5.1과 수동 extended thinking 요청은 <code>any</code>·<code>tool</code>에 400 오류를 낸다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>강제 호출을 해도 Claude가 먼저 이유를 설명한 뒤 도구를 부른다.</div><div class="f"><span class="k">사실</span>API가 응답을 미리 채워 텍스트 없이 <code>tool_use</code>부터 시작하고 thinking도 건너뛴다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">역할 밖 도구</span></div>
+      <div class="qq"><span class="sc">고객 상담 시스템에서 상담 기록을 요약해 CRM에 남기는 요약 에이전트가 모든 에이전트와 같은 도구 세트를 받았다. 어느 날 요약 도중 이 에이전트가 <code>cancel_order</code>를 실행했다. 다만 요약 중에 주문 상태를 확인할 일은 자주 있다.</span>가장 알맞은 설계 변경은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>시스템 프롬프트에 "요약 중에는 주문을 변경하지 마라"를 추가한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>cancel_order에 확인 메시지를 붙이고 도구 세트는 그대로 둔다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>요약 에이전트에서 주문 변경 도구를 빼고 읽기 전용의 좁은 get_order_status만 주며, 주문 처리가 필요하면 코디네이터로 돌려보내게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>요약 에이전트의 tool_choice를 none으로 고정한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>역할 밖 도구는 범위에서 빼고, 잦은 단순 필요만 좁은 교차 역할 도구로 연다. 실제 처리는 코디네이터를 거친다. A는 확률적 억제일 뿐 도구는 여전히 손에 있고, B는 오용 가능성을 그대로 둔다. D는 상태 확인과 CRM 기록 도구까지 막는다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">tool_choice 의미</span></div>
+      <div class="qq"><code>tool_choice: {"type": "any"}</code>의 의미는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>제공된 도구 중 하나는 반드시 호출하되, 어느 것인지는 Claude가 고른다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>지정한 도구 하나를 반드시 호출한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>도구를 부를지 말지 Claude가 판단한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>도구 호출을 금지한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p><code>any</code>는 "반드시 도구를 쓰되 선택은 자유"다. B는 <code>tool</code>, C는 <code>auto</code>, D는 <code>none</code>의 설명이다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">첫 호출 강제</span></div>
+      <div class="qq"><span class="sc">의료비 영수증 처리 에이전트는 먼저 <code>detect_document_type</code>으로 문서 종류를 판별하고, 그 결과에 따라 <code>parse_pharmacy_receipt</code>나 <code>parse_hospital_bill</code> 중 하나를 써야 한다. 사용하는 모델은 강제 호출을 지원한다.</span>가장 알맞은 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모든 요청의 tool_choice를 detect_document_type으로 고정한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>시스템 프롬프트에 "가장 먼저 문서 종류를 판별하라"만 적는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>모든 턴에 tool_choice any를 건다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>첫 요청에만 <code>{"type": "tool", "name": "detect_document_type"}</code>을 주고, 결과를 돌려준 뒤 후속 요청은 auto로 되돌린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>첫 단계만 강제하고 이후 선택은 Claude에게 맡긴다. A는 매 턴 같은 도구만 불러 파싱 단계로 넘어가지 못하고, B는 순서를 보장하지 않는다. C는 어떤 도구든 부르게 할 뿐 판별을 먼저 하도록 정하지 못한다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">강제 호출 제약</span></div>
+      <div class="qq"><span class="sc">팀이 분류 파이프라인의 모델을 Claude Sonnet 5.5로 바꾼 뒤, <code>tool_choice: {"type": "any"}</code>를 쓰던 요청이 모두 400 오류를 낸다.</span>올바른 진단과 대응은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>max_tokens가 부족해서이므로 늘린다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>이 모델은 any·tool을 지원하지 않으므로, auto와 strict tool use·명시적 지시를 쓰거나 고정 JSON 응답이 필요하면 structured outputs로 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>disable_parallel_tool_use를 true로 설정하면 해결된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>any 대신 <code>{"type": "tool", "name": …}</code>로 바꾸면 된다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>현재 문서상 Sonnet 5.5는 강제 도구 호출을 받지 않으며, 문서가 제시하는 대안은 auto + strict + 지시, 또는 structured outputs다. A와 C는 원인과 무관하고, D의 <code>tool</code>도 같은 이유로 거부된다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">가용성 vs 권한</span></div>
+      <div class="qq"><span class="sc">Agent SDK에서 코드 리뷰 서브에이전트를 읽기 전용으로 만들려고 상위 옵션에 <code>allowed_tools=["Read", "Grep", "Glob", "Agent"]</code>만 넣었다. 그런데 리뷰 중 서브에이전트가 Edit을 시도했다.</span>올바른 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>allowed_tools는 자동 승인 목록일 뿐이므로, 서브에이전트의 AgentDefinition에 <code>tools=["Read", "Grep", "Glob"]</code>을 지정한다(또는 Edit·Write를 disallowedTools로 뺀다)</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>allowed_tools에 Edit을 추가해 권한 프롬프트를 없앤다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>서브에이전트 프롬프트에 "파일을 고치지 마라"만 쓴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>서브에이전트의 tool_choice를 none으로 둔다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>도구를 세션에서 없애는 것은 가용성 층(<code>tools</code>, 맨 이름의 <code>disallowedTools</code>)이다. B는 편집을 오히려 자동 승인하고, C는 확률적 지시일 뿐이다. D는 읽기 도구까지 막아 리뷰를 할 수 없게 한다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">병렬 호출 제어</span></div>
+      <div class="qq"><code>tool_choice</code>가 <code>{"type": "tool", "name": "…"}</code>이고 <code>disable_parallel_tool_use: true</code>일 때(강제 호출을 지원하는 모델) Claude의 응답은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>도구를 최대 하나 호출하거나 텍스트로만 답할 수 있다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>같은 도구를 여러 번 병렬로 호출한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>정확히 하나의 도구 호출을 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>설명 텍스트를 먼저 쓰고 도구를 호출한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p><code>any</code>·<code>tool</code>과 함께 쓰면 정확히 하나다. A는 <code>auto</code>와 조합했을 때의 동작이고, B는 병렬을 끈 설정과 모순된다. D: 강제 호출에서는 도구 호출 앞에 텍스트가 나오지 않는다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/agent-sdk/subagents" target="_blank" rel="noopener">Agent SDK: Subagents</a> · <a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener">Claude Code: Create custom subagents</a> · <a href="https://code.claude.com/docs/en/agent-sdk/custom-tools" target="_blank" rel="noopener">Agent SDK: Give Claude custom tools</a> · <a href="https://code.claude.com/docs/en/agent-sdk/python" target="_blank" rel="noopener">Agent SDK Python reference</a> · <a href="https://code.claude.com/docs/en/agent-sdk/tool-search" target="_blank" rel="noopener">Agent SDK: Tool search</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools (Forcing tool use)</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/parallel-tool-use" target="_blank" rel="noopener">Parallel tool use</a> · <a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">API errors (Forced tool use not supported)</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" target="_blank" rel="noopener">Strict tool use</a> · <a href="https://platform.claude.com/cookbook/tool-use-tool-choice" target="_blank" rel="noopener">Tool choice (Cookbook)</a> · <a href="https://www.anthropic.com/engineering/writing-tools-for-agents" target="_blank" rel="noopener">Writing effective tools for agents</a> · <a href="https://www.anthropic.com/engineering/advanced-tool-use" target="_blank" rel="noopener">Advanced tool use</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

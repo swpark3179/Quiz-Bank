@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 3 · 서브도메인 3.1</span></div>
+    <h1>CLAUDE.md 계층·범위·모듈화</h1>
+    <p class="sub">managed · user · project · local · 하위 디렉터리 지연 로드 · @path 가져오기 · .claude/rules/ · /context · /memory</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/claude-md-hierarchy-user-project-and-directory-scopes" target="_blank" rel="noopener">CertSafari 3.1</a> &nbsp;|&nbsp; 출제 도메인: 도메인 3 · Claude Code Configuration &amp; Workflows (20%)</p>
+    <div class="secrow">
+      <span class="s on">3.1 CLAUDE.md</span><span class="s">3.2 명령·스킬</span><span class="s">3.3 경로별 규칙</span><span class="s">3.4 플랜 모드</span><span class="s">3.5 반복 개선</span><span class="s">3.6 CI/CD</span>
+    </div>
+  </header>
+
+  <p class="lede">CLAUDE.md는 Claude가 세션을 시작할 때 읽는 지침용 마크다운 파일이다. 같은 내용이라도 <em>어디에 두느냐</em>에 따라 받는 사람과 로드 시점이 달라진다. 시험은 "왜 이 팀원에게는 지침이 안 먹히나" 같은 계층 진단과, 커진 파일을 나누는 방법을 묻는다. <strong>팀이 함께 따라야 할 지침은 저장소에 커밋되는 위치에, 나만의 선호는 홈 디렉터리나 <code>CLAUDE.local.md</code>에 둔다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>user(<code>~/.claude/CLAUDE.md</code>) · project(<code>./CLAUDE.md</code>, <code>./.claude/CLAUDE.md</code>) · 하위 디렉터리 CLAUDE.md의 위치와 범위</li>
+      <li>user 수준 지침은 버전 관리로 팀원에게 전달되지 않는다는 점과 그로 인한 증상 진단</li>
+      <li><code>@path</code> 가져오기로 패키지별 CLAUDE.md에 필요한 표준 문서만 포함하기</li>
+      <li>단일 CLAUDE.md를 <code>.claude/rules/</code>의 주제별 파일로 나누기</li>
+      <li><code>/memory</code>와 <code>/context</code>로 어떤 메모리 파일이 있고 무엇이 로드됐는지 확인하기</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>위치가 곧 받는 사람이다</h3><span class="unit-en">Where a file lives decides who gets it</span></div>
+    <table class="t">
+      <thead><tr><th style="width:17%">범위</th><th style="width:30%">위치</th><th style="width:20%">받는 사람</th><th>넣을 내용 (예)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Managed policy</strong></td><td>OS별 관리 경로 (예: Linux <code>/etc/claude-code/CLAUDE.md</code>)</td><td>그 머신의 모든 사용자</td><td>회사 보안·컴플라이언스 안내</td></tr>
+        <tr><td><strong>User</strong></td><td><code>~/.claude/CLAUDE.md</code></td><td>나 (모든 프로젝트)</td><td>"설명은 짧게, 커밋 메시지는 영어로"</td></tr>
+        <tr><td><strong>Project</strong></td><td><code>./CLAUDE.md</code> 또는 <code>./.claude/CLAUDE.md</code></td><td>저장소를 쓰는 팀 (커밋)</td><td>빌드·테스트 명령, 아키텍처, 팀 규칙</td></tr>
+        <tr><td><strong>Local</strong></td><td><code>./CLAUDE.local.md</code> (<code>.gitignore</code>에 추가)</td><td>나 (이 프로젝트)</td><td>내 샌드박스 URL, 내가 쓰는 테스트 계정</td></tr>
+        <tr><td><strong>하위 디렉터리</strong></td><td><code>apps/search/CLAUDE.md</code> 등</td><td>그 디렉터리 파일을 다룰 때 (커밋 시 팀)</td><td>그 서비스만의 스택 규칙</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 user · project · directory 세 층으로 설명한다. 현재 문서에는 여기에 <strong>Managed policy</strong>(조직 배포, <code>claudeMdExcludes</code>로도 제외할 수 없음)와 개인용 <strong><code>CLAUDE.local.md</code></strong>가 더 있고, 개인 규칙 폴더 <code>~/.claude/rules/</code>도 있다. 시험의 "user vs project" 판단은 그대로 유효하다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>무엇이 언제, 어떤 순서로 로드되나</h3><span class="unit-en">Launch vs on demand · concatenation</span></div>
+    <p>Claude Code는 실행한 디렉터리와 <strong>그 위의 모든 상위 디렉터리</strong>에서 CLAUDE.md와 CLAUDE.local.md를 찾아 시작 시 로드한다. 실행 위치 <strong>아래</strong> 하위 디렉터리의 CLAUDE.md는 시작 시 로드되지 않고, Claude가 그 디렉터리의 파일을 읽거나 쓰거나 편집할 때 로드된다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">실행</div><div class="ft"><code>~/shop/apps/checkout</code><br>에서 claude 시작</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">시작 시 로드</div><div class="ft"><code>~/shop/CLAUDE.md</code><br>+ <code>checkout/CLAUDE.md</code></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">작업 중 로드</div><div class="ft"><code>checkout/api/</code> 파일을 읽으면<br><code>checkout/api/CLAUDE.md</code></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">로드 안 됨</div><div class="ft">형제 디렉터리<br><code>apps/search/CLAUDE.md</code></div></div>
+    </div>
+    <ul>
+      <li><strong>덮어쓰지 않고 이어 붙인다.</strong> 파일시스템 루트 쪽부터 실행 위치 쪽 순서로 연결되므로 실행 위치에 가까운 지침이 나중에 읽힌다. 같은 디렉터리에서는 CLAUDE.local.md가 CLAUDE.md 뒤에 붙는다.</li>
+      <li>범위별로는 managed → user → project 순으로 컨텍스트에 놓인다. 두 지침이 충돌하면 Claude가 어느 쪽을 따를지 보장되지 않으므로, 충돌 자체를 없애야 한다.</li>
+      <li>CLAUDE.md 내용은 시스템 프롬프트 뒤의 사용자 메시지로 전달되는 <strong>컨텍스트</strong>이지 강제 설정이 아니다. 반드시 지켜야 할 규칙은 hook이나 권한(<code>permissions.deny</code>)으로 강제한다.</li>
+      <li>블록 단위 HTML 주석(<code>&lt;!-- ... --&gt;</code>)은 컨텍스트에 넣기 전에 제거되어 관리자용 메모로 쓸 수 있다.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>계층 문제 진단하기</h3><span class="unit-en">Why does a teammate miss the rule?</span></div>
+    <p>시나리오: 리드 개발자는 "스키마를 바꾸면 <code>make migrate-check</code>를 통과한 뒤 커밋"이라는 지침을 오래 써 왔고, 그의 Claude는 늘 이를 지킨다. 새로 합류한 팀원의 Claude는 이 절차를 전혀 모른다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">원인 · user 수준에 있었다</div><div class="code">~/.claude/CLAUDE.md   <span class="c"># 리드의 홈 디렉터리</span>
+- 스키마 변경 후 make migrate-check</div><p>홈 디렉터리 파일은 저장소에 없으므로 클론해도 전달되지 않는다.</p></div>
+      <div class="pane good"><div class="bh">해결 · project 수준으로 옮겨 커밋</div><div class="code">./CLAUDE.md  또는  .claude/rules/db.md
+- 스키마 변경 후 make migrate-check</div><p>저장소를 받는 모든 사람의 세션에 들어간다.</p></div>
+    </div>
+    <table class="t">
+      <caption>확인 도구</caption>
+      <thead><tr><th style="width:26%">명령·기능</th><th>무엇을 보여 주나</th></tr></thead>
+      <tbody>
+        <tr><td><code>/context</code></td><td>현재 컨텍스트 구성. <strong>Memory files</strong> 목록에서 시작 시 실제로 로드된 CLAUDE.md·rules 파일을 확인한다</td></tr>
+        <tr><td><code>/memory</code></td><td>user·project 범위의 메모리 파일 위치 목록(아직 없는 파일 포함). 선택하면 편집기로 열고, 자동 메모리(auto memory) 켜기·끄기와 폴더 열기도 여기서 한다</td></tr>
+        <tr><td><code>InstructionsLoaded</code> hook</td><td>어떤 지침 파일이 언제·왜 로드됐는지 기록. 지연 로드되는 하위 CLAUDE.md나 경로 규칙 디버깅용</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 "<code>/memory</code>로 어떤 메모리 파일이 로드됐는지 확인"한다고 적는다. 현재 문서에서 <code>/memory</code>는 파일 위치를 나열하고 열어 편집하는 곳이며, <strong>시작 시 실제로 로드된 파일 확인은 <code>/context</code></strong>를 쓰라고 안내한다. 하위 디렉터리 CLAUDE.md는 지연 로드되므로 시작 직후 <code>/context</code> 목록에 없는 것이 정상이며, 로드되면 터미널에 <code>Loaded</code> 줄이 표시된다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>@path 가져오기로 필요한 표준만 포함</h3><span class="unit-en">Imports for modular CLAUDE.md</span></div>
+    <p>CLAUDE.md 안에 <code>@경로</code>를 쓰면 그 파일이 펼쳐져 함께 로드된다. 상대 경로는 작업 디렉터리가 아니라 <strong>가져오는 파일의 위치</strong> 기준이고, 가져온 파일이 다시 가져오는 재귀는 최대 4단계까지다. 모노레포라면 패키지 담당자가 자기 패키지에 해당하는 표준 문서만 고른다.</p>
+    <div class="code"><span class="c"># packages/billing/CLAUDE.md  — 결제 패키지 담당자가 관리</span>
+금액 계산과 오류 응답은 아래 표준을 따른다.
+- @../../docs/standards/money-handling.md
+- @../../docs/standards/api-errors.md
+
+<span class="c"># packages/web/CLAUDE.md  — 프런트엔드 담당자가 관리</span>
+- @../../docs/standards/accessibility.md
+- 경로만 언급하고 가져오지 않을 때는 백틱: `@docs/legacy-notes.md`</div>
+    <ul>
+      <li>경로에 공백이 있으면 공백마다 백슬래시를 붙인다(<code>@Team\ Docs/x.md</code>). 따옴표로 감싸면 가져오지 않는다.</li>
+      <li>작업 디렉터리 밖을 가리키는 <strong>외부 가져오기</strong>는 프로젝트에서 처음 만날 때 승인 대화상자가 뜬다. 여러 worktree에서 공유할 개인 지침은 <code>@~/.claude/...</code>처럼 홈 디렉터리 파일을 가져오면 된다.</li>
+    </ul>
+    <div class="note"><span class="lbl">함정 · 가져오기는 컨텍스트를 줄이지 않는다</span><p>가져온 파일은 가져오는 CLAUDE.md와 <strong>함께 로드</strong>된다. 파일을 정리하는 데는 도움이 되지만 토큰 비용은 그대로다. 컨텍스트를 줄이려면 일부 파일에서만 필요한 내용을 경로 한정 규칙(3.3)이나 스킬(3.2)로 옮긴다. 참고로 가이드가 말하는 "@import 문법"은 문서상 <code>@path/to/import</code> 형태이며 <code>import</code> 키워드는 없다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>거대한 CLAUDE.md를 .claude/rules/로 나누기</h3><span class="unit-en">Topic files instead of one monolith</span></div>
+    <p>문서는 CLAUDE.md 한 파일을 <strong>200줄 미만</strong>으로 유지하라고 권한다. 길어질수록 컨텍스트를 더 쓰고 지침 준수율이 떨어진다. <code>.claude/rules/</code>에 주제 하나당 파일 하나(<code>testing.md</code>, <code>api-conventions.md</code>, <code>release.md</code> …)를 두면 팀이 나눠 관리하기 쉽다. 하위 폴더까지 재귀적으로 <code>.md</code>를 찾는다.</p>
+    <div class="code">repo/
+├── CLAUDE.md                 <span class="c"># 빌드 명령·핵심 규칙만</span>
+└── .claude/
+    └── rules/
+        ├── testing.md        <span class="c"># paths 없음 → 매 세션 로드</span>
+        ├── api-conventions.md
+        └── frontend/
+            └── components.md <span class="c"># paths 지정 → 일치 파일 작업 시만 (3.3)</span></div>
+    <div class="tri">
+      <div class="pane" style="border-top:3px solid var(--blue)"><div class="pt">CLAUDE.md</div><div class="pd">매 세션 로드. 빌드·테스트 명령, 모든 작업에 해당하는 규칙.</div></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt">.claude/rules/</div><div class="pd"><code>paths</code>가 없으면 <code>.claude/CLAUDE.md</code>와 같은 우선순위로 매 세션 로드. 있으면 일치 파일을 다룰 때만.</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt">Skill</div><div class="pd">호출되거나 관련 있다고 판단될 때만 본문 로드. 절차·참고 자료용.</div></div>
+    </div>
+    <div class="axis"><span class="lbl">분리 판단 축</span><ul><li><code>paths</code> 없이 나누기만 하면 <strong>관리가 쉬워질 뿐 매 세션 로드량은 같다</strong></li><li>일부 파일 유형에만 해당하는 규칙 → <code>paths</code>를 단 규칙 파일</li><li>여러 단계로 된 절차나 가끔 필요한 참고 자료 → 스킬</li><li>다른 팀 패키지의 CLAUDE.md가 끼어든다면 <code>claudeMdExcludes</code>(예: <code>.claude/settings.local.json</code>)로 제외한다. 단 managed CLAUDE.md는 제외되지 않는다</li><li>개인 규칙은 <code>~/.claude/rules/</code>. 프로젝트 규칙보다 먼저 로드되지만 서로 덮어쓰지 않으므로 충돌하지 않게 유지한다</li></ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>하위 디렉터리 CLAUDE.md가 상위 CLAUDE.md를 덮어쓴다.</div><div class="f"><span class="k">사실</span>발견된 파일은 모두 이어 붙는다. 실행 위치에 가까운 파일이 나중에 읽힐 뿐이며, 충돌 시 어느 쪽이 따라질지는 보장되지 않는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>@path</code>로 쪼개면 컨텍스트 사용량이 줄어든다.</div><div class="f"><span class="k">사실</span>가져온 파일은 함께 로드되므로 줄지 않는다. 줄이려면 경로 한정 규칙이나 스킬로 옮긴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>CLAUDE.md에 "절대 .env를 수정하지 말 것"이라고 쓰면 그 동작이 차단된다.</div><div class="f"><span class="k">사실</span>CLAUDE.md는 강제력이 없는 컨텍스트다. 차단은 <code>PreToolUse</code> hook이나 권한 deny 규칙으로 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>세션 시작 직후 <code>/context</code>에 하위 디렉터리 CLAUDE.md가 없으면 파일 위치가 잘못된 것이다.</div><div class="f"><span class="k">사실</span>하위 디렉터리 파일은 지연 로드라 원래 시작 목록에 없다. 그 디렉터리의 파일을 Claude가 읽으면 로드된다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">계층 진단</span></div>
+      <div class="qq"><span class="sc">팀장의 Claude는 "API 응답에 항상 <code>request_id</code>를 포함"을 지키지만, 같은 저장소를 클론한 신입의 Claude는 지키지 않는다. 팀장은 이 지침을 <code>~/.claude/CLAUDE.md</code>에 적었다.</span>올바른 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>신입에게 팀장의 홈 디렉터리 파일을 복사해 주고 끝낸다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>지침 앞에 IMPORTANT를 붙인다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>신입의 <code>CLAUDE.local.md</code>에 같은 내용을 적게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>지침을 프로젝트 CLAUDE.md(또는 <code>.claude/rules/</code>)로 옮겨 커밋한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>user 수준 파일은 버전 관리로 공유되지 않는다. 팀 규칙은 project 수준에 두어야 이후 합류자까지 자동으로 받는다. A·C는 사람마다 따로 관리하게 되어 다시 어긋나고, B는 위치 문제를 해결하지 못한다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">개인 · 프로젝트 한정</span></div>
+      <div class="qq">이 프로젝트에서만 쓰는 내 개인 스테이징 URL을 Claude에게 알려 두고 싶다. 팀 저장소에는 올리고 싶지 않다. 알맞은 위치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>./CLAUDE.md</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>./CLAUDE.local.md</code> (<code>.gitignore</code>에 추가)</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>~/.claude/CLAUDE.md</code></span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>managed policy CLAUDE.md</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>CLAUDE.local.md는 "나 · 이 프로젝트" 범위다. C는 모든 프로젝트에 적용되어 범위가 넓고, A는 커밋되어 팀에 공유된다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">로드 시점</span></div>
+      <div class="qq"><span class="sc"><code>~/shop/CLAUDE.md</code>, <code>~/shop/apps/checkout/CLAUDE.md</code>, <code>~/shop/apps/search/CLAUDE.md</code>가 있다. <code>~/shop/apps/checkout</code>에서 Claude Code를 시작했다.</span>시작 시점에 로드되는 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>세 파일 모두</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>checkout의 파일만 — 가장 가까운 하나가 나머지를 대체한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>~/shop/CLAUDE.md</code>와 checkout의 CLAUDE.md</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>~/shop/CLAUDE.md</code>만</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>실행 위치와 그 상위 디렉터리의 파일이 시작 시 로드되어 이어 붙는다. 형제 디렉터리인 search는 실행 위치 아래도 위도 아니어서 로드되지 않는다. B처럼 하나가 나머지를 대체하지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">@path 해석</span></div>
+      <div class="qq"><code>packages/billing/CLAUDE.md</code> 안의 <code>@../../docs/standards/money.md</code>는 어느 경로를 기준으로 해석되는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>가져오기를 적은 파일(<code>packages/billing/CLAUDE.md</code>)의 위치</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Claude Code를 실행한 작업 디렉터리</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>사용자 홈 디렉터리</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>git 저장소 루트</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>상대 경로는 가져오는 파일 기준이다. 그래서 어느 디렉터리에서 실행하든 같은 파일을 가리킨다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">rules로 분리</span></div>
+      <div class="qq"><span class="sc">600줄짜리 CLAUDE.md를 <code>.claude/rules/</code> 아래 주제별 파일 8개로 나눴다. 어느 파일에도 <code>paths</code> frontmatter는 없다.</span>컨텍스트 측면의 결과는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>관련 주제가 나올 때만 해당 파일이 로드되어 크게 줄어든다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>모두 매 세션 시작 시 로드되므로 정리는 쉬워졌지만 로드량은 거의 같다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>rules 파일은 <code>/memory</code>로 열 때만 로드된다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>규칙 파일은 하위 디렉터리 CLAUDE.md보다 늦게 로드되어 무시된다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p><code>paths</code>가 없는 규칙은 <code>.claude/CLAUDE.md</code>와 같은 우선순위로 시작 시 로드된다. 조건부 로드(A)는 <code>paths</code>를 지정해야 일어난다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">로드 확인</span></div>
+      <div class="qq"><span class="sc">세션마다 Claude의 행동이 달라, 어떤 CLAUDE.md와 규칙 파일이 이번 세션 시작 시 실제로 로드됐는지 확인하려 한다.</span>가장 직접적인 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>/init</code>을 다시 실행한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>~/.claude.json</code>을 연다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>저장소의 모든 CLAUDE.md를 Glob으로 찾는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>/context</code>를 실행해 Memory files 목록을 본다 (파일 위치 확인·편집은 <code>/memory</code>)</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>문서는 시작 시 로드된 CLAUDE.md·rules 확인에 <code>/context</code>를 안내하고, <code>/memory</code>는 위치 목록과 편집에 쓴다. C는 존재하는 파일을 보여 줄 뿐 로드 여부를 알려 주지 않는다. <code>~/.claude.json</code>은 앱 상태·MCP 설정 파일이다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener">How Claude remembers your project (Memory)</a> · <a href="https://code.claude.com/docs/en/debug-your-config" target="_blank" rel="noopener">Debug your configuration</a> · <a href="https://code.claude.com/docs/en/large-codebases" target="_blank" rel="noopener">Set up Claude Code in a monorepo or large codebase</a> · <a href="https://code.claude.com/docs/en/features-overview" target="_blank" rel="noopener">Extend Claude Code</a> · <a href="https://code.claude.com/docs/en/claude-directory" target="_blank" rel="noopener">Explore the .claude directory</a> · <a href="https://code.claude.com/docs/en/context-window" target="_blank" rel="noopener">Explore the context window</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener">Hooks reference</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

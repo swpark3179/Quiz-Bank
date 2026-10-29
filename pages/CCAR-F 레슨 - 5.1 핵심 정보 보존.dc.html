@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.1</span></div>
+    <h1>긴 대화에서 핵심 정보 보존</h1>
+    <p class="sub">stateless 이력 · 점진 요약의 위험 · case facts 블록 · 도구 결과 다듬기 · 위치 효과 · 구조화된 핸드오프</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/keeping-critical-facts-intact-in-long-conversations" target="_blank" rel="noopener">CertSafari 5.1</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Context Management &amp; Reliability (15%)</p>
+    <div class="secrow">
+      <span class="s on">5.1 정보 보존</span><span class="s">5.2 에스컬레이션</span><span class="s">5.3 오류 전파</span><span class="s">5.4 코드베이스 탐색</span><span class="s">5.5 사람 검토</span><span class="s">5.6 출처 보존</span>
+    </div>
+  </header>
+
+  <p class="lede">긴 상담이나 긴 에이전트 작업의 실패는 대개 "모델이 잊었다"가 아니라 "우리가 넘긴 컨텍스트에서 사실이 흐려졌다"에서 시작한다. 요약을 거듭하면서 금액과 날짜가 "일부 환불" 같은 말로 바뀌고, 장황한 도구 결과가 쌓여 정작 중요한 값이 묻힌다. 이 서브도메인은 무엇을 요약 밖에 따로 두고, 무엇을 잘라 내고, 어떤 순서로 배치할지를 묻는다. <strong>바뀌면 안 되는 사실은 요약할 대상이 아니라, 매 요청에 원래 값 그대로 다시 실어 보낼 데이터다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>Messages API는 상태를 저장하지 않으므로 매 요청에 전체 이력을 보낸다 — 이력 관리가 곧 기억 관리다</li>
+      <li>점진 요약이 숫자·날짜·고객이 말한 기대를 뭉개는 위험과, 요약 밖에 두는 case facts 블록</li>
+      <li>이슈가 여럿인 세션에서 이슈별 구조화 데이터(주문번호·금액·상태)를 별도 층으로 유지</li>
+      <li>도구 결과는 관련 필드만 남긴 뒤 이력에 넣는다</li>
+      <li>집계 입력에서는 핵심 발견 요약을 앞에 두고 명시적 섹션으로 나눠 위치 효과를 줄인다</li>
+      <li>상류 에이전트가 장황한 추론 대신 사실·출처·메타데이터를 구조화해 넘기게 한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>매 요청이 전체 대화다</h3><span class="unit-en">The API is stateless</span></div>
+    <p>Messages API는 이전 요청을 기억하지 않는다. 대화를 이어 가려면 앱이 지금까지의 user·assistant 메시지를 모두 다시 보내야 한다. 문서는 이전 턴이 꼭 Claude가 만든 것일 필요도 없다고 설명한다(합성 assistant 메시지 가능). 즉 <strong>Claude가 무엇을 "기억"하는지는 앱이 무엇을 다시 보내는지로 정해진다.</strong></p>
+    <table class="t">
+      <thead><tr><th style="width:30%">컨텍스트 창에 들어가는 것</th><th>메모</th></tr></thead>
+      <tbody>
+        <tr><td>system 프롬프트, 도구 정의</td><td>매 요청 반복. 캐싱은 요금을 줄일 뿐 창을 차지하는 것은 같다</td></tr>
+        <tr><td><code>messages</code> 전체</td><td>도구 결과, 이미지, 문서 포함</td></tr>
+        <tr><td>이번 턴의 출력</td><td>thinking 포함. 최신 모델은 이전 thinking 블록도 기본으로 유지해 입력으로 계산된다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 컨텍스트 한계를 강한 제약으로 전제한다. 2026년 10월 문서 기준으로 Opus 5.5 · Sonnet 5.5 · Haiku 5.5 등 현행 모델 대부분은 1M 토큰 창이 기본이고, Claude Code 문서는 자동 compaction 덕에 창이 부족해지는 일이 드물다고 말한다. 그래도 원칙은 그대로다. 토큰이 늘수록 정확도와 recall이 떨어지는 <em>context rot</em>이 있고, 매 턴 전체 이력을 다시 읽으므로 비용도 쌓인다. "창이 크니 다 넣는다"는 답이 아니다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>요약이 지우는 것</h3><span class="unit-en">Progressive summarization blurs specifics</span></div>
+    <p>대화가 길어지면 앞부분을 요약으로 바꾸는 것이 보통이다. 문제는 요약을 거듭할 때마다 구체적인 값이 일반적인 말로 바뀐다는 점이다. 통신사 상담 예로 보자.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 두 번 요약된 이력</div><div class="code">고객은 요금 문제로 여러 차례 문의했다.
+일부 금액의 환급이 약속되었고,
+해지에도 관심을 보였다.</div><p>얼마를, 언제까지, 누가 약속했는지가 사라졌다. 고객이 "그 48,200원 언제 들어와요?"라고 물으면 답할 근거가 없다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 사실은 요약 밖에 그대로</div><div class="code">3월 청구서 로밍 요금 48,200원 이중 청구.
+4월 12일까지 환급 약속 (3월 28일 통화).
+고객 요청: 위약금 없이 해지 가능한지
+서면으로 답변받기.</div><p>금액·날짜·약속·고객의 기대를 원래 값으로 보존한다.</p></div>
+    </div>
+    <p>요약 도구 자체도 이 문제를 의식하고 있다. API의 on-demand compaction(beta, <code>compact-2026-09-04</code>)은 <code>instructions</code>로 요약 프롬프트를 통째로 바꿀 수 있게 하고, 요약에 무엇을 반드시 남길지 적으라고 권한다. 요약된 구간 안의 이미지·문서·가져온 URL 내용은 요약이 대신하지 못하므로 필요하면 다시 넣어야 한다. Anthropic의 컨텍스트 엔지니어링 글은 지나치게 공격적인 compaction이 나중에야 중요성이 드러나는 미묘한 정보를 잃게 한다고 경고하며, 먼저 recall을 최대로 맞춘 뒤 군더더기를 줄여 가라고 권한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>case facts 블록: 요약 밖의 사실층</h3><span class="unit-en">A persistent, structured layer</span></div>
+    <p>거래성 사실(금액, 날짜, 주문번호, 상태, 약속)은 대화 이력과 분리된 블록으로 앱이 관리하고, 매 요청에 그대로 넣는다. 이력은 요약되더라도 이 블록은 요약 대상이 아니다. 이슈가 여럿인 세션이면 이슈마다 항목을 나눠 서로 섞이지 않게 한다.</p>
+    <div class="code">&lt;case_facts&gt;
+{
+  "customer_id": "C-55120",
+  "issues": [
+    {"issue_id": "ISSUE-1", "type": "double_billing",
+     "invoice_month": "2026-03", "amount_krw": 48200,
+     "status": "refund_promised", "promised_by": "2026-04-12",
+     "source": "2026-03-28 통화 기록"},
+    {"issue_id": "ISSUE-2", "type": "cancellation_inquiry",
+     "contract_end": "2026-11-30", "penalty_quoted_krw": null,
+     "status": "needs_check"}
+  ],
+  "customer_expectation": "위약금 없이 해지 가능한지 서면 답변"
+}
+&lt;/case_facts&gt;</div>
+    <ul>
+      <li><strong>누가 쓰나</strong>: 앱이 도구 결과와 확정된 발언에서 값을 뽑아 갱신한다. 모델의 자유 서술에 맡기지 않는다</li>
+      <li><strong>어디에 두나</strong>: system 프롬프트나 매 요청의 고정 위치. 요약된 이력과 섞지 않는다</li>
+      <li><strong>모르는 값</strong>: <code>null</code>로 두고 <code>needs_check</code>처럼 상태로 드러낸다 (4.3의 nullable 원칙)</li>
+    </ul>
+    <p>공식 프롬프트 가이드도 상태 추적에는 JSON 같은 구조화 형식을, 진행 메모에는 자유 텍스트를 쓰라고 권한다. 컨텍스트 엔지니어링 글이 소개하는 structured note-taking(컨텍스트 창 밖에 메모를 두고 필요할 때 다시 불러오는 방식)도 같은 발상이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>도구 결과는 쌓이기 전에 줄인다</h3><span class="unit-en">Trim tool output at the source</span></div>
+    <p>주문 조회 API가 배송지 이력, 마케팅 수신 동의, 포인트 내역까지 40여 개 필드를 돌려준다고 하자. 반품 판단에 필요한 것은 몇 개뿐인데, 원본을 그대로 <code>tool_result</code>에 넣으면 조회할 때마다 이력이 불어나고, 이후 모든 요청이 그 내용을 다시 읽는다.</p>
+    <div class="code">RETURN_FIELDS = ("order_id", "item_name", "paid_amount", "delivered_at",
+                 "return_deadline", "return_status")
+
+def run_get_order(order_id):
+    raw = orders_api.get(order_id)                     <span class="c"># 40여 개 필드</span>
+    slim = {k: raw[k] for k in RETURN_FIELDS if k in raw}
+    return json.dumps(slim, ensure_ascii=False)        <span class="c"># 이 결과만 tool_result로</span></div>
+    <p>플랫폼 쪽 도구도 있다. 각각 줄이는 대상이 다르다.</p>
+    <table class="t">
+      <thead><tr><th style="width:26%">방법</th><th style="width:30%">줄이는 것</th><th>메모</th></tr></thead>
+      <tbody>
+        <tr><td>소스에서 필드 다듬기</td><td>도구 결과 한 건의 크기</td><td>앱 코드. 가장 먼저 할 일</td></tr>
+        <tr><td>Tool result clearing<br>(<code>clear_tool_uses_20250919</code>, beta)</td><td>오래된 도구 결과</td><td>기본값: 입력 100,000 토큰에서 작동, 최근 3개 도구 사용 유지. 지운 자리는 자리표시 텍스트로 바뀐다. <code>exclude_tools</code>로 보호, 캐시 접두부는 무효화된다</td></tr>
+        <tr><td>Programmatic tool calling</td><td>도구 왕복의 중간 결과</td><td>Claude가 쓴 스크립트가 샌드박스에서 여러 도구를 부르고 중간 결과는 대화 이력에 들어오지 않는다</td></tr>
+        <tr><td>Tool search</td><td>미리 싣는 도구 정의</td><td>도구가 많을 때(대략 20개 이상) 필요한 정의만 불러온다</td></tr>
+      </tbody>
+    </table>
+    <p>순서가 중요하다. tool result clearing은 오래된 결과부터 통째로 지운다. 나중에 필요한 값이 그 결과 안에만 있었다면 함께 사라지므로, 지워지기 전에 case facts로 옮겨 두거나 해당 도구를 <code>exclude_tools</code>로 보호한다. context editing은 서버 측에서 적용되며, 앱이 보관하는 원본 이력은 그대로 남는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>위치 효과와 집계 입력의 구조</h3><span class="unit-en">Position effects in long inputs</span></div>
+    <p>시험 가이드는 긴 입력의 앞과 끝은 잘 처리되지만 중간 부분의 발견은 빠지기 쉬운 현상을 "lost in the middle"로 부른다. 공식 문서는 이 용어를 직접 쓰지 않지만, 토큰이 늘수록 recall이 떨어지는 context rot을 설명하고 배치에 관한 구체적 지침을 준다. 긴 문서와 데이터는 프롬프트 위쪽에 두고 질문·지시는 끝에 둔다(복잡한 다문서 입력에서 응답 품질이 최대 30% 좋아졌다는 시험 결과가 있다). 문서마다 <code>&lt;document&gt;</code> 태그와 <code>&lt;source&gt;</code> 같은 메타데이터로 감싸고, 긴 문서 작업에서는 관련 부분을 먼저 인용하게 한다.</p>
+    <div class="code">&lt;key_findings&gt;            <span class="c"># 맨 앞: 보고서별 핵심 발견 3~5줄씩</span>
+  R3: 2분기 이탈률 4.1% → 6.8%, 원인은 요금제 개편 (설문 n=1,200)
+  R7: 경쟁사 가격 인하 시점과 이탈 급증 시점이 일치
+  ...
+&lt;/key_findings&gt;
+&lt;documents&gt;
+  &lt;document index="3"&gt;&lt;source&gt;subagent-R3 / 고객 설문 분석&lt;/source&gt;
+    &lt;document_content&gt;## 방법 ... ## 결과 ... ## 한계 ...&lt;/document_content&gt;
+  &lt;/document&gt;
+  ...
+&lt;/documents&gt;
+위 보고서들을 종합해 이탈 원인을 우선순위로 정리하라.   <span class="c"># 지시는 끝에</span></div>
+    <p>핵심 발견 요약을 맨 앞에 두면, 중간에 놓인 보고서의 결론도 입력의 앞부분에 한 번 더 나타난다. 각 보고서 안에서도 "방법·결과·한계" 같은 명시적 소제목을 쓰면 긴 본문 속 위치를 찾기 쉬워진다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>상류 에이전트가 넘길 것</h3><span class="unit-en">Structured handoffs, not reasoning dumps</span></div>
+    <p>하위 에이전트가 수만 토큰을 쓰며 조사하더라도, 상위 에이전트에게는 1,000~2,000 토큰 정도로 압축한 결과만 돌려주는 것이 Anthropic이 설명하는 sub-agent 구조다. 하류의 컨텍스트 예산이 빠듯하다면 장황한 서술과 추론 과정 대신 <strong>사실, 수치, 기준일, 출처 위치, 방법, 관련도</strong>를 구조화해 넘기게 한다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 서술형 보고</div><div class="code">"먼저 여러 자료를 검토했고, 그중 한 보고서에서
+이탈률이 꽤 올랐다는 내용을 확인했습니다.
+이는 아마도 요금제 변경 때문으로 보이며..."
+(이후 3,000단어)</div><p>기준일과 출처가 없어 종합 단계에서 오래된 수치가 최신처럼 인용된다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 구조화된 사실</div><div class="code">{"claims": [{
+   "statement": "2분기 해지율 상승",
+   "value": 6.8, "unit": "%", "as_of": "2026-06",
+   "source": {"title": "고객 설문 분석",
+              "location": "p.14 표 3"},
+   "method": "온라인 설문 n=1,200",
+   "relevance": 0.9}],
+ "open_questions": ["3분기 데이터 미확보"]}</div><p>종합 에이전트가 날짜·출처를 그대로 이어 받는다(5.6과 연결).</p></div>
+    </div>
+    <p>다중 에이전트 리서치 시스템 글은 여기서 한 걸음 더 나아가, 하위 에이전트가 결과물을 파일 시스템 같은 외부 저장소에 쓰고 코디네이터에는 가벼운 참조만 넘기면 여러 단계를 거치며 정보가 변질되는 "전화 놀이" 현상과 토큰 부담을 줄일 수 있다고 설명한다.</p>
+    <div class="axis"><span class="lbl">시험 판단 기준</span><ul>
+      <li>"요약 후 금액·날짜를 모른다" → 요약을 바꾸는 것이 아니라 사실을 <strong>요약 밖 블록</strong>으로</li>
+      <li>"이슈가 여러 개라 섞인다" → 이슈 ID별 구조화 데이터 층</li>
+      <li>"도구 결과로 토큰이 급증" → 이력에 넣기 <strong>전에</strong> 관련 필드만</li>
+      <li>"중간 보고서의 발견이 빠진다" → 핵심 요약을 앞에, 섹션·태그로 구분, 지시는 끝에</li>
+      <li>"하류 에이전트 예산이 빠듯" → 상류의 출력 형식을 구조화된 사실 + 메타데이터로</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>Claude는 같은 대화의 이전 요청 내용을 서버에서 기억한다.</div><div class="f"><span class="k">사실</span>Messages API는 상태를 저장하지 않는다. 이전 메시지를 다시 보내지 않으면 그 내용은 없는 것과 같다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>1M 토큰 창이 있으니 도구 결과와 이력을 줄일 필요가 없다.</div><div class="f"><span class="k">사실</span>토큰이 늘면 recall이 떨어지고(context rot), 매 턴 전체를 다시 읽는 비용도 쌓인다. 고신호 토큰만 남긴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>요약 주기를 조정하면 숫자가 흐려지는 문제가 해결된다.</div><div class="f"><span class="k">사실</span>주기와 상관없이 요약은 구체적 값을 일반화한다. 바뀌면 안 되는 사실은 요약 대상에서 빼서 따로 싣는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>tool result clearing을 켜면 필요한 값은 알아서 남는다.</div><div class="f"><span class="k">사실</span>임계값을 넘으면 오래된 결과부터 자리표시 텍스트로 바뀐다. 필요한 값은 미리 case facts로 옮기거나 <code>exclude_tools</code>로 보호한다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">case facts</span></div>
+      <div class="qq"><span class="sc">상담 봇은 대화가 20턴을 넘으면 앞부분을 요약으로 바꾼다. 30턴째 고객이 "아까 말한 48,200원 환급은 언제 돼요?"라고 묻자, 요약에 "일부 환급 약속"만 남아 있어 봇이 금액과 날짜를 답하지 못했다.</span>가장 적절한 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>요약 시작 시점을 40턴으로 늦춘다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>금액·날짜·약속·주문번호를 case facts 블록으로 뽑아 요약과 별도로 매 요청에 넣는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>요약 프롬프트에 "더 간결하게"를 추가한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>더 큰 컨텍스트 창을 가진 모델로 바꾼다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>거래성 사실은 요약하지 말고 구조화된 블록으로 따로 유지해야 한다. A와 D는 손실 시점을 늦출 뿐이고, C는 구체적 값을 더 지운다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">도구 결과</span></div>
+      <div class="qq"><span class="sc">반품 에이전트가 턴마다 주문 조회 도구를 부르는데, 응답이 45개 필드의 JSON이다. 대화가 길어질수록 비용이 급증하고, 답변에 반품과 무관한 필드가 섞여 나온다.</span>가장 적절한 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>주문 조회 도구를 없앤다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>max_tokens</code>를 줄인다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>system 프롬프트에 "관련 필드만 참고하라"를 추가한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>도구 결과를 이력에 넣기 전에 반품 판단에 필요한 필드만 남긴다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>불필요한 필드는 들어오는 순간부터 이후 모든 요청에서 토큰을 차지한다. C는 필드가 여전히 컨텍스트에 쌓이고, B의 <code>max_tokens</code>는 출력 한도라 입력 누적과 무관하다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">stateless</span></div>
+      <div class="qq">Messages API로 만든 챗봇이 두 번째 요청에서 첫 질문의 맥락을 전혀 모른다. 가장 가능성 높은 원인은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>두 번째 요청의 <code>messages</code>에 이전 user·assistant 메시지를 넣지 않았다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>서버 쪽 대화 세션이 만료됐다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>system 프롬프트가 너무 짧다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>첫 응답의 <code>stop_reason</code>이 <code>end_turn</code>이었다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>API는 상태를 저장하지 않으므로 대화 이력은 앱이 매번 보내야 한다. 서버 세션이란 개념이 없으므로 B는 틀렸고, <code>end_turn</code>은 정상 종료일 뿐이다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">위치 효과</span></div>
+      <div class="qq"><span class="sc">리서치 코디네이터가 서브에이전트 10개의 보고서를 순서대로 이어 붙여 종합한다. 중간에 놓인 보고서들의 발견이 최종 보고서에서 자주 빠진다.</span>가장 적절한 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>실행할 때마다 보고서 순서를 무작위로 섞는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>보고서 10개를 한 문단으로 압축해 합친다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>입력 맨 앞에 보고서별 핵심 발견 요약을 두고, 각 보고서를 출처가 붙은 명시적 섹션으로 나누며, 지시는 끝에 둔다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>컨텍스트 창이 더 큰 모델로 바꾼다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>핵심 요약을 앞에 두면 중간 보고서의 결론도 잘 처리되는 위치에 한 번 더 놓이고, 섹션과 출처 태그가 긴 입력의 구조를 드러낸다. A는 누락을 다른 보고서로 옮길 뿐이고, B는 세부 사항을 잃는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">핸드오프 형식</span></div>
+      <div class="qq"><span class="sc">하위 에이전트들이 추론 과정을 포함한 3,000단어 서술을 반환한다. 종합 에이전트는 컨텍스트 예산이 빠듯하고, 최종 보고서에 기준일이 불분명한 오래된 통계가 최신처럼 인용됐다.</span>어디를 어떻게 바꾸는 것이 가장 적절한가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>종합 에이전트가 받은 서술을 다시 요약하게 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>하위 에이전트에게 더 자세히, 더 길게 쓰라고 지시한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>종합 단계를 없애고 서술을 그대로 이어 붙여 낸다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>하위 에이전트가 핵심 사실·수치·기준일·출처 위치·관련도를 구조화해 반환하도록 출력 형식을 바꾼다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>문제의 원인은 상류의 출력 형식이다. 구조화된 사실과 메타데이터를 받으면 하류는 적은 토큰으로 날짜와 출처를 보존할 수 있다. A는 요약을 한 번 더 거쳐 정보를 더 잃는다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">context editing</span></div>
+      <div class="qq">context editing의 tool result clearing(<code>clear_tool_uses_20250919</code>)에 대한 설명으로 옳은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>앱이 보관한 원본 대화 이력에서도 해당 결과가 삭제된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>임계값을 넘으면 오래된 도구 결과부터 자리표시 텍스트로 바뀌므로, 나중에 필요한 값은 미리 옮겨 두거나 <code>exclude_tools</code>로 보호해야 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>가장 최근 도구 결과부터 지운다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>prompt cache에는 전혀 영향을 주지 않는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>clearing은 서버 측에서 적용되어 원본 이력은 앱에 그대로 남고(A 오답), 오래된 결과부터 지우며 기본으로 최근 3개를 남긴다(C 오답). 내용을 지우면 캐시된 접두부가 무효화되므로 <code>clear_at_least</code>로 한 번에 충분히 지우게 한다(D 오답).</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/working-with-messages" target="_blank" rel="noopener">Using the Messages API</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/context-windows" target="_blank" rel="noopener">Context windows</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/compaction" target="_blank" rel="noopener">Compaction overview</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/compaction-on-demand" target="_blank" rel="noopener">Compaction on demand</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/context-editing" target="_blank" rel="noopener">Context editing</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/manage-tool-context" target="_blank" rel="noopener">Manage tool context</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices (long context · state management)</a> · <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

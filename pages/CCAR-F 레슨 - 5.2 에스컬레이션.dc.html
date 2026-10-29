@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.2</span></div>
+    <h1>에스컬레이션과 모호성 해소</h1>
+    <p class="sub">에스컬레이션 트리거 · 명시적 상담원 요청 · 정책 공백 · 감정·확신도 함정 · 복수 매칭 명확화 · 기준+예시 프롬프트</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/escalation-triggers-and-ambiguity-resolution-for-support-agents" target="_blank" rel="noopener">CertSafari 5.2</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Context Management &amp; Reliability (15%)</p>
+    <div class="secrow">
+      <span class="s">5.1 정보 보존</span><span class="s on">5.2 에스컬레이션</span><span class="s">5.3 오류 전파</span><span class="s">5.4 코드베이스 탐색</span><span class="s">5.5 사람 검토</span><span class="s">5.6 출처 보존</span>
+    </div>
+  </header>
+
+  <p class="lede">지원 에이전트는 대화마다 "내가 끝까지 처리할 일인가, 사람에게 넘길 일인가"를 판단한다. 공식 고객지원 가이드가 이관 정확도와 자동 처리율을 나란히 재라고 하는 것도 이 판단의 품질이 서비스 품질을 좌우하기 때문이다. 시험은 이 판단의 근거를 묻고, 그럴듯하지만 틀린 근거를 보기에 섞어 낸다. <strong>판단 기준은 "케이스가 어려운가"가 아니라 "에이전트에게 이 결정을 내릴 권한과 근거가 있는가"이며, 말투의 감정이나 모델이 스스로 매긴 확신도는 그 근거가 되지 못한다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>사람에게 넘길 세 가지 근거: 고객의 명시적 요청, 정책의 예외·공백, 의미 있는 진전 불가</li>
+      <li>명시적 요청은 조사 없이 즉시 이관하고, 단순한 불만은 감정을 인정한 뒤 해결을 제안한다 — 고객이 다시 사람을 원하면 그때 이관</li>
+      <li>정책이 요청에 대해 말하지 않거나 해석이 갈리면, 에이전트가 결론을 만들지 않고 이관한다</li>
+      <li>감정 점수와 자기보고 확신도가 케이스 복잡도의 대리지표로 부적합한 이유</li>
+      <li>조회 결과가 여러 건이면 휴리스틱으로 고르지 말고 추가 식별자를 요청한다</li>
+      <li>에스컬레이션 기준과 "처리 vs 이관" 대비 예시를 프롬프트에 명시한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>근거는 권한: 사람에게 넘기는 세 경우</h3><span class="unit-en">Authority, not difficulty</span></div>
+    <p>이 페이지의 예시는 통신사 고객지원 에이전트다. 요금 조회·정정, 요금제 변경, 회선 일시정지 같은 업무를 도구로 처리한다. 시험 가이드가 꼽는 이관 근거를 이 에이전트에 대입하면 다음과 같다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">근거</th><th style="width:40%">통신사 예시</th><th>왜 사람 몫인가</th></tr></thead>
+      <tbody>
+        <tr><td><strong>명시적 요청</strong></td><td>"요금 문의인데, 상담원 연결 부탁드립니다."</td><td>어느 채널로 도움받을지는 고객이 정한다. 에이전트가 해결 가능성을 먼저 심사할 일이 아니다</td></tr>
+        <tr><td><strong>정책 예외·공백</strong></td><td>규정에 없는 사유로 기본료 면제를 요청한다</td><td>규정이 답하지 않는 요청에 결론을 낼 권한이 에이전트에게 없다</td></tr>
+        <tr><td><strong>진전 불가</strong></td><td>회선 조회가 계속 "처리 중"이고 고객이 줄 수 있는 정보도 다 받았다</td><td>쓸 수 있는 도구와 질문을 다 써도 상태가 바뀌지 않는다</td></tr>
+      </tbody>
+    </table>
+    <p>반대로 <strong>단계가 많아도 정책이 모든 단계를 다루면</strong> 에이전트가 처리한다. 예: "단말 할부 잔액을 일시불로 정산하고, 요금제를 바꾸고, 바뀐 요금제 기준 위약금을 알려 달라"는 문의는 길지만 세 절차가 모두 규정에 있다. 시험 가이드가 트리거를 "복잡한 케이스"가 아니라 "정책 예외·공백"으로 적은 이유가 여기에 있다.</p>
+    <div class="note tip"><span class="lbl">두 지표를 같이 본다</span><p>공식 고객지원 가이드는 <em>escalation efficiency</em>(올바르게 이관한 대화와, 이관했어야 했는데 놓친 대화의 비율을 추적, 95% 이상 목표)와 <em>deflection rate</em>(사람 개입 없이 처리한 비율, 문의 난이도에 따라 보통 70~80% 목표)를 함께 제시한다. 앞의 지표는 과소 이관을, 뒤의 지표는 과다 이관을 드러낸다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>규칙이 답하지 못하는 요청</h3><span class="unit-en">When the rulebook has no answer</span></div>
+    <p>정책 공백은 "어려운 케이스"와 다른 범주다. 기준은 요청의 난이도가 아니라 <strong>그 요청에 답하는 조항이 있느냐</strong>다. 공식 고객지원 가이드의 가드레일 예시에는 "권한이 없는 약속이나 합의를 하지 말 것"이 들어 있다. 조항이 없는 곳에서 에이전트가 내리는 결론은 무엇이든 새 규칙을 만드는 일이 된다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">침묵: 조항이 아예 없다</div><p>정책은 <em>"군 입대로 회선을 일시정지하면 기본료를 면제한다"</em>만 규정한다. 고객은 1년 해외 연수 기간의 면제를 요청했다. 연수 사유는 허용 조항에도 금지 조항에도 없다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">모호: 조항은 있는데 읽는 법이 둘</div><p>규정은 <em>"구매 후 14일 이내 반품 가능"</em>이라고만 하고, 기준일이 결제일인지 수령일인지 정하지 않았다. 고객의 해석이 그럴듯해도 에이전트가 한쪽을 골라 확정할 근거가 없다.</p></div>
+    </div>
+    <div class="code"><span class="c"># 침묵 사례에 대한 응답 예</span>
+현재 규정은 입대로 인한 일시정지만 기본료 면제 대상으로 정하고 있어요.
+해외 연수 사유는 담당 부서의 판단이 필요해서 지금 연결해 드리겠습니다.
+요청 내용과 해당 조항은 제가 정리해서 함께 전달할게요.</div>
+    <p class="cap">면제를 약속하지도, 불가를 통보하지도 않는다. 무엇이 규정에 있고 없는지만 알리고 넘긴다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>숫자로 자동화하고 싶은 유혹</h3><span class="unit-en">Tempting but misleading signals</span></div>
+    <p>감정 분석 점수나 "확신도 0.4" 같은 숫자에 임계값을 걸어 이관을 자동화하면 깔끔해 보인다. 하지만 시험 가이드는 둘 다 실제 케이스 복잡도의 대리지표로 믿을 수 없다고 본다. 재는 대상이 이관 판단과 다르기 때문이다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">감정 기반 이관</div><p>화난 고객의 문제가 로밍 요금 정정처럼 단순할 수 있고, 차분한 고객의 요청이 해외 연수 면제처럼 정책 공백일 수 있다. 감정은 고객 경험 지표로는 의미가 있지만(공식 가이드도 대화 시작과 끝의 감정을 재서 90% 대화에서 유지·개선을 목표로 한다) 복잡도의 척도는 아니다. 티켓 라우팅 가이드는 불만이 표현되면 Claude가 실제 의도보다 감정 대응을 앞세울 수 있다고 짚고, 감정을 언제 고려할지 프롬프트에 명시하라고 권한다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">자기보고 확신도</div><p>Claude Academy는 미세조정이 남기는 흔적 가운데 하나로 <strong>"표현된 확신과 실제 신뢰성 사이의 느슨한 보정"</strong>을 든다. 모델이 자신 있다고 말하면서 정책 공백을 놓칠 수 있고, 쉬운 케이스에 낮은 점수를 줄 수도 있다. 이런 점수를 쓰려면 라벨된 데이터로 보정해야 한다(5.5 레슨).</p></div>
+    </div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"감정 점수가 임계값 아래면 이관", "확신도 0.7 미만이면 이관" 같은 보기는 대개 오답이다</li>
+      <li>정답은 대화와 시스템에서 확인할 수 있는 사실에 기댄다: 고객의 요청 문구, 해당 정책 조항의 유무, 시도 이력</li>
+      <li>확신도는 보정을 거치면 검토 우선순위 같은 보조 신호로는 쓸 수 있다. 이관 트리거 자체로는 쓰지 않는다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>채널을 고른 고객, 해결을 원하는 고객</h3><span class="unit-en">Choosing a channel vs. wanting a fix</span></div>
+    <p>시험 가이드는 "고객이 명시적으로 요구하면 즉시 이관"과 "문제가 단순하면 해결을 제안"을 구분한다. 아래 두 대화로 비교한다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 명시적 요청인데 조사부터</div><div class="code">고객: 요금 문의인데요, 상담원 연결 부탁드립니다.
+에이전트: 연결 전에 몇 가지만 확인할게요.
+         휴대폰 번호 뒷자리를 알려 주시겠어요?</div><p>고객은 이미 채널을 골랐다. 본인 확인과 조회를 먼저 하는 것은 요청을 뒤로 미루는 것이다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 사람 요청 없음 + 정책 범위 안</div><div class="code">고객: 로밍 요금이 또 잘못 나왔네요. 이번이 세 번째예요.
+에이전트: 세 번이나 연락하시게 해서 죄송합니다.
+         이번 달 로밍 내역을 지금 확인해 잘못된 금액은
+         바로 정정해 드리겠습니다. 진행할까요?</div><p>감정을 인정하고 해결을 제안한다. 로밍 요금 정정은 정책 안의 일이다.</p></div>
+    </div>
+    <ol class="proc teal">
+      <li>고객이 사람을 요구했는가 → 그렇다면 <strong>즉시 이관</strong></li>
+      <li>아니라면, 요청이 정책으로 다뤄지는가 → 공백이거나 해석이 갈리면 이관</li>
+      <li>정책 범위 안이면 감정을 인정하고 해결을 제안해 진행한다</li>
+      <li>제안 뒤에도 고객이 사람을 원한다고 <strong>다시</strong> 말하면 이관한다. 시도를 다 했는데 진전이 없을 때도 이관한다</li>
+    </ol>
+    <p class="cap">이관할 때 넘기는 요약(고객 ID, 문의 내용, 이미 확인한 사실)은 1.4 레슨의 핸드오프 설계와 이어진다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>누구의 계정인가: 동명이인 조회</h3><span class="unit-en">Whose account is it?</span></div>
+    <p>이름 "김민수"로 고객을 조회했더니 계정이 세 개 나왔다. 가장 최근 가입자, 첫 번째 결과, 지역이 맞아 보이는 계정을 고르는 휴리스틱은 틀리면 남의 요금 내역을 보여 주거나 남의 회선을 바꾼다. 되돌리기 어렵고 개인정보까지 걸린 행동이다. 공식 프롬프팅 가이드도 되돌리기 어려운 행동은 진행 전에 사용자에게 확인하게 하라고 권한다.</p>
+    <ol class="proc">
+      <li><strong>도구로 먼저 좁힌다</strong> — 대화에 이미 나온 정보(전화번호, 주소)가 있으면 그것으로 다시 조회한다</li>
+      <li>그래도 여러 건이면 <strong>구별에 필요한 식별자 하나</strong>만 묻는다 (생년월일, 회선 번호 뒷자리 등)</li>
+      <li>정확히 한 건이 될 때까지 조회 외의 작업(정정·변경)은 보류한다</li>
+    </ol>
+    <div class="code"><span class="c"># 조회 도구가 돌려주는 결과 (예시)</span>
+{"status": "multiple_matches", "count": 3,
+ "distinguishing_fields": ["birth_date", "line_last4"]}
+
+<span class="c"># 프롬프트 규칙</span>
+&lt;identity_rule&gt;
+조회 결과가 2건 이상이면 어느 계정도 임의로 고르지 않는다.
+distinguishing_fields 중 하나를 고객에게 물어 1건으로 좁힌 뒤에만
+조회 외의 작업을 진행한다. 다른 계정의 정보는 보여 주지 않는다.
+&lt;/identity_rule&gt;</div>
+    <div class="note"><span class="lbl">참고 · Anthropic 앱의 명확화 원칙</span><p>Anthropic이 공개한 claude.ai 시스템 프롬프트(Claude Opus 4.7)는 도구로 모호함을 풀 수 있으면 사람에게 묻기 전에 도구를 먼저 쓰고, 빠진 정보 없이는 정말 답할 수 없을 때만 미리 묻게 한다. Claude Sonnet 5용 프롬프트는 질문이 필요해도 한 번에 하나로 제한한다. 이 프롬프트는 claude.ai와 모바일 앱용이며 API에는 적용되지 않지만, "도구 먼저, 꼭 필요할 때 질문 하나"라는 방향은 지원 에이전트 설계에도 그대로 쓸 만하다. 복수 매칭은 추가 정보 없이는 올바르게 행동할 수 없는 경우라서 질문하는 것이 맞다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>프롬프트 안에 판례집을 만든다</h3><span class="unit-en">A casebook in the prompt</span></div>
+    <p>"적절할 때 상담원에게 넘겨라" 한 줄로는 판단이 들쭉날쭉하다. 조건을 명시하고, 처리할 때와 넘길 때를 나란히 보여 주는 예시를 붙인다. 공식 프롬프팅 가이드는 예시(few-shot, 퓨샷)를 출력 형식·톤·구조를 조정하는 가장 믿을 만한 방법으로 꼽고, 3~5개를 실제 사용 사례와 가깝게(relevant), 엣지 케이스를 포함해 다양하게(diverse), <code>&lt;example&gt;</code> 태그로 구분해(structured) 넣으라고 한다. 고객지원 가이드도 4~5개의 좋은 상호작용 예시를 권한다.</p>
+    <div class="code">&lt;escalation_policy&gt;
+다음 중 하나에 해당하면 transfer_to_agent 도구를 호출한다.
+1. 고객이 상담원·사람 연결을 요청한다. 확인 질문이나 조회 없이 즉시.
+2. 요청을 다루는 정책 조항이 없거나, 조항 해석이 둘 이상 가능하다.
+3. 가능한 조회와 질문을 모두 했는데도 진행이 없다.
+다음은 이관 사유가 아니다: 화난 말투, 단계가 많지만 정책이 모두 다루는 문의.
+&lt;/escalation_policy&gt;
+
+&lt;examples&gt;
+&lt;example&gt;
+고객: 데이터 쉐어링 요금이 두 번 빠져나갔어요. 진짜 짜증나네요.
+판단: 사람 요청 없음. 중복 청구 환불은 정책 4.2 범위 → 사과 후 직접 처리
+&lt;/example&gt;
+&lt;example&gt;
+고객: 해외 연수 1년 동안 기본료 면제되죠?
+판단: 일시정지 면제는 입대 사유만 규정(정책 7.1) → 공백. 요약 첨부해 이관
+&lt;/example&gt;
+&lt;example&gt;
+고객: 됐고요, 그냥 사람이랑 통화하고 싶어요.
+판단: 명시적 요청 → 조회 없이 즉시 이관
+&lt;/example&gt;
+&lt;/examples&gt;</div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 기준과 예시를 "시스템 프롬프트"에 넣는다고 표현한다. 현재 공식 고객지원 가이드의 예제 코드는 역할(<code>IDENTITY</code>)만 <code>system</code>에 두고, 회사 정보·예시·가드레일은 첫 <code>user</code> 턴에 넣으며 "역할 지정을 빼면 프롬프트 본문은 첫 User 턴에 둘 때 가장 잘 동작한다"는 팁을 단다. 시험에서 핵심은 위치보다 <strong>명시적 기준 + 대비 예시</strong>다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>케이스가 복잡하면 사람에게 넘기는 편이 안전하다.</div><div class="f"><span class="k">사실</span>정책이 모든 단계를 다루면 에이전트가 처리한다. 과다 이관은 deflection rate를 떨어뜨리는 비용이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>고객이 상담원을 요청해도, 문제가 간단하면 먼저 풀어 주는 것이 고객에게 이득이다.</div><div class="f"><span class="k">사실</span>명시적 요청은 조사 없이 즉시 이관한다. "먼저 해결을 제안"은 사람을 요구하지 않은 불만 고객에게 해당하는 처리다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>정책에 없는 요청은 거절하면 된다.</div><div class="f"><span class="k">사실</span>금지 조항도 없는데 거절을 확정하는 것 역시 권한 밖 결정이다. 정책 공백은 이관 사유다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>이름이 같은 계정이 여럿이면 가장 최근에 활동한 계정을 고르면 된다.</div><div class="f"><span class="k">사실</span>추가 식별자를 요청해 한 건으로 좁힌다. 휴리스틱 선택은 틀렸을 때 남의 계정을 건드리게 된다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">트리거 판단</span></div>
+      <div class="qq"><span class="sc">고객이 단말 할부 잔액 일시불 정산, 요금제 변경, 변경 후 위약금 안내를 한 번에 요청했다. 세 작업 모두 정책 문서에 절차가 있다.</span>에이전트의 바람직한 처리는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>단계가 많아 실수 위험이 크므로 상담원에게 이관한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>첫 번째 작업만 처리하고 나머지는 상담원에게 넘긴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>정책이 모든 단계를 다루므로 직접 순서대로 처리한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>모델이 확신도를 출력하게 해 0.8 미만이면 이관한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>복잡도는 이관 트리거가 아니다. 각 단계가 정책 범위 안이면 에이전트가 처리한다. A·B는 과다 이관이고, D는 보정되지 않은 자기보고 확신도를 트리거로 쓰는 함정이다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">명시적 요청</span></div>
+      <div class="qq"><span class="sc">첫 메시지가 "지난달 청구서 건으로 상담원과 통화하고 싶어요."다. 에이전트가 보기엔 조회 한 번이면 끝날 문제다.</span>어떻게 해야 하는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>즉시 상담원에게 이관하고, 지금까지 파악한 문의 내용을 요약해 넘긴다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>상담원 대기 시간이 길다고 안내하고 챗봇으로 계속 진행하도록 권한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>본인 확인과 요금 조회를 먼저 마친 뒤 결과와 함께 이관한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>메시지의 감정 점수를 측정해 부정적일 때만 이관한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>명시적 요청은 조사를 먼저 하지 않고 바로 받아들인다. C는 친절해 보이지만 "조사 후 이관"이라 요청을 미룬다. B는 고객의 선택을 무시하고, D는 감정을 트리거로 쓰는 오류다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">불만 + 정책 범위</span></div>
+      <div class="qq"><span class="sc">"이번 달 요금이 왜 이렇게 많이 나왔어요? 어이가 없네요." 고객은 사람을 찾지 않았다. 확인해 보니 부가서비스 중복 가입 때문이고, 환불은 정책상 상담 채널에서 바로 처리할 수 있다.</span>바람직한 대응은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>부정적 감정이 감지됐으므로 즉시 상담원에게 이관한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>불편을 인정하고 원인과 환불 처리를 제안한다. 고객이 그래도 사람을 원하면 그때 이관한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>감정이 가라앉을 때까지 사과만 하고 처리는 다음 연락으로 미룬다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>환불은 민감한 작업이므로 정책과 관계없이 항상 이관한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>사람 요청이 없고 문제가 에이전트 권한 안에 있으면 감정을 인정하면서 해결을 제안한다. 고객이 사람을 다시 원하면 그때 이관한다. A는 감정 기반 이관, D는 정책이 허용한 처리까지 넘기는 과다 이관이다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">정책 모호성</span></div>
+      <div class="qq"><span class="sc">정책: "구매 후 14일 이내 단순 변심 반품 가능." 고객은 선물로 받은 단말을 결제일 기준 15일째에 반품하려 하며, 수령일 기준으로는 5일째라고 주장한다. 정책은 기준일을 정의하지 않는다.</span>에이전트가 할 일은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>결제일 기준 14일이 지났으므로 거절한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>고객 주장이 합리적이므로 수령일 기준으로 반품을 승인한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>반품 대신 다음 달 요금 할인을 약속해 마무리한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>기준일 해석이 갈리는 사안임을 요약해 담당자에게 이관한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>정책 해석이 둘 이상 가능하면 결론을 낼 권한이 에이전트에게 없다. A와 B는 각각 한쪽 해석을 골라 확정하는 권한 밖 결정이고, C는 승인받지 않은 약속이다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">복수 매칭</span></div>
+      <div class="qq">고객 조회 도구가 이름과 시·군·구가 같은 계정 2건을 반환했다. 에이전트가 다음에 할 일로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>최근에 로그인한 계정을 고른다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>두 계정의 요금 내역을 모두 보여 주고 고객이 고르게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>두 계정을 구별할 추가 식별자(생년월일, 회선 번호 뒷자리 등)를 요청한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>첫 번째 결과로 진행하고, 틀리면 고객이 바로잡게 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>복수 매칭은 추가 정보 없이는 올바르게 행동할 수 없는 상황이므로 구별용 식별자를 묻는다. A·D는 휴리스틱 선택이라 틀리면 남의 계정을 건드리고, B는 다른 사람의 정보를 노출한다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">프롬프트 설계</span></div>
+      <div class="qq">에이전트의 이관 판단이 대화마다 들쭉날쭉하다. 가장 효과적인 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>"적절한 경우 상담원에게 이관하라"는 문장을 IMPORTANT로 강조한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>이관 조건을 명시하고, 처리와 이관을 대비시키는 다양한 예시 3~5개를 &lt;example&gt; 태그로 추가한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>감정 분석 모델을 앞단에 붙여 점수로 이관을 결정한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>모든 응답에 확신도를 출력하게 하고 낮으면 이관한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>명시적 기준과 엣지 케이스를 담은 대비 예시가 판단을 가장 안정시킨다. A는 기준 자체가 모호한 채 강조만 더한다(Claude Code 문서도 강조를 쌓으면 규칙을 과하게 적용하기 쉽다고 본다). C·D는 신뢰할 수 없는 대리지표다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/about-claude/use-case-guides/customer-support-chat" target="_blank" rel="noopener">Customer support agent</a> · <a href="https://platform.claude.com/docs/en/about-claude/use-case-guides/ticket-routing" target="_blank" rel="noopener">Ticket routing</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices</a> · <a href="https://platform.claude.com/docs/en/release-notes/system-prompts/claude-opus-4-7" target="_blank" rel="noopener">Claude Opus 4.7 system prompts</a> · <a href="https://platform.claude.com/docs/en/release-notes/system-prompts/claude-sonnet-5" target="_blank" rel="noopener">Claude Sonnet 5 system prompts</a> · <a href="https://platform.claude.com/docs/en/release-notes/system-prompts/overview" target="_blank" rel="noopener">System prompts (overview)</a> · <a href="https://academy.claude.com/courses/ai-capabilities-and-limitations/how-ai-gets-its-character" target="_blank" rel="noopener">Claude Academy — How AI Gets Its Character</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

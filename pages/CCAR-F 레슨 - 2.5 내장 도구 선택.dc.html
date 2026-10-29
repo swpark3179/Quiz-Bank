@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 2 · 서브도메인 2.5</span></div>
+    <h1>내장 도구 고르기: Read·Write·Edit·Bash·Grep·Glob</h1>
+    <p class="sub">내용 검색 vs 경로 검색 · 전체 쓰기 vs 부분 수정 · Edit 실패 복구 · 점진적 탐색 · 재export 추적</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/grep-vs-glob-vs-read-searching-a-codebase-with-claude-code-s-built-in-tools" target="_blank" rel="noopener">CertSafari 2.5</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 · Tool Design &amp; MCP Integration (18%)</p>
+    <div class="secrow">
+      <span class="s">2.1 도구 설명</span><span class="s">2.2 오류 응답</span><span class="s">2.3 도구 범위</span><span class="s">2.4 MCP 서버</span><span class="s on">2.5 내장 도구</span>
+    </div>
+  </header>
+
+  <p class="lede">Claude Code의 내장 도구는 저마다 좁은 질문 하나에 답한다. 시험은 "이 상황에 맞는 도구는?", "Edit가 실패하면?", "낯선 코드베이스를 어떤 순서로 파악하나?"를 시나리오로 묻는다. <strong>먼저 찾기 도구로 범위를 좁히고, 가리킨 곳만 읽고, 바꿀 부분만 고친다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>Grep = 파일 <strong>내용</strong> 검색(함수명·오류 메시지·import 문), Glob = 파일 <strong>경로</strong> 패턴 매칭(<code>**/*.test.tsx</code>)</li>
+      <li>Read·Write = 파일 전체 단위, Edit = 고유한 문자열을 찾아 바꾸는 부분 수정</li>
+      <li>Edit가 "고유하지 않음"으로 실패할 때의 복구 순서와 Read + Write 대안</li>
+      <li>Grep으로 진입점을 찾고 Read로 import를 따라가는 점진적 탐색</li>
+      <li>래퍼·배럴 모듈을 거치는 사용처는 export 이름을 먼저 모은 뒤 이름마다 검색</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>질문의 종류로 도구를 고른다</h3><span class="unit-en">One tool, one kind of question</span></div>
+    <table class="t">
+      <thead><tr><th style="width:34%">지금 던지는 질문</th><th style="width:12%">도구</th><th>예</th></tr></thead>
+      <tbody>
+        <tr><td>이 문자열·패턴이 <strong>어느 파일 안에</strong> 있나?</td><td><code>Grep</code></td><td>오류 코드 <code>E_QUOTA_EXCEEDED</code>를 던지는 곳, <code>from billing.client import</code> 하는 파일</td></tr>
+        <tr><td>이런 <strong>이름·확장자의 파일</strong>이 어디 있나?</td><td><code>Glob</code></td><td><code>db/migrations/*.sql</code>, <code>src/**/*.stories.tsx</code></td></tr>
+        <tr><td>이 파일을 처음부터 끝까지 이해해야 한다</td><td><code>Read</code></td><td>검색으로 찾아낸 핸들러 파일 한 개</td></tr>
+        <tr><td>새 파일을 만들거나 내용을 통째로 바꾼다</td><td><code>Write</code></td><td>새 테스트 파일, 전면 재작성한 설정 파일</td></tr>
+        <tr><td>기존 파일의 <strong>일부만</strong> 바꾼다</td><td><code>Edit</code></td><td>함수 하나의 조건문 수정</td></tr>
+        <tr><td>명령을 실행한다</td><td><code>Bash</code></td><td>테스트·빌드·git, 디렉터리 목록(<code>ls</code>) — Read는 디렉터리를 읽지 못한다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 Grep·Glob을 항상 있는 도구로 다룬다. 현재 문서에 따르면 Windows에서는 기본 도구지만 <strong>macOS·Linux·WSL에서는 Grep·Glob이 기본 도구 세트에서 빠지고</strong>, Claude는 Bash 안의 <code>find</code>·<code>grep</code>(내장 <code>bfs</code>·<code>ugrep</code>)으로 검색한다. 이 검색은 hook과 권한 규칙에 <code>Bash</code> 호출로 보인다. <code>--tools</code>·<code>--allowedTools</code>에 이름을 적거나, Bash를 제거하거나, 서브에이전트 <code>tools</code>에 Glob·Grep을 넣고 Bash를 빼면 돌아온다. "내용 검색 vs 경로 검색"이라는 판단 기준 자체는 그대로다.</p></div>
+    <h4>Bash에서 기억할 동작</h4>
+    <ul>
+      <li>명령마다 별도 프로세스에서 실행된다. 메인 세션에서 프로젝트 디렉터리 안으로 한 <code>cd</code>는 이어지지만(서브에이전트는 이어지지 않음), <code>export</code>한 환경 변수는 다음 명령에 남지 않는다.</li>
+      <li>기본 타임아웃은 2분, 상한은 10분이다(<code>BASH_DEFAULT_TIMEOUT_MS</code>, <code>BASH_MAX_TIMEOUT_MS</code>).</li>
+      <li>파이프·리다이렉트 없이 파일 하나에 실행한 <code>cat</code>, <code>head</code>, <code>sed -n 'X,Yp'</code>, <code>grep</code> 등은 Edit·Write 전의 "읽기"로 인정된다.</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>Grep과 Glob, 함정이 되는 세부 동작</h3><span class="unit-en">Content search vs path matching</span></div>
+    <table class="t">
+      <thead><tr><th style="width:22%">항목</th><th style="width:39%">Grep</th><th>Glob</th></tr></thead>
+      <tbody>
+        <tr><td>보는 대상</td><td>파일 안의 줄</td><td>파일 경로(이름)</td></tr>
+        <tr><td>문법</td><td>ripgrep 정규식 — 메타문자는 이스케이프 (<code>retry\(</code>)</td><td><code>**</code>(하위 전체), <code>*</code>, <code>{json,yaml}</code></td></tr>
+        <tr><td>결과</td><td><code>files_with_matches</code>(기본·경로만) · <code>content</code>(줄·줄 번호) · <code>count</code>(파일별 개수)</td><td>수정 시각 순 정렬, <strong>최대 100개</strong> — 넘으면 잘림 표시</td></tr>
+        <tr><td>범위 좁히기</td><td><code>glob</code>(<code>**/*.tsx</code>) · <code>type</code>(<code>py</code>) 파라미터, 여러 줄은 <code>multiline: true</code></td><td>패턴 자체를 구체적으로</td></tr>
+        <tr><td><code>.gitignore</code></td><td><strong>따른다</strong> — 무시된 파일은 건너뜀</td><td>기본적으로 <strong>따르지 않는다</strong> — 무시된 파일도 찾음</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험에서 자주 엇갈리는 판단</span><ul><li>"함수 <code>chargeCard</code>를 호출하는 모든 곳" → 내용이므로 <strong>Grep</strong>. Glob으로는 파일 이름에 <code>chargeCard</code>가 들어간 파일만 나온다.</li><li>"모든 Storybook 파일" → 이름 규칙이므로 <strong>Glob</strong> <code>**/*.stories.tsx</code>.</li><li>"이 파일 형식 안에서만 내용 검색" → Grep + <code>glob</code>/<code>type</code> 필터. 두 도구를 순서대로 부를 필요가 없다.</li><li>Grep으로 안 나오던 <code>dist/</code> 파일이 Glob에서는 나온다 → <code>.gitignore</code> 처리 차이 때문이다.</li></ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>Read·Write·Edit: 전체냐 부분이냐</h3><span class="unit-en">Full-file vs targeted changes</span></div>
+    <div class="tri">
+      <div class="pane" style="border-top:3px solid var(--blue)"><div class="pt">Read</div><div class="pd">줄 번호가 붙은 내용을 돌려준다. 이미지·PDF·노트북도 읽는다. 한 번에 기본 25,000토큰, 256KB를 넘는 파일 전체는 거부되어 <code>offset</code>·<code>limit</code>로 나눠 읽는다.</div></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt">Write</div><div class="pd">새 파일을 만들거나 기존 파일을 <strong>전체 내용으로 덮어쓴다</strong>. 덧붙이기·병합은 없다. 부분 변경에는 Edit를 쓴다.</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt">Edit</div><div class="pd"><code>old_string</code>을 <code>new_string</code>으로 바꾸는 <strong>정확한 문자열 치환</strong>. 정규식·유사 매칭이 아니다.</div></div>
+    </div>
+    <h4>Edit가 통과해야 하는 세 가지 검사</h4>
+    <ol class="proc">
+      <li><strong>먼저 읽기</strong>: 이 대화에서 파일을 읽었어야 한다(<code>PARTIAL view</code>로 잘린 읽기는 불인정). Claude Opus 4.6·Haiku 4.5와 그 이전 모델은 항상 요구하고, 더 새로운 모델은 권한 프롬프트 없이 읽을 수 있는 파일이고 Read 도구가 있으면 생략할 수 있다.</li>
+      <li><strong>일치</strong>: <code>old_string</code>이 공백·들여쓰기까지 그대로 있어야 한다. 한 글자 차이로도 실패한다.</li>
+      <li><strong>고유성</strong>: <code>old_string</code>은 파일에 정확히 한 번만 나와야 한다. 여러 번이면 앞뒤 문맥을 더 넣어 하나로 특정하거나, 전부 바꿀 의도라면 <code>replace_all: true</code>를 준다.</li>
+    </ol>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 앵커가 세 번 나온다</div><div class="code"><span class="c"># deploy.yaml 안에 [dev] [staging] [prod] 섹션마다 같은 줄</span>
+old_string: "  replicas: 2"
+new_string: "  replicas: 4"</div><p>고유하지 않아 실패한다. <code>replace_all</code>을 주면 세 섹션이 모두 바뀐다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 섹션 머리를 앵커에 포함</div><div class="code">old_string: "staging:\n  image: api:1.8\n  replicas: 2"
+new_string: "staging:\n  image: api:1.8\n  replicas: 4"</div><p>staging 블록 하나로 특정된다.</p></div>
+    </div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>가이드는 "Edit가 고유하지 않은 매칭으로 실패하면 Read + Write로 대체"를 정답 패턴으로 든다. 현재 도구 문서가 먼저 설명하는 복구는 <strong>앵커를 넓히거나 <code>replace_all</code></strong>을 쓰는 것이다. Read + Write는 고유한 앵커를 만들 수 없거나 파일 대부분을 다시 써야 할 때의 확실한 대안으로 이해하면 된다. Write로 기존 파일을 덮어쓸 때도 먼저 읽기 규칙이 적용되며, 이전 내용을 읽지 않고 기억으로 다시 쓰면 다른 변경을 잃을 수 있다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>점진적 탐색: 찾고, 읽고, 따라간다</h3><span class="unit-en">Just-in-time context</span></div>
+    <p>Anthropic의 컨텍스트 엔지니어링 글은 에이전트가 데이터를 미리 다 싣지 않고, 파일 경로 같은 <strong>가벼운 식별자</strong>를 들고 있다가 필요할 때 도구로 불러오는 "just in time" 방식을 설명한다. Claude Code는 CLAUDE.md는 처음부터 싣고, glob·grep 같은 기본 동작으로 파일을 그때그때 찾아 읽는 혼합형으로 소개된다. 탐색할수록 파일 크기·이름 규칙·수정 시각 같은 정보가 다음 판단의 단서가 된다(점진적 공개, progressive disclosure).</p>
+    <h4>예: "환불 승인 후 포인트가 두 번 적립된다"</h4>
+    <ol class="proc teal">
+      <li><strong>Grep</strong>으로 진입점을 찾는다: 라우트 문자열 <code>"/refunds/approve"</code> 또는 로그 메시지 <code>"points credited"</code></li>
+      <li>찾은 핸들러 파일 하나만 <strong>Read</strong>한다</li>
+      <li>핸들러가 import하는 <code>rewards/service</code>를 <strong>Read</strong>해 흐름을 따라간다</li>
+      <li>적립 함수 <code>creditPoints</code>를 부르는 다른 곳을 <strong>Grep</strong>(<code>content</code> 모드)으로 찾는다 — 두 번째 호출 지점이 여기서 드러난다</li>
+      <li>관련 테스트만 <strong>Glob</strong>(<code>**/rewards/**/*.test.ts</code>)으로 찾아 읽고, 수정은 <strong>Edit</strong>로 한다</li>
+    </ol>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 전부 먼저 읽기</div><div class="code">src/ 아래 파일 300개를 차례로 Read</div><p>컨텍스트가 무관한 코드로 차고, 정작 중요한 연결을 놓치기 쉽다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 검색으로 좁힌 뒤 읽기</div><div class="code">Grep → Read(1개) → import 따라 Read
+→ Grep(호출부) → Edit</div><p>읽는 파일 수가 질문에 비례한다.</p></div>
+    </div>
+    <p class="cap">타입 언어라면 code intelligence 플러그인을 설치해 LSP 도구의 정의 이동·참조 찾기를 쓸 수 있다. 공식 문서는 심볼 조회가 넓은 파일 읽기를 대신해 컨텍스트 사용을 줄일 수 있다고 본다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>래퍼 모듈 너머로 사용처 추적하기</h3><span class="unit-en">Trace through re-exports</span></div>
+    <p>함수가 배럴(<code>index.ts</code>)이나 래퍼 모듈에서 <strong>다른 이름으로 재export</strong>되면, 원래 이름 하나로 Grep해서는 호출부가 빠진다. 먼저 래퍼가 내보내는 이름을 모두 확인하고, 그 이름마다 검색한다.</p>
+    <div class="code"><span class="c">// packages/money/src/index.ts  ← 1단계: Read로 export 이름 목록 확보</span>
+export { toMinorUnits } from "./convert";
+export { toMinorUnits as toCents } from "./convert";   <span class="c">// 별칭</span>
+export { default as Money } from "./money";
+
+<span class="c"># 2단계: 이름마다 Grep (content 모드, TS 파일로 한정)</span>
+pattern: "\btoMinorUnits\b"   glob: "**/*.{ts,tsx}"
+pattern: "\btoCents\b"        glob: "**/*.{ts,tsx}"
+pattern: "from \"@acme/money\""   <span class="c"># 패키지째 가져와 Money.xxx로 쓰는 곳</span></div>
+    <div class="axis"><span class="lbl">추적 순서</span><ul><li>정의 파일보다 <strong>공개 경계(배럴·래퍼)</strong>를 먼저 읽는다 — 외부에서 실제로 쓰는 이름이 거기 있다</li><li>별칭·default export·네임스페이스 import(<code>import * as m</code>)까지 이름 목록에 넣는다</li><li>각 이름을 Grep한 결과 중 필요한 파일만 Read한다. 처음부터 패키지 전체를 읽지 않는다</li></ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>함수가 쓰이는 파일을 찾으려면 Glob에 함수 이름을 넣으면 된다.</div><div class="f"><span class="k">사실</span>Glob은 경로만 본다. 파일 안의 내용은 Grep(또는 Bash의 grep)으로 찾는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Edit는 비슷한 문자열이면 알아서 맞춰 준다.</div><div class="f"><span class="k">사실</span>정확히 일치하고 한 번만 나와야 한다. 정규식·유사 매칭이 없다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Grep과 Glob은 둘 다 <code>.gitignore</code>를 따른다.</div><div class="f"><span class="k">사실</span>Grep은 무시된 파일을 건너뛰지만 Glob은 기본적으로 포함한다(<code>CLAUDE_CODE_GLOB_NO_IGNORE=false</code>로 바꿀 수 있다).</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Write로 기존 파일 끝에 몇 줄을 덧붙일 수 있다.</div><div class="f"><span class="k">사실</span>Write는 전체 내용으로 덮어쓴다. 부분 변경은 Edit다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">내용 검색</span></div>
+      <div class="qq"><span class="sc">운영 로그에 <code>PAYMENT_GATEWAY_TIMEOUT</code>이 찍혔다. 이 코드를 만드는 곳을 저장소 전체에서 찾아야 한다.</span>알맞은 도구는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Glob <code>**/*PAYMENT_GATEWAY_TIMEOUT*</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>모든 소스 파일을 Read한 뒤 눈으로 찾는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>Grep으로 <code>PAYMENT_GATEWAY_TIMEOUT</code>을 검색한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Edit로 해당 문자열을 다른 값으로 바꿔 본다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>파일 안의 문자열을 찾는 것은 내용 검색이다. A는 파일 이름에 그 문자열이 들어간 경우만 찾는다. B는 컨텍스트를 낭비한다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">경로 검색</span></div>
+      <div class="qq">여러 패키지에 흩어진 <code>*.stories.tsx</code> 파일 목록을 얻으려 한다. 가장 직접적인 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Glob <code>**/*.stories.tsx</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Grep <code>stories</code>를 <code>content</code> 모드로</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>Read로 각 패키지 디렉터리를 연다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Write로 목록 파일을 만든다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>이름 규칙으로 파일을 찾는 것은 Glob의 일이다. B는 내용에 "stories"가 들어간 줄을 주므로 목적과 다르고, C의 Read는 디렉터리를 읽지 못한다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">Edit 실패</span></div>
+      <div class="qq"><span class="sc">설정 파일에서 staging 섹션의 <code>replicas: 2</code>만 4로 바꾸려는데, Edit가 "old_string이 3번 나온다"며 실패했다.</span>다음 조치로 가장 알맞은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>replace_all: true</code>로 다시 시도한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>파일을 읽지 않고 기억나는 내용으로 Write해 덮어쓴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>Glob으로 같은 이름의 다른 파일을 찾는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>staging:</code> 머리 줄까지 포함하도록 <code>old_string</code>을 넓혀 한 곳으로 특정한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>고유성 검사를 통과하도록 문맥을 넓히는 것이 기본 복구다. A는 세 섹션을 모두 바꿔 의도와 다르다. B는 다른 변경을 잃을 위험이 있고, 기존 파일을 덮어쓸 때도 먼저 읽기 규칙이 적용된다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">Read + Write</span></div>
+      <div class="qq">Edit 대신 Read 후 Write로 파일을 바꾸는 것이 합리적인 경우는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>함수 하나의 반환값만 바꿀 때</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>반복되는 블록이 많아 고유한 앵커를 만들 수 없거나, 파일 대부분을 재구성할 때</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>파일 끝에 한 줄을 덧붙일 때</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>오타 하나를 고칠 때</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>Read로 현재 내용을 모두 확보한 뒤 Write로 통째로 쓰는 방법은 부분 치환이 어려울 때 확실하다. A·D처럼 범위가 분명한 수정은 Edit가 맞고, C도 Write는 덧붙이기가 아니라 전체 덮어쓰기이므로 Edit가 더 알맞다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">재export 추적</span></div>
+      <div class="qq"><span class="sc"><code>toMinorUnits</code>의 시그니처를 바꾸려 한다. 이 함수는 <code>packages/money/src/index.ts</code>에서 별칭으로도 재export된다. Grep <code>toMinorUnits</code> 결과가 예상보다 적다.</span>누락 없이 호출부를 찾는 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>index.ts를 읽어 별칭을 포함한 export 이름을 모두 모은 뒤 이름마다 Grep한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Glob <code>**/*toMinorUnits*</code>로 파일을 찾는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>packages/ 아래 모든 파일을 Read한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Grep 결과가 적으므로 영향 범위가 작다고 판단한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>외부 코드는 래퍼가 내보낸 이름(별칭 포함)으로 쓴다. 공개 경계에서 이름 목록을 얻고 각각 검색해야 누락이 없다. D는 별칭 사용처를 놓친 채 결론을 내리는 대표 오답이다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">.gitignore</span></div>
+      <div class="qq"><span class="sc">빌드 산출물 폴더 <code>dist/</code>는 <code>.gitignore</code>에 있다. Grep으로 검색할 때는 <code>dist/</code> 파일이 나오지 않았는데, Glob <code>**/*.js</code>에는 나왔다.</span>이유는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>Glob은 수정 시각이 최근인 파일만 돌려준다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>Grep은 JavaScript 파일을 검색하지 않는다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>Grep은 <code>.gitignore</code>를 따르고, Glob은 기본적으로 따르지 않는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>dist/</code>에 대한 권한이 Grep에만 막혀 있다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>두 도구의 <code>.gitignore</code> 처리가 다르다. Glob 결과는 수정 시각 순으로 <em>정렬</em>될 뿐 최근 파일로 거르지 않으며(A), 최대 100개에서 잘린다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/tools-reference" target="_blank" rel="noopener">Tools reference</a> · <a href="https://code.claude.com/docs/en/how-claude-code-works" target="_blank" rel="noopener">How Claude Code works</a> · <a href="https://code.claude.com/docs/en/common-workflows" target="_blank" rel="noopener">Common workflows</a> · <a href="https://code.claude.com/docs/en/features-overview" target="_blank" rel="noopener">Extend Claude Code</a> · <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

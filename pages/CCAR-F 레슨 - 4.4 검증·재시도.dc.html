@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 4 · 서브도메인 4.4</span></div>
+    <h1>검증·재시도·피드백 루프</h1>
+    <p class="sub">의미 검증 · retry-with-error-feedback · 재시도의 한계 · calculated vs stated · conflict_detected · detected_pattern</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/retry-with-error-feedback-in-extraction-pipelines" target="_blank" rel="noopener">CertSafari 4.4</a> &nbsp;|&nbsp; 출제 도메인: 도메인 4 · Prompt Engineering &amp; Structured Output (20%)</p>
+    <div class="secrow">
+      <span class="s">4.1 명시적 기준</span><span class="s">4.2 퓨샷</span><span class="s">4.3 구조화 출력</span><span class="s on">4.4 검증·재시도</span><span class="s">4.5 배치 처리</span><span class="s">4.6 다중 리뷰</span>
+    </div>
+  </header>
+
+  <p class="lede">structured outputs를 켜면 JSON이 깨지는 문제는 사라지지만, 숫자가 맞지 않거나 값이 엉뚱한 칸에 들어가는 문제는 남는다. 이 서브도메인은 그 두 번째 종류의 오류를 앱이 검증하고, 구체적인 오류 내용을 되먹여 재시도하고, 재시도로는 고칠 수 없는 경우를 가려내는 설계를 다룬다. <strong>재시도는 형식과 해석의 실수를 고칠 수 있지만, 원문에 없는 정보를 만들어 내지는 못한다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>스키마 문법 오류(제약 디코딩이 제거)와 의미 검증 오류(앱이 잡아야 함)를 구분한다</li>
+      <li>재시도 요청에 원문 · 실패한 추출 결과 · 구체적인 검증 오류를 함께 넣어 자기 교정을 유도한다</li>
+      <li>재시도가 통하는 경우(형식 불일치·구조 오류)와 통하지 않는 경우(정보 부재·제공되지 않은 외부 문서)를 판별한다</li>
+      <li><code>calculated_total</code>과 <code>stated_total</code>을 따로 받고 <code>conflict_detected</code>로 원문 모순을 표시하는 자기 점검 필드를 설계한다</li>
+      <li><code>detected_pattern</code> 필드로 개발자가 기각한 지적을 패턴별로 집계해 프롬프트를 개선한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>오류의 세 층</h3><span class="unit-en">Syntax · semantics · absence</span></div>
+    <p>예시로 인테리어 시공 견적서에서 항목별 금액, 공급가액, 부가세, 총액, 착공일·완공일을 뽑는 파이프라인을 생각한다. 여기서 나는 오류는 세 층으로 나뉘고, 층마다 막는 주체와 처방이 다르다.</p>
+    <table class="t">
+      <thead><tr><th style="width:15%">층</th><th style="width:31%">예</th><th style="width:24%">막는 주체</th><th>재시도 효과</th></tr></thead>
+      <tbody>
+        <tr><td>스키마(문법)</td><td>닫히지 않은 괄호, 금액이 <code>"1,200,000"</code> 문자열, 필수 키 누락</td><td><code>strict: true</code> / <code>output_config.format</code>의 제약 디코딩</td><td>문서는 스키마 위반에 대해서는 재시도가 필요 없다고 설명한다</td></tr>
+        <tr><td>의미</td><td>항목 합 ≠ 공급가액, 착공일이 완공일보다 늦음, 부가세를 공급가액 칸에 기록</td><td>앱의 검증 코드</td><td>무엇이 틀렸는지 구체적으로 알려 주면 대개 고쳐진다</td></tr>
+        <tr><td>정보 부재</td><td>완공일이 원문에 없음, "세부 내역은 별첨 참조"인데 별첨이 입력에 없음</td><td>없음 — 원문에 답이 없다</td><td>효과 없음. 오히려 지어낼 위험이 커진다</td></tr>
+      </tbody>
+    </table>
+    <p>제약 디코딩에도 예외는 있다. <code>stop_reason</code>이 <code>"max_tokens"</code>면 출력이 잘렸을 수 있고, Sonnet 5.5 프롬프트 가이드는 이런 응답을 JSON이 유효해 보여도 실패로 보고 재시도하라고 권한다. 이것은 <code>max_tokens</code>를 늘리면 해결되는 구조적 실패다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>검증할 거리를 스키마에 심기</h3><span class="unit-en">Self-check fields</span></div>
+    <p>의미 검증을 쉽게 하려면 모델이 "적힌 값"과 "직접 계산한 값"을 따로 쓰게 한다. 둘이 다르면 추출 실수인지, 견적서 작성자의 계산 실수(원문 자체의 모순)인지 가를 단서가 생긴다.</p>
+    <div class="code">"line_items":          [{"name": "string", "amount": "integer"}],
+"stated_subtotal":     "integer",         <span class="c"># 견적서에 적힌 공급가액</span>
+"calculated_subtotal": "integer",         <span class="c"># line_items를 직접 더한 값</span>
+"conflict_detected":   "boolean",         <span class="c"># 원문 숫자끼리 서로 맞지 않으면 true</span>
+"conflict_note":       ["string", "null"],
+"start_date":          ["string", "null"],
+"end_date":            ["string", "null"]</div>
+    <p>앱은 모델이 쓴 <code>calculated_subtotal</code>도 그대로 믿지 않고 다시 계산한다. 모델의 계산값은 검증의 대상이지 정답이 아니다.</p>
+    <div class="code">def validate(q):
+    errs = []
+    s = sum(item["amount"] for item in q["line_items"])
+    if s != q["calculated_subtotal"]:
+        errs.append(f"calculated_subtotal은 {q['calculated_subtotal']}인데 "
+                    f"line_items 합은 {s}다. 항목 금액을 원문에서 다시 확인하라.")
+    if s != q["stated_subtotal"] and not q["conflict_detected"]:
+        errs.append("원문 공급가액과 항목 합이 다른데 conflict_detected가 false다.")
+    if q["start_date"] and q["end_date"] and q["start_date"] &gt; q["end_date"]:
+        errs.append("start_date가 end_date보다 늦다. 두 날짜가 뒤바뀌었는지 확인하라.")
+    return errs</div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>재시도 요청에 담을 것</h3><span class="unit-en">Retry with error feedback</span></div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">1 · 추출</div><div class="ft">원문 → 구조화 결과</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">2 · 검증</div><div class="ft">앱 코드가 오류 목록 생성</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">3 · 재요청</div><div class="ft">원문 + 직전 결과 + 구체적 오류</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">4 · 상한</div><div class="ft">N회 실패 시 사람 검토 큐</div></div>
+    </div>
+    <p>재요청에는 세 가지가 함께 들어가야 한다. <strong>원문</strong>(다시 대조할 근거), <strong>실패한 추출 결과</strong>(무엇을 고칠지), <strong>구체적인 오류</strong>(어느 필드가 어떤 관계를 어겼는지). "다시 해 줘"만 보내면 같은 실수가 반복되기 쉽다. 추출을 도구 호출로 받았다면 직전 <code>tool_use</code>에 <code>is_error: true</code>인 <code>tool_result</code>로 오류를 돌려주는 방식이 자연스럽다. 문서는 도구 입력이 잘못됐을 때 Claude가 교정하며 2~3회 다시 시도한다고 설명한다.</p>
+    <div class="code">messages = [
+    {"role": "user", "content": f"&lt;document&gt;{quote_text}&lt;/document&gt;\n이 견적서를 record_quote로 기록하라."},
+    {"role": "assistant", "content": first.content},           <span class="c"># 실패한 tool_use 포함</span>
+    {"role": "user", "content": [{
+        "type": "tool_result", "tool_use_id": tool_use.id, "is_error": True,
+        "content": "검증 실패:\n" + "\n".join(errs) +
+                   "\n원문에서 해당 필드만 다시 확인해 record_quote를 다시 호출하라. "
+                   "원문에 없는 값은 null로 둔다."}]}
+]</div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 "검증 오류를 붙여 재시도"를 직접 구현할 패턴으로 설명한다. 현재 문서에서 스키마 수준의 재시도는 플랫폼이 상당 부분 맡는다. API의 structured outputs는 스키마 위반 자체를 막고, Agent SDK에서 <code>outputFormat</code>/<code>output_format</code>을 쓰면 내부 <code>StructuredOutput</code> 도구가 스키마 불일치를 <code>is_error</code>로 돌려받아 다시 호출하며, 끝내 실패하면 결과 subtype이 <code>error_max_structured_output_retries</code>가 된다. 직접 짜는 재시도 루프는 스키마 밖의 의미 검증에 집중하면 된다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>재시도가 소용없는 경우 가려내기</h3><span class="unit-en">Is the answer in the input?</span></div>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">재시도로 고쳐지는 것</div><ul>
+        <li>날짜를 <code>2026.3.5</code>처럼 써서 YYYY-MM-DD 규칙에 어긋남</li>
+        <li>천 원 단위 표기를 원 단위로 바꾸지 않음</li>
+        <li>공급가액과 부가세를 서로 뒤바꿔 기록</li>
+        <li>항목 합계를 잘못 더함</li>
+        <li><code>max_tokens</code>에 걸려 잘린 출력 (한도를 늘려 재요청)</li>
+      </ul></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">재시도로 안 고쳐지는 것</div><ul>
+        <li>완공일이 견적서 어디에도 없음</li>
+        <li>"상세 공정은 별첨 공정표 참조"인데 공정표가 입력에 없음</li>
+        <li>스캔 상태가 나빠 금액 칸이 판독 불가</li>
+        <li>작성자가 원문에서 합계를 잘못 씀 (고칠 것은 추출이 아니라 원문)</li>
+      </ul></div>
+    </div>
+    <p>오른쪽 경우에 "end_date는 필수다, 다시 채워라"를 반복하면 모델은 그럴듯한 날짜를 지어낼 압박만 받는다. 대신 값을 <code>null</code>로 두고 사유를 남긴다. 예를 들어 <code>missing_reason</code>을 <code>not_in_document</code> · <code>in_referenced_attachment</code> · <code>illegible</code> 중 하나로 받는다. 그 뒤 처방은 사유에 따라 갈린다. 별첨을 확보해 다시 돌리거나, 사람 검토로 보내거나, 원문 모순이면 <code>conflict_detected</code>로 표시해 넘긴다. 공식 문서도 환각을 줄이는 첫 방법으로 모르면 모른다고 말할 수 있게 허용하라고 권한다.</p>
+    <div class="axis"><span class="lbl">재시도 전에 던질 질문</span><ul>
+      <li>정답이 <strong>입력 안에</strong> 있는가? 없으면 재시도가 아니라 입력을 보강하거나 사람에게 넘긴다</li>
+      <li>오류 메시지가 <strong>필드와 관계를 짚는가</strong>? "틀렸다"가 아니라 "A는 x인데 B의 합은 y"</li>
+      <li>재시도 <strong>상한</strong>이 있는가? 같은 오류가 반복되면 프롬프트·스키마 결함을 의심한다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>피드백 루프: 기각 패턴에서 배우기</h3><span class="unit-en">detected_pattern</span></div>
+    <p>추출만이 아니라 코드 리뷰 봇에도 같은 원리가 적용된다. 각 지적에 <code>detected_pattern</code>(어떤 코드 구조를 보고 지적했는지)을 붙여 두면, 개발자가 지적을 기각할 때 그 이유를 패턴 단위로 모을 수 있다. 패턴 이름이 없으면 기각 로그는 "봇이 시끄럽다"는 인상만 남긴다.</p>
+    <div class="code">{"file": "api/orders.py", "line": 142, "severity": "medium",
+ "detected_pattern": "broad-except",
+ "issue": "except Exception이 결제 게이트웨이 타임아웃까지 삼킨다",
+ "suggestion": "TimeoutError를 분리해 재시도 경로로 보낸다"}</div>
+    <table class="t">
+      <caption>한 달 집계 예시 (가상의 수치)</caption>
+      <thead><tr><th style="width:26%">detected_pattern</th><th style="width:12%">게시</th><th style="width:12%">기각</th><th>조치</th></tr></thead>
+      <tbody>
+        <tr><td><code>broad-except</code></td><td>120</td><td>78</td><td>로그 후 다시 raise하는 경우는 제외하도록 기준을 구체화</td></tr>
+        <tr><td><code>missing-null-check</code></td><td>95</td><td>9</td><td>유지</td></tr>
+        <tr><td><code>magic-number</code></td><td>64</td><td>55</td><td>기준을 다시 쓸 때까지 일시 중지 (4.1과 연결)</td></tr>
+      </tbody>
+    </table>
+    <p>생성과 평가를 나눠 돌리는 구조는 Anthropic이 evaluator-optimizer 워크플로로 설명하는 패턴과 같다. 한 호출이 결과를 만들고 다른 호출이 명확한 기준으로 평가해 피드백을 돌려준다. Managed Agents의 outcome 기능도 별도 컨텍스트의 grader가 루브릭으로 산출물을 채점해 에이전트에게 되돌리며, 루브릭은 "데이터가 좋아 보인다"가 아니라 채점 가능한 명시적 기준으로 쓰라고 권한다.</p>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>structured outputs를 켰으니 검증 코드는 필요 없다.</div><div class="f"><span class="k">사실</span>제약 디코딩이 없애는 것은 문법·타입 오류다. 합계 불일치, 필드 뒤바뀜, 날짜 역전 같은 의미 오류는 앱이 잡아야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>검증에 실패하면 같은 요청을 그대로 다시 보내면 된다.</div><div class="f"><span class="k">사실</span>원문 · 실패한 결과 · 구체적 오류를 함께 줘야 모델이 무엇을 고칠지 안다. 같은 입력은 같은 실수를 부르기 쉽다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>필수 정보가 비어 있으면 채워질 때까지 재시도한다.</div><div class="f"><span class="k">사실</span>원문에 없는 정보는 재시도로 생기지 않는다. null + 사유로 남기고 입력 보강이나 사람 검토로 넘긴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>모델이 <code>calculated_total</code>을 써 주니 앱에서 다시 계산할 필요는 없다.</div><div class="f"><span class="k">사실</span>모델의 계산값도 검증 대상이다. 앱이 독립적으로 계산해 대조한다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">재시도 구성</span></div>
+      <div class="qq"><span class="sc">견적서 추출에 structured outputs를 쓰고 있다. 일부 결과에서 항목 금액의 합(4,580,000)과 <code>calculated_subtotal</code>(4,850,000)이 다르다.</span>재시도 요청 설계로 가장 효과적인 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>같은 요청을 그대로 다시 보낸다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>원문, 직전 추출 결과, "항목 합 4,580,000 ≠ calculated_subtotal 4,850,000"이라는 구체적 오류를 함께 보낸다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트에 "정확하게 계산하라"를 굵게 추가하고 처음부터 다시 추출한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>오류 내용 없이 다른 모델로 같은 요청을 보낸다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>재시도의 효과는 무엇이 어떻게 틀렸는지를 모델이 아는 데서 나온다. A·D는 오류 정보가 없어 같은 실수를 반복할 수 있고, C의 강조 문구는 어느 필드를 고칠지 알려 주지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">재시도의 한계</span></div>
+      <div class="qq"><span class="sc">견적서에는 완공일이 없고 "공정 일정은 별첨 공정표 참조"라고만 적혀 있다. 공정표는 입력에 없다. 검증기가 <code>end_date</code>의 null을 오류로 보고 세 번 재시도했는데, 결과는 null이거나 매번 다른 날짜였다.</span>가장 적절한 대응은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>재시도 횟수를 5회로 늘린다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>end_date</code>를 null 불가 필수 필드로 바꿔 값을 강제한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트에 "반드시 날짜를 채워라"를 추가한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>재시도를 멈추고 null과 사유(별첨 참조)를 기록한 뒤, 공정표를 확보해 다시 돌리거나 사람 검토로 보낸다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>정답이 입력 밖에 있으면 재시도는 효과가 없다. 매번 다른 날짜가 나왔다는 것은 이미 지어내고 있다는 신호다. A·B·C는 모두 날조 압박만 키운다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">고쳐지는 오류</span></div>
+      <div class="qq">다음 중 오류 피드백을 붙인 재시도로 고쳐질 가능성이 가장 높은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>날짜를 <code>2026.3.5</code>로 써서 YYYY-MM-DD 규칙 검증에 실패했다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>견적서에 사업자등록번호가 아예 없다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>스캔 품질이 나빠 금액 칸을 읽을 수 없다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>계약 조건이 입력에 포함되지 않은 별도 약관 문서에 있다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>형식 불일치는 원문에 정보가 있고 표기만 틀린 경우라 구체적 오류를 주면 교정된다. B·C·D는 정답이 입력 안에 없거나 읽을 수 없는 경우다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">피드백 루프</span></div>
+      <div class="qq"><span class="sc">사내 코드 리뷰 봇의 지적 중 상당수가 개발자에게 기각되고 있다. 어떤 종류의 지적이 문제인지는 아직 모른다.</span>개선의 첫걸음으로 가장 적절한 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모델이 자신 없어 하는 지적은 모두 숨긴다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>전체 프롬프트에 "보수적으로 판단하라"를 추가한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>각 지적에 <code>detected_pattern</code> 필드를 넣고, 기각 여부를 패턴별로 집계한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>리뷰 모델을 다른 모델로 바꾼다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>어떤 코드 구조가 기각을 부르는지 알아야 해당 기준만 고치거나 잠시 끌 수 있다. A·B는 원인을 모른 채 전체 재현율을 깎고, D도 무엇이 문제인지 알려 주지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">원문 모순</span></div>
+      <div class="qq"><span class="sc">일부 견적서는 작성자가 총액을 잘못 적어, 원문에 적힌 총액이 항목 합과 다르다. 추출 결과에는 이 사실이 드러나야 한다.</span>어떤 스키마 설계가 맞는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모델이 총액을 항목 합으로 덮어써 일관된 값만 남기게 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>stated_total</code>과 <code>calculated_total</code>을 따로 받고, 불일치하면 <code>conflict_detected</code>를 true로 표시하게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>총액 필드를 스키마에서 뺀다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>불일치가 사라질 때까지 재시도한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>원문 자체의 모순은 추출이 고칠 문제가 아니라 드러내야 할 사실이다. A는 원문을 왜곡해 오류를 숨기고, D는 원문이 바뀌지 않으므로 끝나지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">Agent SDK</span></div>
+      <div class="qq">Agent SDK에서 <code>output_format</code>으로 JSON 스키마를 지정했는데 결과 메시지의 subtype이 <code>error_max_structured_output_retries</code>였다. 가장 정확한 해석은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>앱의 의미 검증 함수가 결과를 거절했다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>API가 400 오류를 반환해 요청이 실행되지 않았다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>배치 처리 시간이 24시간을 넘겨 만료됐다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>여러 번 시도했지만 스키마에 맞는 출력이 끝내 남지 않았다. 스키마를 단순화하거나, 정보가 없을 수 있는 필드를 optional로 바꾸는 것을 검토한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>SDK는 <code>StructuredOutput</code> 호출이 스키마에 맞지 않으면 다시 시도하고, 유효한 출력이 끝내 없으면 이 subtype으로 끝난다(모델 fallback으로 출력이 철회된 경우도 포함). 문서는 스키마를 작업에 맞추고 없을 수 있는 정보는 optional로 두라고 권한다. 의미 검증은 SDK가 아니라 앱의 몫이다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Structured outputs</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls (is_error)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/structured-outputs" target="_blank" rel="noopener">Agent SDK: Structured outputs</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5" target="_blank" rel="noopener">Prompting Claude Sonnet 5.5</a> · <a href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" target="_blank" rel="noopener">Reduce hallucinations</a> · <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a> · <a href="https://platform.claude.com/docs/en/managed-agents/define-outcomes" target="_blank" rel="noopener">Managed Agents: Define outcomes</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

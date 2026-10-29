@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 4 · 서브도메인 4.1</span></div>
+    <h1>명시적 기준으로 오탐 줄이기</h1>
+    <p class="sub">보고 기준 vs 제외 기준 · 범주별 정의 · 심각도 앵커 · 오탐률과 신뢰 · 범주 일시 중지 · 찾기/거르기 분리</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/explicit-review-criteria-vs-vague-instructions-in-claude-prompts" target="_blank" rel="noopener">CertSafari 4.1</a> &nbsp;|&nbsp; 출제 도메인: 도메인 4 · Prompt Engineering &amp; Structured Output (20%)</p>
+    <div class="secrow">
+      <span class="s on">4.1 명시적 기준</span><span class="s">4.2 퓨샷</span><span class="s">4.3 구조화 출력</span><span class="s">4.4 검증·재시도</span><span class="s">4.5 배치 처리</span><span class="s">4.6 다중 리뷰</span>
+    </div>
+  </header>
+
+  <p class="lede">자동 리뷰어가 쓸모없는 지적을 쏟아내면 개발자는 곧 모든 지적을 무시한다. 이때 흔한 반응은 프롬프트에 "신중하게", "확실한 것만"을 덧붙이는 것이지만, 이런 말은 무엇이 문제인지에 대한 모델의 정의를 바꾸지 않는다. 시험은 오탐(false positive)을 줄이는 올바른 수단을 고르게 한다. <strong>정밀도는 태도 지시가 아니라 "어떤 범주를 보고하고 어떤 범주를 건너뛰는지, 경계가 어디인지"를 적은 명시적 기준에서 나온다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>모호한 지시("주석이 정확한지 확인")와 명시적 기준("주석이 말하는 동작이 실제 코드 동작과 모순될 때만 지적")의 차이</li>
+      <li>"be conservative", "high-confidence만 보고" 같은 일반 지시가 범주별 기준보다 정밀도 개선에 약한 이유</li>
+      <li>보고할 것(버그·보안)과 건너뛸 것(사소한 스타일·지역 관례)을 범주로 적는 리뷰 기준 작성</li>
+      <li>심각도마다 구체적인 코드 예시를 붙여 분류를 일관되게 만들기</li>
+      <li>오탐이 많은 범주가 정확한 범주의 신뢰까지 깎는 효과, 그런 범주를 일시 중지하고 프롬프트를 고치는 운영</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>태도 지시는 경계가 아니라 문턱만 옮긴다</h3><span class="unit-en">Why "be conservative" is not a criterion</span></div>
+    <p>리뷰 프롬프트의 오탐은 대개 모델이 불확실해서가 아니라 <strong>"문제로 칠 것"의 범위가 사용자와 다르기 때문</strong>에 생긴다. 예를 들어 팀은 테스트 코드의 하드코딩된 날짜를 의도된 고정값으로 보는데 모델은 "하드코딩 금지"로 지적한다면, 이는 확신의 문제가 아니라 범주 경계의 문제다. "확실한 것만 보고"라고 해도 모델은 여전히 그것을 문제로 보며, 단지 확신이 높은 것만 남길 뿐이다.</p>
+    <p>현행 모델 문서는 이런 지시가 실제로 어떻게 작동하는지 구체적으로 적어 둔다. Claude Opus 4.8·Sonnet 5 프롬프팅 가이드에 따르면 리뷰 프롬프트에 "only report high-severity issues", "be conservative", "don't nitpick" 같은 말이 있으면 모델은 이를 이전 모델보다 충실히 따른다. 같은 깊이로 조사하고 버그를 찾은 뒤, <strong>스스로 정한 문턱 아래의 발견을 보고하지 않는다</strong>. 그 결과 정밀도는 대체로 오르지만 측정 재현율(recall)은 떨어질 수 있다. 문턱이 모든 범주에 똑같이 올라가므로 진짜 버그 중 덜 심각해 보이는 것까지 함께 사라진다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 문턱만 올리는 지시</div><div class="code">코드 리뷰를 하라. 신중하게 판단하고
+확신이 높은 문제만 보고하라.</div><p>무엇이 문제인지에 대한 정의는 그대로다. 오탐 범주는 살아남고, 덜 확실해 보이는 진짜 버그가 빠진다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 문턱을 구체적 조건으로</div><div class="code">잘못된 동작, 테스트 실패, 오해를 부르는 결과를
+일으킬 수 있는 버그는 모두 보고하라.
+순수한 스타일·명명 취향은 보고하지 마라.</div><p>Opus 4.8 가이드가 단일 패스 자기 필터링에 권하는 형태다. "중요한" 같은 질적 표현 대신 보고 조건을 구체적으로 적는다.</p></div>
+    </div>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 "be conservative"·"high-confidence만 보고" 같은 일반 지시가 정밀도를 <em>개선하지 못한다</em>고 표현한다. 2026년 10월 현재 모델별 프롬프팅 문서(Opus 4.8, Sonnet 5, Opus 5)는 이런 지시를 최신 모델이 <strong>문자 그대로 따라 보고량을 줄이며, 정밀도는 대체로 오르지만 재현율이 떨어질 수 있다</strong>고 설명한다. 즉 "효과가 없다"기보다 "원하는 효과(오탐 범주 제거)가 아니라 다른 효과(전반적 과소 보고)를 낸다"가 현재 문서에 더 가깝다. 두 설명의 결론은 같다: 범주와 조건을 명시하라.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>보고할 것과 건너뛸 것을 범주로 적기</h3><span class="unit-en">Report / skip criteria</span></div>
+    <p>명시적 기준은 세 부분으로 이루어진다: <strong>보고할 범주</strong>, <strong>건너뛸 범주</strong>, 그리고 둘 사이의 <strong>경계 조건</strong>. 메모리 문서가 CLAUDE.md 작성법으로 권하는 "검증할 수 있을 만큼 구체적으로"("코드를 제대로 포맷하라" 대신 "2칸 들여쓰기")와 같은 원리다. 아래는 주석 정확성 리뷰어의 예다.</p>
+    <div class="code"><span class="c"># 이 가이드의 예시: 주석 정확성 리뷰 기준</span>
+&lt;report&gt;
+주석이 설명하는 동작이 실제 코드와 모순될 때만 지적한다.
+- 반환값·단위가 다르다 (주석: "초 단위 반환", 코드: 밀리초 반환)
+- 부수 효과가 다르다 (주석: "읽기 전용", 코드: 조회할 때마다 접근 로그를 DB에 기록)
+- 오류 조건이 다르다 (주석: "없으면 null", 코드: 예외를 던짐)
+&lt;/report&gt;
+&lt;skip&gt;
+- 문법·맞춤법·문체, 주석이 짧거나 장황한 것
+- TODO/FIXME 존재 자체, 작성자 이름·날짜가 오래된 것
+- 이 저장소에서 관례인 패턴 (예: 테스트의 고정 날짜)
+&lt;/skip&gt;
+&lt;evidence&gt;
+지적마다 주석 위치와, 모순되는 코드의 file:line을 함께 인용한다.
+&lt;/evidence&gt;</div>
+    <p>범주마다 태그로 감싸 두면 긴 리뷰 프롬프트에서도 각 범주의 기준이 섞이지 않는다. 플랫폼 프롬프팅 문서는 지시·맥락·예시·입력이 섞인 프롬프트에서 내용 유형별로 XML 태그를 쓰면 오해가 줄어든다고 설명한다. 마지막 <code>&lt;evidence&gt;</code> 항목은 관리형 Code Review 문서가 오판을 줄이는 방법으로 드는 것과 같은 발상이다: "동작에 대한 주장은 이름에서 추론하지 말고 소스의 <code>file:line</code>을 인용하라"처럼 특정 범주의 지적에 증거를 요구한다.</p>
+    <div class="note tip"><span class="lbl">관리형 Code Review에서는 REVIEW.md</span><p>Code Review 서비스는 저장소 루트의 <code>REVIEW.md</code>를 리뷰 전용 지침으로 읽는다. 문서의 예시 구성은 "Important가 이 저장소에서 뜻하는 것", "Nit 개수 상한", "보고하지 말 것(CI가 이미 잡는 린트·포맷, 생성 파일, lock 파일)", "항상 확인할 것"이다. 기본 동작도 포맷 취향이나 테스트 누락이 아니라 <strong>정확성(프로덕션을 깨뜨릴 버그)</strong>에 초점을 둔다. Claude Code best practices 문서는 리뷰 프롬프트의 "skip style"을 빼지 말라고 한다. 문제를 찾으라는 요청을 받은 리뷰어는 언제나 무언가를 찾아내기 때문이다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>심각도는 이름이 아니라 코드 예시로 고정</h3><span class="unit-en">Severity anchors</span></div>
+    <p>"critical / major / minor"라는 이름만 주면 같은 문제가 실행마다 다른 등급으로 분류된다. 이름은 질적 표현이라 해석 폭이 넓다. 등급마다 <strong>정의 한 줄 + 대표 코드 예시</strong>를 붙이면 새 지적을 그 예시와 비교해 분류하게 된다.</p>
+    <table class="t">
+      <thead><tr><th style="width:15%">등급</th><th style="width:33%">정의</th><th>앵커 예시 (이 가이드의 예)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>blocker</strong></td><td>데이터 손상·보안 노출·금전 오류로 이어진다. 머지 전 수정 필수</td><td><div class="code">await chargeCard(order)  <span class="c"># await 누락 시</span>
+chargeCard(order)        <span class="c"># 결제 확정 전에 성공 응답</span>
+return res.ok()</div></td></tr>
+        <tr><td><strong>major</strong></td><td>특정 조건에서 잘못된 동작. 사용자에게 보이지만 복구 가능</td><td><div class="code">items[items.length]   <span class="c"># 마지막 원소 대신 undefined</span></div></td></tr>
+        <tr><td><strong>minor</strong></td><td>동작은 맞지만 유지보수를 해친다. 머지를 막지 않음</td><td><div class="code">catch (e) { throw e }  <span class="c"># 의미 없는 재던지기</span></div></td></tr>
+      </tbody>
+    </table>
+    <p>관리형 Code Review는 고정된 세 등급을 쓴다: 🔴 <strong>Important</strong>(머지 전 고쳐야 할 버그), 🟡 <strong>Nit</strong>(고칠 만하지만 막지 않는 사소한 문제), 🟣 <strong>Pre-existing</strong>(이 PR이 만든 것이 아닌 기존 버그). 등급 이름은 바꿀 수 없지만, <code>REVIEW.md</code>에서 "이 저장소에서 Important는 동작을 깨거나 데이터를 유출하거나 롤백을 막는 경우로 한정하고, 스타일·명명은 최대 Nit"처럼 <strong>등급의 의미를 재정의</strong>할 수 있다. 등급에 구체적 내용을 채운다는 점에서 위 표와 같은 원리다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>오탐은 범주 단위로 관리한다</h3><span class="unit-en">False-positive rates and developer trust</span></div>
+    <p>개발자는 리뷰어의 지적을 범주별로 구분해 믿지 않는다. 한 범주(예: "성능 개선 제안")에서 엉뚱한 지적이 계속되면, 정확도가 높은 범주(예: "null 역참조")의 지적까지 같이 무시되기 시작한다. 시험 가이드가 짚는 지점이 이것이다. <strong>오탐률이 높은 범주 하나가 리뷰 전체의 신뢰를 끌어내린다.</strong></p>
+    <table class="t">
+      <caption>범주별 운영 예 (이 가이드의 예)</caption>
+      <thead><tr><th style="width:26%">범주</th><th style="width:22%">최근 지적의 실제 수정 비율</th><th>조치</th></tr></thead>
+      <tbody>
+        <tr><td>null 역참조</td><td>높음</td><td>유지</td></tr>
+        <tr><td>권한 검사 누락</td><td>높음</td><td>유지, 증거(file:line) 요구 유지</td></tr>
+        <tr><td>성능 개선 제안</td><td>낮음 (대부분 무시·해결 처리)</td><td><strong>일시 중지</strong> — 프롬프트에서 빼거나 "보고하지 말 것"에 추가하고, 기준을 다시 쓴 뒤 평가 세트로 확인하고 재개</td></tr>
+      </tbody>
+    </table>
+    <ol class="proc">
+      <li><strong>범주별로 측정</strong> — 지적이 실제 수정으로 이어졌는지, 무시·해결 처리됐는지를 범주 단위로 집계한다</li>
+      <li><strong>높은 오탐 범주는 잠시 끈다</strong> — 신뢰를 먼저 회복한다. 끄는 동안 나머지 범주는 계속 동작한다</li>
+      <li><strong>기준을 다시 쓴다</strong> — 그 범주의 보고 조건·제외 조건·증거 요구를 구체화한다(02·03 단원)</li>
+      <li><strong>평가 후 재개</strong> — 과거 PR에서 뽑은 평가 사례로 정밀도·재현율을 확인한다. 모델 가이드도 평가 세트나 테스트 사례로 재현율·F1 개선을 검증하며 프롬프트를 반복하라고 권한다</li>
+    </ol>
+    <p>관리형 Code Review 문서도 같은 운영 감각을 보인다. 같은 종류의 지적이 계속 돌아오면 유지 관리자에게 <code>REVIEW.md</code>에 규칙을 추가하게 하라고 안내하고, CI가 이미 강제하는 것과 생성 코드 같은 범주는 제외 목록에 두라고 한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>찾기와 거르기를 나누는 설계</h3><span class="unit-en">Coverage first, filter later</span></div>
+    <p>한 번의 호출에 "찾고, 판단하고, 거르는" 일을 모두 맡기면 거르는 기준이 찾는 단계까지 위축시킨다. 모델 가이드는 대안으로, 찾는 단계에서는 <strong>불확실하거나 심각도가 낮아 보이는 것까지 모두 보고하되 지적마다 확신 수준과 추정 심각도를 붙이게</strong> 하고, 거르기는 별도의 검증·중복 제거·순위 단계가 하도록 권한다. 별도 단계가 있다면 찾기 단계의 역할이 "필터링이 아니라 커버리지"라고 명시한다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">Find</div><div class="ft">여러 에이전트가 diff와 주변 코드를 병렬 조사</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">Verify</div><div class="ft">후보를 코드와 대조해 오탐 제거</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">Rank</div><div class="ft">중복 제거·심각도 순위</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">Post</div><div class="ft">인라인 코멘트·요약·check run</div></div>
+    </div>
+    <p class="cap">관리형 Code Review가 문서에 밝힌 네 단계. 찾기와 검증이 분리돼 있다.</p>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul><li>오탐이 특정 범주에 몰려 있다 → 그 범주의 <strong>보고·제외 조건을 구체화</strong>하거나 일시 중지 (전체에 "신중하게"를 더하지 않는다)</li><li>분류가 실행마다 흔들린다 → 등급별 <strong>정의 + 코드 예시</strong></li><li>"확신 높은 것만"을 넣었더니 진짜 버그가 빠진다 → 문턱을 <strong>구체적 조건</strong>으로 바꾸거나 찾기/거르기 분리</li><li>스타일 지적이 넘친다 → <strong>skip 범주</strong>에 명시 (CI가 잡는 것 포함)</li></ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>프롬프트에 "확신이 높은 것만 보고하라"를 넣으면 오탐 문제가 해결된다.</div><div class="f"><span class="k">사실</span>문제의 정의는 그대로 두고 문턱만 올린다. 최신 모델은 이를 충실히 따라 보고량을 줄이며 재현율이 떨어질 수 있다. 범주별 기준을 적는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>오탐이 많은 범주가 있어도 정확한 범주의 지적은 그대로 신뢰받는다.</div><div class="f"><span class="k">사실</span>개발자는 리뷰어 전체를 평가한다. 높은 오탐 범주는 정확한 범주의 신뢰까지 깎으므로 일시 중지하고 기준을 고친다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>심각도는 critical·major·minor라는 이름만 주면 일관되게 분류된다.</div><div class="f"><span class="k">사실</span>질적 이름은 해석 폭이 넓다. 등급마다 정의와 구체적 코드 예시를 붙인다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>기준을 IMPORTANT·대문자로 강조할수록 잘 지켜진다.</div><div class="f"><span class="k">사실</span>best practices 문서는 현행 모델이 평이한 문장을 잘 따르며 과도한 강조는 오히려 규칙을 과잉 적용하게 만든다고 설명한다. 강조보다 구체성이다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">명시적 기준</span></div>
+      <div class="qq"><span class="sc">"주석이 정확한지 확인하라"는 리뷰 지시가 맞춤법, 오래된 작성자 이름, 짧은 주석까지 지적해 개발자들이 무시하기 시작했다.</span>가장 알맞은 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>"정말 중요한 것만 신중하게 지적하라"를 추가한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>"주석이 말하는 동작(반환값·부수 효과·오류 조건)이 실제 코드와 모순될 때만 지적하고, 문체·맞춤법·작성자 정보는 건너뛴다"로 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>지적 개수를 PR당 3개로 제한한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>주석 리뷰를 영구히 없앤다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>보고할 범주와 건너뛸 범주, 경계 조건을 명시한 기준이 정밀도를 높인다. A는 정의를 바꾸지 않는 태도 지시이고, C는 어떤 지적이 남을지 통제하지 못하며, D는 가치 있는 범주까지 버린다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">태도 지시의 효과</span></div>
+      <div class="qq"><span class="sc">오탐을 줄이려고 리뷰 프롬프트에 "be conservative, only report high-confidence findings"를 넣었다. 오탐은 조금 줄었지만, 나중에 장애로 이어진 off-by-one 버그를 리뷰가 놓쳤다.</span>현재 문서 기준으로 가장 그럴듯한 설명과 대응은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모델의 버그 탐지 능력이 떨어졌다 → 더 큰 모델로 바꾼다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>지시가 너무 약했다 → "extremely conservative"로 강화한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>프롬프트가 너무 길다 → 기준을 모두 지운다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>모델이 지시를 충실히 따라 문턱 아래 발견을 보고하지 않았다 → 구체적 보고 조건을 쓰거나, 찾기 단계는 모두 보고하고 거르기를 분리한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>모델 가이드는 이런 지시가 조사 깊이는 그대로 둔 채 보고량을 줄여 재현율을 떨어뜨릴 수 있다고 설명한다(능력 저하가 아닌 하네스 효과). 대응은 구체적 조건이나 찾기/거르기 분리다. B는 같은 문제를 키운다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">심각도 일관성</span></div>
+      <div class="qq">같은 종류의 문제(예외를 삼키는 빈 catch 블록)가 어떤 실행에서는 major, 다른 실행에서는 minor로 분류된다. 가장 효과적인 개선은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>등급마다 정의와 대표 코드 예시를 붙여, 빈 catch가 어느 등급의 앵커와 비슷한지 판단하게 한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>등급 이름을 critical/high/medium/low로 늘린다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>같은 프롬프트로 세 번 돌려 다수결로 등급을 정한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>심각도 필드를 출력에서 빼 버린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>질적 이름은 해석 폭이 넓어 분류가 흔들린다. 등급별 정의와 구체적 코드 예시가 비교 기준이 된다. 등급 수만 늘리면(B) 경계가 더 늘어날 뿐이고, C는 흔들림을 평균낼 뿐 판단 기준을 주지 않으며, D는 분류 자체를 포기한다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">신뢰 회복</span></div>
+      <div class="qq"><span class="sc">리뷰 봇의 "성능 개선 제안" 범주는 지적 대부분이 무시되고, 최근에는 정확도가 높은 "권한 검사 누락" 지적까지 그냥 닫히고 있다.</span>가장 알맞은 단기 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>봇 전체를 끄고 사람 리뷰로 돌아간다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>모든 범주에 "확실한 것만"을 추가한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>성능 범주를 일시 중지하고 그 범주의 기준을 다시 쓴 뒤 평가 사례로 확인하고 재개한다. 나머지 범주는 유지한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>권한 검사 범주의 지적을 더 길게 설명하게 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>오탐이 높은 범주가 정확한 범주의 신뢰까지 깎고 있다. 문제 범주만 잠시 꺼서 신뢰를 회복하고, 기준을 개선해 평가로 확인한 뒤 되돌린다. A는 가치 있는 범주까지 버리고, B는 모든 범주의 재현율을 떨어뜨릴 수 있다.</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">찾기/거르기 분리</span></div>
+      <div class="qq"><span class="sc">리뷰 파이프라인에 이미 별도의 검증·중복 제거 단계가 있다. 그런데 앞단의 찾기 프롬프트에도 "중요한 것만 보고"가 들어 있어 검증 단계로 넘어오는 후보 자체가 적다.</span>찾기 프롬프트를 어떻게 바꾸는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>찾기 단계에도 검증 단계와 같은 엄격한 기준을 복사해 넣는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>불확실하거나 사소해 보이는 것까지 모두 보고하되 지적마다 확신 수준과 추정 심각도를 붙이게 하고, 이 단계의 목표가 커버리지라고 명시한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>찾기 단계를 없애고 검증 단계만 둔다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>찾기 단계에서 지적 수를 5개로 제한한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>모델 가이드가 권하는 구성이다. 확신 기반 필터링을 찾기 단계에서 빼고, 별도 단계가 순위를 매기고 거르게 한다. A·D는 후보를 줄여 뒷단 검증이 할 일을 앞에서 미리 버리게 만든다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">제외 범주</span></div>
+      <div class="qq">관리형 Code Review가 lockfile, <code>src/gen/</code>의 생성 코드, 이미 CI 린터가 잡는 포맷 문제까지 지적해 소음이 크다. 가장 알맞은 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>리뷰 수준(review level)을 Deep으로 올린다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>PR 본문에 "사소한 것은 무시해 주세요"라고 쓴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>로컬 <code>/code-review</code>용 설정만 바꾼다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>저장소 루트 <code>REVIEW.md</code>의 "보고하지 말 것"에 해당 경로와 CI가 강제하는 범주를 적는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>REVIEW.md는 관리형 Code Review의 리뷰 전용 지침으로, 건너뛸 경로·범주를 명시하는 곳이다. A는 더 철저하게(그리고 비싸게) 볼 뿐 범주를 바꾸지 않고, C의 로컬 <code>/code-review</code>는 REVIEW.md를 읽지 않는 별개 도구다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-4-8" target="_blank" rel="noopener">Prompting Claude Opus 4.8</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5" target="_blank" rel="noopener">Prompting Claude Sonnet 5</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5" target="_blank" rel="noopener">Prompting Claude Opus 5</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices</a> · <a href="https://code.claude.com/docs/en/code-review" target="_blank" rel="noopener">Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-customize" target="_blank" rel="noopener">Customize Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-pull-requests" target="_blank" rel="noopener">Read and request reviews on a pull request</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener">How Claude remembers your project</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

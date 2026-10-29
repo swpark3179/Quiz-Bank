@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.6</span></div>
+    <h1>다중 소스 종합의 출처 보존</h1>
+    <p class="sub">claim-source 매핑 · Citations · search_result · 상충 수치 주석 · 발행일·수집 시점 · 내용별 렌더링</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/claim-source-mappings-keeping-provenance-through-multi-agent-synthesis" target="_blank" rel="noopener">CertSafari 5.6</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Context Management &amp; Reliability (15%)</p>
+    <div class="secrow">
+      <span class="s">5.1 정보 보존</span><span class="s">5.2 에스컬레이션</span><span class="s">5.3 오류 전파</span><span class="s">5.4 코드베이스 탐색</span><span class="s">5.5 사람 검토</span><span class="s on">5.6 출처 보존</span>
+    </div>
+  </header>
+
+  <p class="lede">여러 서브에이전트가 각자 자료를 찾고, 중간 에이전트가 요약하고, 마지막 에이전트가 보고서를 쓰는 구조에서는 단계마다 정보가 압축된다. 숫자는 살아남아도 "누가, 언제, 어떤 방법으로 낸 숫자인가"는 쉽게 떨어져 나간다. 시험은 출처(provenance)를 끝까지 들고 가는 출력 계약과, 출처끼리 수치가 다를 때 어떻게 쓰는지를 묻는다. <strong>주장과 출처·발췌·날짜를 한 단위로 묶어 넘기고, 종합 단계는 그 묶음을 보존·병합하며, 상충하는 값은 고르지 말고 출처를 붙여 함께 보여 준다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>요약 단계에서 claim-source 매핑 없이 압축하면 출처가 사라지는 구조</li>
+      <li>서브에이전트가 출처 URL·문서명·관련 발췌를 담은 구조화 매핑을 내고, 하위 단계가 이를 보존한다</li>
+      <li>신뢰할 만한 출처끼리 수치가 다르면 하나를 고르지 않고 출처를 붙여 주석한다 — 조정은 코디네이터가 결정</li>
+      <li>발행일·수집 시점을 필수로 받아 시점 차이를 모순으로 오해하지 않게 한다</li>
+      <li>확립된 결과와 논쟁 중인 결과를 나누고, 원 출처의 표현과 방법론 맥락을 보존한다</li>
+      <li>재무 데이터는 표, 뉴스는 서술, 기술 발견은 구조화 목록처럼 내용에 맞게 렌더링한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>단계를 거칠 때마다 무엇이 잘려 나가나</h3><span class="unit-en">Where provenance leaks</span></div>
+    <p>예시 과제: "국내 반려동물 양육 가구 비율과 추이"를 조사한다. 검색 서브에이전트들이 공공 표본조사, 민간 패널 조사, 업계 보고서를 찾고, 요약 에이전트가 정리하고, 종합 에이전트가 보고서를 쓴다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">검색</div><div class="ft">원문 발췌 + URL<br>+ 발행일</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">요약</div><div class="ft">"출처 A에 따르면<br>25.4%"</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">병합</div><div class="ft">"약 25~29%"</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">보고서</div><div class="ft">"약 27%로 추정"<br>(출처 없음)</div></div>
+    </div>
+    <p>각 단계가 "핵심만 남기라"는 지시를 충실히 따를수록 출처·날짜·방법이 먼저 잘려 나간다. 최종 문장은 검증할 수 없고, 두 조사의 차이도 사라진다. 해결책은 "출처를 잊지 말라"는 당부가 아니라 <strong>주장과 출처를 떼어 낼 수 없는 구조로 넘기는 것</strong>이다.</p>
+    <div class="note"><span class="lbl">Anthropic 리서치 시스템의 선택</span><p>Anthropic의 멀티에이전트 리서치 글에 따르면, 리서치 루프가 끝나면 모든 결과를 별도의 CitationAgent에 넘겨 문서와 보고서를 처리해 인용 위치를 찾게 한다. 모든 주장이 출처에 제대로 귀속되게 하려는 단계다. 같은 글은 서브에이전트 산출물을 파일시스템 같은 외부 저장소에 두고 코디네이터에는 가벼운 참조만 넘겨, 여러 단계를 거치며 정보가 변형되는 "전화 게임"을 줄이라고 권한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>API가 들고 다니는 출처: Citations와 search_result</h3><span class="unit-en">Provenance the API can carry</span></div>
+    <table class="t">
+      <thead><tr><th style="width:26%">입력 형태</th><th style="width:30%">인용 위치 형식</th><th>메모</th></tr></thead>
+      <tbody>
+        <tr><td>plain text <code>document</code></td><td><code>char_location</code> (문자 인덱스, 0부터)</td><td>문장 단위로 자동 청킹</td></tr>
+        <tr><td>PDF <code>document</code></td><td><code>page_location</code> (페이지, 1부터)</td><td>문장 단위 청킹, 이미지 인용은 아직 불가</td></tr>
+        <tr><td>custom content <code>document</code></td><td><code>content_block_location</code> (블록 인덱스)</td><td>추가 청킹 없음 — 목록·전사본처럼 단위를 직접 정할 때</td></tr>
+        <tr><td><code>search_result</code> 블록</td><td><code>search_result_location</code> (<code>source</code>·<code>title</code> 포함)</td><td>RAG용. 도구 결과나 user 메시지에 넣는다. <code>source</code>는 URL이든 <code>kb://article-1234</code> 같은 내부 식별자든 안정적인 문자열이면 된다</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li><code>citations.enabled</code>는 요청 안의 문서 전체에 켜거나 전체에 꺼야 한다. <code>search_result</code>는 citations가 기본으로 꺼져 있다</li>
+      <li><code>title</code>과 <code>context</code>는 모델에 전달되지만 <strong>인용 대상이 아니다</strong>. <code>title</code>은 길이 제한이 있어 발행일·저자 같은 메타데이터는 <code>context</code>에 텍스트나 JSON 문자열로 넣는다</li>
+      <li><code>cited_text</code>는 출력 토큰에 세지 않고, 다음 턴에 다시 보내도 입력 토큰에 세지 않는다</li>
+      <li>공식 Citations 쿡북에 따르면 이 기능은 제공되지 않은 문서나 위치를 가리키는 인용을 반환하지 않으며, 테스트에서 프롬프트 기반 인용보다 recall·precision이 높았다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>주장 하나에 근거 한 묶음</h3><span class="unit-en">One claim, one evidence bundle</span></div>
+    <p>검색·분석 서브에이전트가 내는 결과의 단위를 "주장 하나 + 그 근거"로 정한다.</p>
+    <div class="code">{"claims": [
+  {"claim_id": "c1",
+   "claim": "반려동물 양육 가구 비율 25.4%",
+   "source": {"url": "https://example.org/survey-2023",
+              "title": "출처 A 가구 표본조사 보고서"},
+   "excerpt": "조사 대상 가구의 25.4%가 반려동물을 기르고 있다",
+   "published": "2024-03-15",
+   "collected": "2023-09",
+   "method": "방문 표본조사, 표본 8,000가구",
+   "hedge": "추정치"}
+]}</div>
+    <ul>
+      <li><code>excerpt</code>는 <strong>원문 그대로</strong>다. 환각 줄이기 문서는 긴 문서 작업에서 먼저 원문 인용을 뽑게 하고, 각 주장마다 뒷받침 인용을 찾게 하며, 인용을 못 찾은 주장은 철회하게 하라고 권한다</li>
+      <li><code>hedge</code>는 원 출처가 쓴 표현("잠정치", "추정")을 보존한다. 요약하면서 "확인됨"으로 굳히지 않는다</li>
+      <li>종합 에이전트는 <code>claim_id</code>와 <code>source</code>를 <strong>보존하고 병합</strong>한다. 같은 주장을 두 출처가 뒷받침하면 sources 배열로 합치고, 문장마다 어느 claim에서 왔는지 남긴다</li>
+    </ul>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 "구조화된 claim-source 매핑"을 요구한다. 현재 문서 기준으로 Citations 기능과 structured outputs는 <strong>한 요청에서 함께 쓸 수 없다</strong>. 문서(<code>document</code>·<code>search_result</code> 블록)에 citations를 켜고 <code>output_config.format</code>을 같이 보내면 400 오류다. 그래서 (a) 위 예처럼 JSON 스키마에 출처·발췌 필드를 직접 두거나, (b) citations를 켠 텍스트 응답을 받아 앱 코드가 <code>cited_text</code>와 위치 정보를 매핑으로 바꾸는 식으로 나눈다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>숫자마다 날짜 두 개</h3><span class="unit-en">Two dates per number</span></div>
+    <p>2023년 조사의 25.4%와 2025년 조사의 28.9%는 모순이 아니라 변화일 수 있다. 날짜가 빠지면 종합 에이전트는 두 값을 "출처 간 불일치"로 분류하거나, 오래된 값을 현재 사실처럼 쓴다. 그래서 서브에이전트 출력에서 <code>published</code>(발행일)와 <code>collected</code>(데이터 수집 시점)를 <strong>필수 필드</strong>로 둔다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">상황</th><th>종합 단계의 처리</th></tr></thead>
+      <tbody>
+        <tr><td>같은 지표, 수집 시점이 다름</td><td>시계열로 배치하고 "변화"로 서술. 방법이 다르면 직접 비교의 한계를 적는다</td></tr>
+        <tr><td>같은 지표, 같은 시점, 다른 값</td><td>진짜 상충. 출처·방법을 붙여 "차이가 있는 결과" 섹션에</td></tr>
+        <tr><td>날짜가 출처에 없음</td><td>추측해 채우지 않는다. <code>null</code>과 "날짜 미기재" 표시로 남긴다</td></tr>
+      </tbody>
+    </table>
+    <p class="cap">structured outputs는 문자열 <code>format</code>으로 <code>date</code>·<code>date-time</code>을 지원한다. Citations를 쓸 때는 발행일을 문서의 <code>context</code> 필드에 넣으면, 인용 대상은 아니지만 모델이 답을 쓸 때 참고한다 — 쿡북은 "12개월간 갱신되지 않은 문서"라는 경고를 <code>context</code>에 넣자 답변에 그 사실을 알리는 예를 보여 준다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>출처끼리 다를 때의 문장</h3><span class="unit-en">Writing up disagreement</span></div>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 한 값만 남김</div><div class="code">반려동물 양육 가구 비율은 28.9%다.</div><p>출처 B만 남겼고 이유도 없다. 독자는 다른 값이 있었다는 사실을 모른다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 출처를 붙인 주석</div><div class="code">출처 A(방문 표본조사, 2023년 9월 조사)는 25.4%,
+출처 B(온라인 패널, 2025년 5월 조사)는 28.9%로
+보고한다. 조사 시점이 약 1년 8개월 다르고 방법도
+달라, 두 값을 단순 모순으로 보기 어렵다.</div><p>두 값과 출처, 시점, 방법이 함께 남는다.</p></div>
+    </div>
+    <p>역할 분담이 핵심이다. <strong>문서 분석 단계</strong>는 상충하는 값을 모두 넣고 주석을 단 상태로 작업을 마친다. 어느 값을 쓸지, 둘 다 보여 줄지, 추가 조사를 할지는 <strong>코디네이터</strong>가 정해 종합 단계에 넘긴다. 분석 에이전트가 혼자 값을 골라 버리면 그 결정이 하위 단계에서 보이지 않는다.</p>
+    <p>보고서는 섹션을 나눈다: <em>확립된 결과</em>(여러 독립 출처가 일치), <em>출처 간 차이가 있는 결과</em>(값·출처·방법을 나란히), <em>확인하지 못한 영역</em>. 공식 프롬프팅 가이드도 리서치 작업에서 여러 출처로 정보를 교차 검증하게 하고, 진행 노트에 확신 수준을 기록해 보정하게 하라고 권한다. 환각 줄이기 문서처럼 정보가 부족하면 "확신하기 어렵다"고 말할 수 있게 허용한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>표·문단·목록 고르기</h3><span class="unit-en">Choosing table, prose, or list</span></div>
+    <table class="t">
+      <thead><tr><th style="width:28%">내용</th><th style="width:24%">형식</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>재무·통계 수치 (여러 출처·연도)</td><td>표</td><td>값을 나란히 비교하고, 행마다 출처·시점 열을 둘 수 있다</td></tr>
+        <tr><td>뉴스·사건 경과</td><td>서술형 문단</td><td>인과와 맥락이 문장 사이에 있다</td></tr>
+        <tr><td>기술 발견 (설정값, 버전, 단계)</td><td>구조화된 목록</td><td>항목별로 확인·재현하기 쉽다</td></tr>
+      </tbody>
+    </table>
+    <p>모든 내용을 한 형식(예: 전부 글머리표)으로 바꾸면 수치 비교가 어려워지거나 사건의 맥락이 끊긴다. 공식 프롬프팅 가이드는 형식을 "하지 말 것"보다 "할 것"으로 지시하고, XML 형식 표시자를 쓰고, 프롬프트 자체의 스타일을 원하는 출력에 맞추라고 권한다.</p>
+    <div class="code">&lt;report_format&gt;
+섹션: 확립된 결과 / 출처 간 차이가 있는 결과 / 확인하지 못한 영역
+- 수치 비교는 표로 쓴다. 각 행에 값, 출처, 조사 시점, 방법을 둔다.
+- 사건 경과는 문단으로 서술한다.
+- 기술적 발견은 번호 목록으로 쓴다.
+- 문장마다 근거가 된 claim_id를 대괄호로 남긴다. 예: [c1, c4]
+&lt;/report_format&gt;</div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>상충 값 중 하나를 임의로 채택, 평균으로 뭉개기 → 오답. 출처를 붙여 함께 제시하고 조정은 코디네이터가</li>
+      <li>요약·병합 단계에서 출처 필드를 버림 → 오답. 매핑을 보존·병합한다</li>
+      <li>날짜 없는 통계를 비교 → 오답. 발행일·수집 시점을 필수로</li>
+      <li>모든 내용을 하나의 형식으로 통일 → 오답. 내용 유형별 렌더링</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>보고서 끝에 참고문헌 목록만 붙이면 출처를 보존한 것이다.</div><div class="f"><span class="k">사실</span>주장 단위로 연결되지 않으면 어떤 문장이 어떤 출처에서 왔는지 검증할 수 없다. 매핑은 주장마다 있어야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>신뢰할 만한 두 출처가 다른 수치를 내면 더 최신 값을 쓰면 된다.</div><div class="f"><span class="k">사실</span>시점·방법 차이일 수도, 진짜 상충일 수도 있다. 두 값을 출처와 함께 남기고 조정은 코디네이터가 결정한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Citations와 structured outputs를 함께 켜면 인용이 달린 JSON을 받을 수 있다.</div><div class="f"><span class="k">사실</span>현재 문서상 함께 쓰면 400 오류다. 스키마에 출처 필드를 직접 두거나 단계를 나눈다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>출처 URL만 남기면 충분하다.</div><div class="f"><span class="k">사실</span>원문 발췌, 발행일·수집 시점, 방법론 맥락이 있어야 하위 단계가 주장을 검증하고 시점 차이를 올바르게 해석한다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">출처 손실</span></div>
+      <div class="qq"><span class="sc">검색 → 요약 → 종합 3단계 파이프라인의 최종 보고서에 출처 없는 수치가 많다. 검색 단계 출력에는 출처가 있었다.</span>가장 효과적인 수정은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>종합 프롬프트에 "출처를 꼭 밝혀라"를 추가한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>요약 단계가 주장마다 출처 URL·문서명·발췌를 묶은 매핑을 출력하고, 종합 단계는 그 매핑을 보존·병합하게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>요약 단계를 없애고 검색 원문 전체를 종합 에이전트에 넣는다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>최종 보고서 끝에 검색된 URL 목록을 붙인다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>출처가 사라진 지점은 요약 단계의 압축이다. 주장과 출처를 한 단위로 묶어 넘겨야 끝까지 남는다. A는 이미 잃은 정보를 요구하고, C는 컨텍스트를 낭비하며, D는 주장 단위 연결이 없다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">상충 수치</span></div>
+      <div class="qq"><span class="sc">출처 A(2023년 조사)는 25.4%, 출처 B(2025년 조사)는 28.9%를 보고한다. 둘 다 신뢰할 만한 기관이다.</span>문서 분석 서브에이전트가 할 일은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>더 최근인 28.9%만 남긴다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>두 값의 평균 27.2%를 보고한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>표본이 더 큰 쪽을 골라 남긴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>두 값을 출처·조사 시점·방법과 함께 모두 넣고 차이를 주석으로 남겨, 조정은 코디네이터가 정하게 한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>분석 단계는 상충을 지우지 않고 드러낸다. A·C는 그럴듯한 기준으로 임의 선택한 것이고, B는 어느 출처도 말하지 않은 새 숫자를 만든다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">시점 해석</span></div>
+      <div class="qq"><span class="sc">종합 에이전트가 여러 지표를 "출처 간 불일치"로 분류했는데, 검토해 보니 대부분 조사 연도가 다른 수치였다.</span>근본 원인과 해결은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>서브에이전트 출력에 발행일·수집 시점이 없었다. 날짜를 필수 필드로 요구한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>종합 모델이 작아서다. 더 큰 모델로 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>보고서에서 불일치 섹션을 없앤다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>가장 최신 수치만 수집하도록 검색 범위를 제한한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>날짜가 있어야 시점 차이(변화)와 진짜 상충을 구분한다. C는 정보를 숨기고, D는 추이 분석에 필요한 과거 데이터까지 버린다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">Citations 기능</span></div>
+      <div class="qq">Claude API의 Citations 기능에 대한 설명으로 옳은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>문서의 <code>title</code>과 <code>context</code>에 적은 내용도 인용 대상이 된다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>PDF 문서 인용은 문자 인덱스로 위치를 알려 준다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>문서에 citations를 켠 요청에 <code>output_config.format</code>을 함께 보내면 400 오류가 난다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>한 요청 안에서 문서마다 citations를 골라 켤 수 있다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>인용은 텍스트 블록 사이에 인용 정보를 끼워 넣어야 해서 strict JSON 스키마와 충돌한다. <code>title</code>·<code>context</code>는 인용 대상이 아니고(A), PDF는 페이지 번호(B), citations는 요청 내 문서 전체에 켜거나 꺼야 한다(D).</p></div>
+    </div>
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">렌더링</span></div>
+      <div class="qq"><span class="sc">세 회사의 분기별 매출(4개 분기), 관련 업계 뉴스 세 건, 각 회사의 기술 스택 변경 사항을 한 보고서로 종합한다.</span>가장 알맞은 렌더링은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모든 내용을 같은 형식의 글머리표로 통일한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>매출은 표, 뉴스는 서술형 문단, 기술 변경은 구조화된 목록으로 쓴다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>모든 내용을 서술형 문단으로 쓴다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>모든 내용을 하나의 큰 표로 만든다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>수치는 비교가 쉬운 표, 사건은 맥락이 사는 문단, 기술 발견은 항목별로 확인하기 쉬운 목록이 맞다. 한 형식으로 통일하면(A·C·D) 어느 한 종류의 내용은 반드시 손해를 본다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">search_result 블록</span></div>
+      <div class="qq"><code>search_result</code> 콘텐츠 블록에 대한 설명으로 옳은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>source</code>에는 공개 URL만 쓸 수 있다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>assistant 메시지에도 넣을 수 있다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>citations는 기본으로 켜져 있다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>source</code>에 <code>kb://article-1234</code> 같은 내부 식별자도 쓸 수 있고, 인용에는 그 <code>source</code>와 <code>title</code>이 실린다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>공식 문서는 안정적인 문자열이면 URL이든 내부 식별자든 <code>source</code>로 쓸 수 있다고 한다. <code>search_result</code>는 user 메시지(도구 결과 포함)에만 들어가고, citations는 기본으로 꺼져 있어 명시적으로 켜야 한다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/citations" target="_blank" rel="noopener">Citations</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/search-results" target="_blank" rel="noopener">Search results</a> · <a href="https://platform.claude.com/cookbook/misc-using-citations" target="_blank" rel="noopener">Citations (cookbook)</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Structured outputs</a> · <a href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" target="_blank" rel="noopener">Reduce hallucinations</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>

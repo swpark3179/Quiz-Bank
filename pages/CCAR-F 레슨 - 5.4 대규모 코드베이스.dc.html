@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCAR-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.4</span></div>
+    <h1>대규모 코드베이스 탐색의 컨텍스트 관리</h1>
+    <p class="sub">context rot · 탐색 서브에이전트 · 스크래치패드 노트 · 단계 간 요약 · 매니페스트 기반 복구 · /compact</p>
+    <p class="meta">참고 레슨 · <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn/context-rot-compact-and-scratchpad-files-in-long-codebase-sessions" target="_blank" rel="noopener">CertSafari 5.4</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Context Management &amp; Reliability (15%)</p>
+    <div class="secrow">
+      <span class="s">5.1 정보 보존</span><span class="s">5.2 에스컬레이션</span><span class="s">5.3 오류 전파</span><span class="s on">5.4 코드베이스 탐색</span><span class="s">5.5 사람 검토</span><span class="s">5.6 출처 보존</span>
+    </div>
+  </header>
+
+  <p class="lede">낯선 대형 저장소를 몇 시간씩 탐색하면 컨텍스트가 파일 내용과 검색 결과로 가득 찬다. 그러면 앞에서 분명히 확인한 클래스 이름 대신 일반론이 답으로 나오기 시작한다. 시험은 이때 무엇을 대화 밖으로 빼고, 무엇을 파일로 남기고, 무엇을 다음 단계에 넘기는지 묻는다. <strong>장황한 탐색은 서브에이전트에 격리하고, 확정한 사실은 파일에 적어 다시 읽게 하며, 재시작과 compaction을 넘어가야 하는 상태는 구조화된 파일로 남긴다.</strong></p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>긴 세션의 성능 저하 증상: 답이 흔들리고, 앞서 찾은 구체적인 클래스 대신 "보통의 패턴"을 말한다</li>
+      <li>구체적인 질문 단위로 서브에이전트를 띄워 장황한 출력을 격리하고, 메인 에이전트는 전체 그림을 유지한다</li>
+      <li>스크래치패드 파일에 핵심 발견을 기록하고 후속 질문에서 다시 참조한다</li>
+      <li>한 탐색 단계의 결과를 요약해 다음 단계 서브에이전트의 첫 프롬프트에 주입한다</li>
+      <li>에이전트별 상태 export와 매니페스트로 크래시 후 재개를 설계한다</li>
+      <li><code>/compact</code> 등 세션 명령으로 컨텍스트 사용량을 줄인다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>세션이 일반론을 말하기 시작할 때</h3><span class="unit-en">Symptoms of a crowded context</span></div>
+    <p>예시: 10년 된 창고관리(WMS) 모노레포에서 "재고 예약이 어디서 해제되는가"를 추적하는 작업이다. 세션 초반에 <code>ReservationReleaseService</code>를 찾았는데, 몇 시간 뒤 같은 질문에 "일반적으로 이런 시스템은 서비스 레이어에서 해제합니다" 같은 답이 돌아오고, 이전 답과 세부가 어긋난다.</p>
+    <p>Anthropic의 컨텍스트 엔지니어링 글은 이를 <strong>context rot</strong>로 설명한다. 컨텍스트의 토큰 수가 늘수록 그 안의 정보를 정확히 회상하는 능력이 떨어지고, 정도의 차이는 있어도 모든 모델에서 나타난다. 그래서 컨텍스트를 "넣을수록 효용이 줄어드는 유한한 자원"으로 다루라고 한다. 같은 글은 장기 작업의 대응책으로 compaction, 구조화된 노트(structured note-taking), 서브에이전트 구조를 든다.</p>
+    <div class="note"><span class="lbl">시험 가이드 표현 vs 현재 문서</span><p>시험 가이드는 컨텍스트 열화를 핵심 위험으로 다룬다. 2026년 10월 Claude Code best practices 문서는 최신 모델 대부분이 1M 토큰 윈도를 갖고 compaction이 자동으로 돌기 때문에 컨텍스트가 바닥나는 일은 드물다고 보고, "컨텍스트 윈도가 가장 큰 제약이니 공격적으로 관리하라", "컨텍스트 보호를 위해 서브에이전트를 써라"를 이제 버려도 되는 옛 조언으로 분류한다. 다만 같은 문서도 <code>/clear</code>는 여전히 할 가치가 있고 집중된 컨텍스트가 더 좋은 답을 주며 비용도 낮다고 말한다. 바뀐 것은 동기(용량 부족 → 답의 품질과 비용)이고, "노이즈는 메인 대화 밖으로, 핵심은 파일로"라는 답의 방향은 그대로다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>/compact·/clear와 compaction이 남기는 것</h3><span class="unit-en">Session commands and what compaction keeps</span></div>
+    <table class="t">
+      <thead><tr><th style="width:30%">명령</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td><code>/compact [지시]</code></td><td>지금까지의 대화를 요약해 공간을 비운다. 지시로 남길 것을 지정한다 (예: <code>/compact 확정한 호출 경로와 미확인 목록 유지</code>). 긴 세션에서는 대화 전체를 읽어 요약하므로 그 자체가 큰 요청이다</td></tr>
+        <tr><td><code>/clear [이름]</code></td><td>빈 컨텍스트로 새 대화를 시작한다. 무관한 작업으로 넘어갈 때</td></tr>
+        <tr><td><code>/context</code></td><td>무엇이 컨텍스트를 채우고 있는지 범주별로 보여 준다</td></tr>
+        <tr><td><code>/rewind</code> → Summarize from here / up to here</td><td>대화의 일부만 요약한다</td></tr>
+        <tr><td><code>/autocompact [크기]</code></td><td>자동 compaction이 도는 시점을 조정한다 (v2.1.221 이상)</td></tr>
+        <tr><td><code>/btw</code></td><td>기록에 남기지 않는 곁가지 질문</td></tr>
+      </tbody>
+    </table>
+    <h4>compaction 뒤에 남는 것과 사라지는 것</h4>
+    <p>프로젝트 루트 CLAUDE.md와 경로 한정이 없는 규칙은 디스크에서 다시 주입된다. <code>paths:</code> 규칙과 하위 폴더 CLAUDE.md는 해당 파일을 다시 다룰 때 다시 로드된다. 읽거나 편집한 파일은 최근 수정 순으로 최대 다섯 개만 다시 읽고, 5,000토큰이 넘는 파일은 경로 참조로만 돌아온다. <strong>대화 중에 말로 준 지시나 발견은 요약 속에 섞여 흐려질 수 있다.</strong> 컨텍스트 엔지니어링 글도 지나치게 공격적인 compaction은 나중에야 중요성이 드러나는 미묘한 맥락을 잃게 한다고 경고한다. 그래서 놓치면 안 되는 사실은 노트 파일에, 반드시 지킬 규칙은 CLAUDE.md나 hook·deny 규칙에 둔다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>기억 대신 디스크: 탐색 노트</h3><span class="unit-en">Notes on disk, not in memory</span></div>
+    <p>compaction, <code>/clear</code>, 새 세션, 크래시처럼 컨텍스트 경계를 넘어가야 하는 사실은 대화가 아니라 파일에 둔다. 컨텍스트 엔지니어링 글의 structured note-taking이 이것이다. 에이전트가 컨텍스트 밖에 노트를 정기적으로 쓰고 나중에 다시 불러온다(글은 NOTES.md, 할 일 목록을 예로 든다). 후속 질문 때 "기억"에 기대지 말고 노트를 다시 읽게 하면 일반론으로 미끄러지는 것을 막는다.</p>
+    <div class="code"><span class="c"># explore-notes.md (탐색 중 계속 갱신)</span>
+## 확정 사실 (파일:라인)
+- 수동 해제: ReservationController.release()
+    -&gt; ReservationReleaseService.release(orderId)   inventory-core/.../ReservationReleaseService.kt:41
+- 만료 해제: ReservationExpiryJob (@Scheduled 5분) -&gt; 같은 서비스 호출
+- 해제 이벤트: reservation.released -&gt; InventorySyncConsumer (inventory-sync)
+## 미확인
+- 부분 출고 시 잔여 수량 해제 위치 (OutboundService 의심)
+## 다음 질문
+- 해제 실패 시 재시도 정책</div>
+    <p>프롬프트에는 "답하기 전에 <code>explore-notes.md</code>를 읽고, 새로 확정한 사실은 파일 경로·클래스명과 함께 추가하라"고 적는다. 공식 프롬프팅 가이드의 상태 관리 권고도 같은 방향이다. 테스트 결과·작업 상태처럼 구조가 있는 정보는 JSON 같은 구조화 형식으로, 진행 메모는 자유 서술 텍스트로, 작업 이력은 git으로 남긴다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>질문 크기로 위임하고, 요약을 들려 보낸다</h3><span class="unit-en">Question-sized delegation and handoffs</span></div>
+    <p>질문을 구체적인 단위로 잘라 서브에이전트에 맡긴다. 예: "모든 Kafka consumer 클래스와 구독 토픽 목록", "<code>ReservationReleaseService.release()</code>를 호출하는 경로". 서브에이전트의 중간 도구 호출과 결과는 그 안에 남고 최종 메시지만 돌아오므로, 메인 대화는 수백 줄의 grep 결과 대신 요약만 받는다. 컨텍스트 엔지니어링 글은 서브에이전트가 수만 토큰을 쓰며 탐색해도 보통 1,000~2,000 토큰 정도의 압축 요약만 돌려주는 구조를 설명한다.</p>
+    <p>Claude Code의 내장 <strong>Explore</strong> 서브에이전트가 이 용도다. 읽기 전용(Write·Edit 거부)이고 파일 탐색과 코드 검색에 맞춰져 있으며, Claude가 호출할 때 철저함 수준을 quick · medium · very thorough 중에서 지정한다. Explore와 Plan은 CLAUDE.md와 git status 스냅샷 없이 시작한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:50%">서브에이전트가 맞을 때</th><th>메인 대화가 맞을 때</th></tr></thead>
+      <tbody>
+        <tr><td>메인 맥락에 필요 없는 장황한 출력이 나온다 (전체 검색, 테스트 실행, 로그)</td><td>자주 주고받으며 다듬어야 한다</td></tr>
+        <tr><td>도구 제한(읽기 전용 등)을 강제하고 싶다</td><td>여러 단계가 많은 맥락을 공유한다</td></tr>
+        <tr><td>독립된 일이라 요약만 돌려받으면 된다</td><td>빠르고 국소적인 수정이다, 또는 지연이 중요하다 (새 서브에이전트는 맥락을 다시 모아야 한다)</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">비용 감각</span><p>서브에이전트마다 자기 요청을 보내므로 토큰이 더 든다. 결과가 길면 결국 메인 컨텍스트를 채우므로 <strong>짧은 요약을 요청</strong>한다. 파일 목록 수집처럼 단순한 일은 서브에이전트 정의에 <code>model: haiku</code>를 둘 수 있다. 같은 작업을 서브에이전트에 넘긴다고 답이 더 똑똑해지지는 않는다 — 이점은 병렬성, 출력 격리, 독립 리뷰다.</p></div>
+    <h4>단계 사이의 인계</h4>
+    <p>탐색을 단계로 나눌 때(1단계: 모듈 지도 → 2단계: 특정 흐름 추적), 1단계 결과를 요약해 2단계 서브에이전트의 첫 프롬프트에 넣는다. fork가 아닌 서브에이전트는 새 컨텍스트로 시작하고, 부모가 넘기는 내용은 <strong>Agent 도구의 프롬프트 문자열뿐</strong>이다. Agent SDK 문서는 필요한 파일 경로, 오류 메시지, 결정 사항을 그 프롬프트에 직접 넣으라고 한다. 서브에이전트는 CLAUDE.md는 받지만(Explore·Plan 제외) 부모의 대화 이력과 도구 결과는 받지 않는다.</p>
+    <div class="code"><span class="c"># 2단계 위임 프롬프트</span>
+목표: 부분 출고 시 남은 예약 수량이 어디서 해제되는지 찾는다.
+1단계에서 확정된 사실:
+- 해제 로직의 중심: inventory-core/.../ReservationReleaseService.kt
+- 출고 관련 모듈: outbound-api, outbound-worker (Kafka consumer 3개)
+제외: vendor/, build/generated/
+반환: 호출 경로 목록(파일:라인)과 확신하지 못한 지점, 400단어 이내</div>
+    <div class="note"><span class="lbl">fork는 다른 선택지</span><p>Claude Code의 fork는 지금까지의 대화 전체를 이어받는 서브에이전트다. 배경 설명이 너무 길어 일반 서브에이전트에 넘기기 어려울 때 쓸 수 있지만, 입력 격리가 사라진다. fork의 도구 호출도 메인 대화에 남지 않고 최종 결과만 돌아온다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>재시작을 전제로 설계한다</h3><span class="unit-en">Designing for restarts</span></div>
+    <p>여러 에이전트가 오래 도는 탐색은 중간에 프로세스가 죽을 수 있다. 각 에이전트가 정해진 위치에 자기 상태를 내보내고, 코디네이터는 재시작할 때 <strong>매니페스트</strong>(manifest, 작업별 진행 상태와 결과 파일 위치를 적은 목록)를 읽어 각 에이전트 프롬프트에 주입한다.</p>
+    <div class="code">{
+  "run_id": "wms-explore-1030",
+  "updated_at": "2026-10-30T14:20:00+09:00",
+  "tasks": [
+    {"id": "map-modules",    "status": "done",
+     "output": "state/map-modules.json"},
+    {"id": "trace-release",  "status": "in_progress",
+     "output": "state/trace-release.json",
+     "checkpoint": "outbound-worker 분석 완료, outbound-api 미착수"},
+    {"id": "list-consumers", "status": "pending"}
+  ]
+}</div>
+    <ol class="proc blue">
+      <li>코디네이터가 매니페스트를 읽는다</li>
+      <li><code>done</code> 작업은 다시 실행하지 않고 결과 파일의 요약만 주입한다</li>
+      <li><code>in_progress</code> 작업은 checkpoint와 부분 결과를 프롬프트에 넣어 이어 가게 한다</li>
+      <li><code>pending</code> 작업만 새로 시작한다</li>
+    </ol>
+    <div class="note"><span class="lbl">공식 문서와의 연결</span><p>Agent SDK 세션은 대화 이력을 디스크에 저장해 <code>resume</code>·<code>continue</code>로 이어 갈 수 있지만 <strong>파일시스템 상태는 저장하지 않는다</strong>(파일 변경은 file checkpointing으로 따로 다룬다). 세션 문서는 다른 호스트에서 재개하는 선택지 중 하나로 "세션 재개에 기대지 말고, 필요한 결과(분석 결과·결정·diff)를 애플리케이션 상태로 저장해 새 세션 프롬프트에 넘기라"를 들고, 이쪽이 대개 더 견고하다고 한다. 매니페스트 패턴이 바로 그것이다. 장기 실행 하네스 글도 새 컨텍스트에서 시작하는 에이전트가 진행 기록 파일과 git log를 먼저 읽게 하고, 기능 목록은 모델이 부적절하게 고치거나 덮어쓸 가능성이 Markdown보다 낮은 JSON으로 관리했다고 소개한다.</p></div>
+    <p class="cap">서브에이전트 하나를 이어 가는 것은 별개 기능이다. Claude Code에서 완료된 서브에이전트는 agent ID를 돌려주고 <code>SendMessage</code>로 재개할 수 있지만, 내장 Explore·Plan은 일회성이라 ID를 돌려주지 않아 재개할 수 없다.</p>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>탐색 출력이 컨텍스트를 채운다 → 구체적인 질문 단위로 서브에이전트에 위임하고, 포커스 지시와 함께 <code>/compact</code></li>
+      <li>후속 질문에서도 쓸 사실 → 스크래치패드 파일에 기록하고 다시 읽게 한다 (자동 요약에 맡기지 않는다)</li>
+      <li>다음 단계 서브에이전트 → 이전 단계 요약을 위임 프롬프트에 주입한다</li>
+      <li>크래시·재시작 → 매니페스트를 읽어 완료분은 재사용, 진행분은 이어서. 처음부터 다시 탐색하지 않는다</li>
+      <li>무관한 작업으로 전환 → <code>/clear</code></li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>1M 토큰 윈도면 노트 파일이나 위임은 필요 없다.</div><div class="f"><span class="k">사실</span>용량이 남아도 토큰이 늘수록 회상 정확도가 떨어지고(context rot) 비용도 오른다. 공식 문서도 집중된 컨텍스트가 더 좋은 답을 준다고 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>compaction이 중요한 내용은 알아서 남긴다.</div><div class="f"><span class="k">사실</span>자동 요약은 무엇이 중요한지 추측한다. <code>/compact</code>에 포커스 지시를 주고, 놓치면 안 되는 사실은 파일에 적는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>서브에이전트는 부모 대화를 알고 시작하므로 짧게 지시해도 된다.</div><div class="f"><span class="k">사실</span>fork가 아니면 새 컨텍스트로 시작하고 위임 프롬프트만 받는다. 이전 단계의 경로와 결정을 프롬프트에 직접 넣어야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>세션을 resume하면 크래시 전의 파일 상태까지 돌아온다.</div><div class="f"><span class="k">사실</span>세션은 대화 이력만 저장한다. 작업 산출물과 진행 상태는 매니페스트와 상태 파일로 따로 남겨야 한다.</div></div>
+
+  <h2 class="sec">자가 점검 퀴즈</h2>
+  <div class="quizhd"><span class="qs">점수 <b data-score>0 / 6</b></span><span class="sp"></span><button class="qbtn" data-act="reveal">정답 모두 보기</button><button class="qbtn" data-act="reset">다시 풀기</button></div>
+  <div class="quiz">
+    <div class="q" data-answer="B">
+      <div class="qh"><span class="qn">Q1</span><span class="qt">열화 증상 대응</span></div>
+      <div class="qq"><span class="sc">세 시간째 탐색 중인 세션에서, 앞서 확인한 <code>ReservationReleaseService</code> 대신 "일반적으로 이런 시스템은 서비스 레이어에서 처리합니다"라는 답이 나오기 시작했다.</span>가장 알맞은 조치는?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>같은 질문을 IMPORTANT를 붙여 다시 묻는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>확정 사실을 노트 파일로 정리하게 하고, 포커스 지시와 함께 <code>/compact</code>한 뒤 노트를 참조해 답하게 한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>더 큰 컨텍스트 윈도 모델로 바꾸고 그대로 계속한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>노트 없이 <code>/clear</code>하고 처음부터 다시 탐색한다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (B)</span><p>증상은 긴 컨텍스트에서의 회상 저하다. 사실을 파일로 고정하고 컨텍스트를 줄인 뒤 파일을 근거로 답하게 하는 것이 정석이다. C는 윈도만 키워 원인을 남기고, D는 이미 찾은 사실까지 버린다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q2</span><span class="qt">탐색 위임</span></div>
+      <div class="qq"><span class="sc">결제 모듈에서 외부 PG를 호출하는 모든 지점을 찾아야 한다. 검색 결과가 수백 줄 나올 것으로 보이고, 메인 대화는 리팩터링 설계를 이어 가야 한다.</span>어떻게 하는가?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>메인 대화에서 grep 결과를 모두 읽는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>리팩터링 설계를 멈추고 <code>/clear</code>한 뒤 검색한다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>검색 결과를 CLAUDE.md에 붙여 넣어 항상 로드되게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>Explore 같은 읽기 전용 서브에이전트에 맡기고 호출 지점 목록(파일:라인)과 요약만 돌려받는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>장황한 출력은 서브에이전트 안에 두고 메인은 요약만 받는다. A는 메인 컨텍스트를 노이즈로 채우고, B는 설계 맥락을 버리며, C는 매 세션 불필요한 토큰을 싣는다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q3</span><span class="qt">위임 프롬프트</span></div>
+      <div class="qq">2단계 탐색 서브에이전트(fork 아님)가 1단계에서 이미 파악한 모듈 구조를 다시 탐색하느라 시간을 썼다. 원인과 해결로 옳은 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>서브에이전트는 새 컨텍스트로 시작해 위임 프롬프트만 받는다. 1단계 요약(경로·결정)을 프롬프트에 넣는다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>서브에이전트는 부모 대화를 상속하므로 원인은 모델 성능이다. 더 큰 모델로 바꾼다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>모든 탐색 결과를 CLAUDE.md에 누적해 둔다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>서브에이전트의 <code>maxTurns</code>를 줄인다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>부모에서 서브에이전트로 가는 것은 Agent 도구의 프롬프트 문자열뿐이다. 이전 단계의 결과를 거기에 주입해야 중복 탐색이 없다. B는 사실과 다르고, D는 탐색을 끊을 뿐 정보 부족을 해결하지 않는다.</p></div>
+    </div>
+    <div class="q" data-answer="C">
+      <div class="qh"><span class="qn">Q4</span><span class="qt">크래시 복구</span></div>
+      <div class="qq"><span class="sc">서브에이전트 네 개가 병렬 탐색하던 중 코디네이터 프로세스가 죽었다. 각 에이전트는 <code>state/</code> 아래 결과 파일과 <code>manifest.json</code>을 갱신해 왔다.</span>재시작할 때 올바른 방법은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>모든 서브에이전트를 처음부터 다시 실행한다</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>가장 최근 세션을 resume하면 파일 상태까지 복원되므로 그것만 하면 된다</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>매니페스트를 읽어 완료 작업은 결과 요약만 주입하고, 진행 중 작업은 checkpoint와 부분 결과를 프롬프트에 넣어 이어 가게 한다</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>결과 파일 전체를 메인 대화에 그대로 붙여 넣는다</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (C)</span><p>구조화된 상태 export와 매니페스트의 목적은 완료분을 재사용하고 진행분만 이어 가는 것이다. A는 비용을 다시 치르고, B는 세션이 파일 상태를 저장하지 않는다는 점에서 틀렸으며, D는 메인 컨텍스트를 다시 채운다.</p></div>
+    </div>
+    <div class="q" data-answer="D">
+      <div class="qh"><span class="qn">Q5</span><span class="qt">compaction 이후</span></div>
+      <div class="qq">Claude Code에서 compaction이 일어난 뒤 디스크에서 다시 주입되는 것은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span>대화 중 말로 준 "vendor/ 폴더는 건드리지 마" 지시</span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span>세션에서 읽은 모든 파일의 전체 내용</span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span>메인 대화에 붙어 있던 모든 도구 결과</span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span>프로젝트 루트 CLAUDE.md</span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (D)</span><p>루트 CLAUDE.md와 경로 한정 없는 규칙은 다시 주입된다. 대화 중 지시(A)는 요약 속에 흐려질 수 있고, 파일은 최근 수정 순 최대 다섯 개만 다시 읽으므로 B는 틀렸다. 지켜야 할 규칙은 대화가 아니라 CLAUDE.md에 둔다.</p></div>
+    </div>
+    <div class="q" data-answer="A">
+      <div class="qh"><span class="qn">Q6</span><span class="qt">명령 선택</span></div>
+      <div class="qq"><span class="sc">탐색을 마치고 전혀 관계없는 버그 수정을 시작하려 한다. 앞의 탐색 기록은 노트 파일에 정리해 두었고 대화로는 더 필요 없다.</span>가장 알맞은 명령은?</div>
+      <div class="opts">
+        <button class="opt" data-k="A"><span class="ok">A</span><span><code>/clear</code></span></button>
+        <button class="opt" data-k="B"><span class="ok">B</span><span><code>/compact</code></span></button>
+        <button class="opt" data-k="C"><span class="ok">C</span><span><code>/btw</code></span></button>
+        <button class="opt" data-k="D"><span class="ok">D</span><span><code>/context</code></span></button>
+      </div>
+      <div class="exp"><span class="verdict">정답 (A)</span><p>무관한 작업으로 넘어갈 때는 <code>/clear</code>로 새 컨텍스트에서 시작한다. 이전 기록이 남아 있으면 매 요청마다 다시 읽히며 비용이 든다. <code>/compact</code>는 같은 작업을 이어 갈 때, <code>/btw</code>는 곁가지 질문, <code>/context</code>는 사용량 확인용이다.</p></div>
+    </div>
+  </div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/context-window" target="_blank" rel="noopener">Explore the context window</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener">Create custom subagents</a> · <a href="https://code.claude.com/docs/en/agent-sdk/subagents" target="_blank" rel="noopener">Subagents in the SDK</a> · <a href="https://code.claude.com/docs/en/agent-sdk/sessions" target="_blank" rel="noopener">Work with sessions</a> · <a href="https://code.claude.com/docs/en/commands" target="_blank" rel="noopener">Commands</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" target="_blank" rel="noopener">Prompting best practices</a> · <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents</a> · <a href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" target="_blank" rel="noopener">Effective harnesses for long-running agents</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문·예시·자가 점검 문항은 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const root = document.querySelector('.doc');
+    if (!root || root.__ccarQuiz) return;
+    root.__ccarQuiz = true;
+    const quiz = root.querySelector('.quiz');
+    if (!quiz) return;
+    const qs = Array.from(quiz.querySelectorAll('.q[data-answer]'));
+    const scoreEl = root.querySelector('[data-score]');
+    qs.forEach(q => {
+      const ans = q.getAttribute('data-answer');
+      q.querySelectorAll('.opt').forEach(b => {
+        if (b.getAttribute('data-k') === ans) b.classList.add('is-answer');
+      });
+      const v = q.querySelector('.verdict');
+      if (v) v.setAttribute('data-orig', v.textContent);
+    });
+    const paint = () => {
+      const done = qs.filter(q => q.classList.contains('done'));
+      const ok = done.filter(q => !q.classList.contains('miss')).length;
+      if (scoreEl) scoreEl.textContent = ok + ' / ' + qs.length + ' (풀이 ' + done.length + ')';
+    };
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const opt = t.closest('.opt');
+      if (opt && quiz.contains(opt)) {
+        const q = opt.closest('.q');
+        if (!q || q.classList.contains('done')) return;
+        const ans = q.getAttribute('data-answer');
+        q.classList.add('done');
+        q.querySelectorAll('.opt').forEach(b => {
+          if (b.getAttribute('data-k') === ans) b.classList.add('correct');
+        });
+        const v = q.querySelector('.verdict');
+        if (opt.getAttribute('data-k') !== ans) {
+          opt.classList.add('wrong');
+          q.classList.add('miss');
+          if (v) v.textContent = '오답 — 정답은 (' + ans + ')';
+        } else if (v) {
+          v.textContent = '정답! (' + ans + ')';
+        }
+        paint();
+        return;
+      }
+      const act = t.closest('[data-act]');
+      if (!act || !root.contains(act)) return;
+      if (act.getAttribute('data-act') === 'reset') {
+        qs.forEach(q => {
+          q.classList.remove('done', 'miss');
+          q.querySelectorAll('.opt').forEach(b => b.classList.remove('correct', 'wrong'));
+          const v = q.querySelector('.verdict');
+          if (v) v.textContent = v.getAttribute('data-orig') || '';
+        });
+        quiz.classList.remove('reveal');
+        paint();
+      } else if (act.getAttribute('data-act') === 'reveal') {
+        quiz.classList.toggle('reveal');
+      }
+    });
+    paint();
+  }
+}
+</script>
+</body>
+</html>
