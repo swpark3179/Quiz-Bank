@@ -150,9 +150,6 @@ for r in client.messages.batches.results(batch.id):        <span class="c"># 순
   <div class="myth"><div class="m"><span class="k">오해</span>일부 요청이 실패하면 배치 전체를 다시 제출해야 한다.</div><div class="f"><span class="k">사실</span>요청은 독립적으로 처리된다. 실패한 <code>custom_id</code>만 고쳐서 재제출하고, <code>errored</code>·<code>canceled</code>·<code>expired</code> 요청에는 과금되지 않는다.</div></div>
   <div class="myth"><div class="m"><span class="k">오해</span>배치에서는 도구를 아예 쓸 수 없다.</div><div class="f"><span class="k">사실</span>server tool은 배치 안에서도 서버 측 루프로 돈다. 안 되는 것은 우리 코드가 실행하는 client tool을 요청 도중에 실행해 결과를 넣는 일이다.</div></div>
 
-  <h2 class="sec">연습 문제</h2>
-  <div class="note tip"><span class="lbl">앱에서 풀기</span><p>이 레슨의 연습 문제는 문제은행 앱 <strong>CCAR-F</strong> 카테고리에 도메인별로 모았다. <strong>자가점검 D4</strong>(한글)과 <strong>레슨문제 D4</strong>(CertSafari 영문 원문, 한글 해설)에서 해설 첫 줄이 <code>📘 레슨 4.5</code>인 문항이 이 레슨에 해당한다.</p></div>
-
   <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/batch-processing" target="_blank" rel="noopener">Batch processing</a> · <a href="https://platform.claude.com/docs/en/api/messages/batches/results" target="_blank" rel="noopener">Retrieve Message Batch results</a> · <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Pricing (Batch processing)</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/context-windows" target="_blank" rel="noopener">Context windows (overflow behavior)</a></p></div>
 
   <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://www.certsafari.com/anthropic/claude-certified-architect-foundations/learn" target="_blank" rel="noopener">CertSafari CCAR-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
