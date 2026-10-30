@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 8 · 서브도메인 8.3</span></div>
+    <h1>Claude 확장 방식 고르기: 내장 도구·커스텀 도구·스킬·MCP</h1>
+    <p class="sub">내장 도구 먼저 · 클라이언트 도구와 서버 도구 · 인프로세스 커스텀 도구 · 스킬의 단계적 로딩 · MCP와 스킬의 조합 · 플러그인</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/built-in-tools-vs-custom-tools-choosing-how-claude-acts" target="_blank" rel="noopener">CertSafari 8.3</a> &nbsp;|&nbsp; 출제 도메인: 도메인 8 · Tools and MCPs (10.6%) · 서브도메인 8.3 Agentic Customization</p>
+    <div class="secrow">
+      <span class="s">8.1 도구 정의·호출 처리</span><span class="s">8.2 MCP 서버·트랜스포트</span><span class="s on">8.3 확장 방식 선택</span>
+    </div>
+  </header>
+
+  <p class="lede">Claude가 할 수 있는 일을 늘리는 방법은 여러 가지다. 내장 도구, 직접 만든 커스텀 도구, MCP 서버, 스킬, CLAUDE.md, 훅, 플러그인. 이것들은 서로 대체재가 아니라 <strong>각자 다른 문제를 푸는 층</strong>이다. 시험은 요구 사항 한 줄을 주고 어느 층에 넣어야 하는지 묻는다. 판단의 출발점은 간단하다. 내장 도구로 되는 일은 내장 도구로 하고, 외부 서비스는 연결(MCP)로, 반복되는 절차와 노하우는 스킬로, 기존 통합이 없는 사내 동작만 커스텀 도구로 만든다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>Anthropic이 스키마를 정의한 클라이언트 도구(<code>bash</code>·<code>text_editor</code>)와 Anthropic이 실행하는 서버 도구를 구분한다</li>
+      <li>Agent SDK에서 커스텀 도구를 인프로세스 MCP 서버로 등록하는 방법과 그 도구를 쓸 상황을 안다</li>
+      <li>스킬의 3단계 로딩(메타데이터 → SKILL.md → 참조 파일·스크립트)과 단계별 토큰 비용을 설명한다</li>
+      <li>MCP(연결)와 스킬(절차·지식)을 함께 쓰는 설계와, 기존 MCP 서버를 재사용하는 판단을 내린다</li>
+      <li>CLAUDE.md·스킬·MCP·서브에이전트·훅·플러그인을 요구 사항에 맞게 고른다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>내장 도구 먼저, 도메인 동작은 커스텀 도구로</h3><span class="unit-en">Built-in tools first</span></div>
+    <p>Claude Code와 Agent SDK에는 파일 읽기·편집, 검색, 명령 실행, 웹 접근을 위한 내장 도구(<code>Read</code>, <code>Edit</code>, <code>Write</code>, <code>Glob</code>, <code>Grep</code>, <code>Bash</code>, <code>WebFetch</code>, <code>WebSearch</code> 등)가 있고, 문서는 이것들이 대부분의 코딩 작업을 감당한다고 설명한다. 파일을 읽는 도구를 새로 만들 이유는 거의 없다.</p>
+    <p>Messages API에서 직접 앱을 만들 때도 같은 원리다. 셸 실행이나 파일 편집처럼 흔한 작업에는 Anthropic이 스키마를 공개한 도구를 쓴다. 이 스키마는 학습되어 있어서 Claude가 같은 기능의 커스텀 도구보다 더 안정적으로 호출한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">도구</th><th style="width:22%">스키마 작성</th><th style="width:22%">실행 주체</th><th>앱의 일</th></tr></thead>
+      <tbody>
+        <tr><td><code>text_editor</code>, <code>bash</code>, <code>memory</code>, <code>computer</code>, <code>browser</code></td><td>Anthropic</td><td><strong>여러분의 앱</strong></td><td><code>tool_use</code>를 받아 실제로 파일을 고치거나 명령을 돌리고 <code>tool_result</code>를 돌려준다</td></tr>
+        <tr><td><code>web_search</code>, <code>web_fetch</code>, <code>code_execution</code>, <code>tool_search</code></td><td>Anthropic</td><td>Anthropic</td><td>요청에서 켜고 결과를 읽는다</td></tr>
+        <tr><td>사용자 정의 도구</td><td>여러분</td><td>여러분의 앱</td><td>사내 로직·내부 API·독점 데이터를 연결한다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">구분 기준 한 줄</span><p>'스키마를 누가 썼나'와 '누가 실행하나'는 다른 질문이다. <code>text_editor</code>는 Anthropic이 스키마를 썼지만 클라이언트 도구라서 파일 쓰기는 여러분의 코드가 한다. 실행을 Anthropic이 맡는 것은 서버 도구뿐이다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>Agent SDK의 커스텀 도구: 인프로세스 MCP 서버</h3><span class="unit-en">Custom tools in the Agent SDK</span></div>
+    <p>내장 도구로 안 되고, 연결할 기존 MCP 서버도 없는 사내 시스템이라면 커스텀 도구를 만든다. Agent SDK에서는 도구를 <code>tool()</code>(TypeScript) 또는 <code>@tool</code>(Python)로 정의하고, <code>createSdkMcpServer</code>·<code>create_sdk_mcp_server</code>로 감싸 <code>mcpServers</code>에 넘긴다. 이 서버는 <strong>별도 프로세스가 아니라 앱 프로세스 안에서</strong> 돈다.</p>
+    <div class="code">from typing import Annotated, Any
+from claude_agent_sdk import (tool, create_sdk_mcp_server,
+                              ClaudeAgentOptions)
+
+@tool("get_leave_balance",
+      "Return remaining annual-leave days for one employee. "
+      "Use only for current-year balances.",
+      {"employee_id": Annotated[str, "HR id such as E-10293"]})
+async def get_leave_balance(args: dict[str, Any]) -&gt; dict[str, Any]:
+    try:
+        days = await hr_client.balance(args["employee_id"])
+    except HrUnavailable as e:
+        return {"content": [{"type": "text",
+                 "text": f"HR service unavailable: {e}. Try later."}],
+                "is_error": True}       <span class="c"># Claude가 읽을 오류를 직접 쓴다</span>
+    return {"content": [{"type": "text", "text": f"{days} days left"}]}
+
+hr = create_sdk_mcp_server(name="hr", version="1.0.0",
+                           tools=[get_leave_balance])
+options = ClaudeAgentOptions(
+    mcp_servers={"hr": hr},
+    allowed_tools=["mcp__hr__get_leave_balance"],
+)</div>
+    <table class="t">
+      <thead><tr><th style="width:30%">요소</th><th>요점</th></tr></thead>
+      <tbody>
+        <tr><td>이름·설명·입력 스키마·핸들러</td><td>도구를 이루는 네 부분. Claude는 설명을 읽고 언제 부를지 정한다</td></tr>
+        <tr><td>도구 이름</td><td><code>mcp__{server}__{tool}</code>. <code>allowedTools</code>에 이 이름을 넣으면 확인 없이 실행된다</td></tr>
+        <tr><td>오류</td><td>잡히지 않은 예외도 루프를 멈추지 않고 원시 메시지로 전달된다. <code>isError</code>·<code>is_error</code>로 직접 쓰면 다음에 할 일까지 알려 줄 수 있다</td></tr>
+        <tr><td>annotations</td><td><code>readOnlyHint: true</code>면 다른 읽기 전용 도구와 병렬 호출될 수 있다. 메타데이터일 뿐 강제력은 없다</td></tr>
+        <tr><td>도구가 많아질 때</td><td>tool search가 기본으로 켜져 있어, 이름만 목록에 두고 전체 스키마는 필요할 때 불러온다</td></tr>
+      </tbody>
+    </table>
+    <p>커스텀 도구를 더할 때 내장 도구를 어떻게 남길지도 함께 정한다. 문서는 두 층을 구분한다. <strong>가용성</strong>은 도구가 Claude의 컨텍스트에 보이느냐, <strong>권한</strong>은 시도한 호출이 승인되느냐다.</p>
+    <table class="t">
+      <thead><tr><th style="width:32%">옵션</th><th style="width:16%">층</th><th>효과</th></tr></thead>
+      <tbody>
+        <tr><td><code>tools: ["Read", "Grep"]</code></td><td>가용성</td><td>나열한 내장 도구만 컨텍스트에 남는다. MCP 도구에는 영향이 없다</td></tr>
+        <tr><td><code>tools: []</code></td><td>가용성</td><td>내장 도구를 모두 빼고 MCP 도구(커스텀 도구 포함)만 쓰게 한다</td></tr>
+        <tr><td><code>allowedTools</code></td><td>권한</td><td>나열한 도구는 확인 없이 실행. 나머지는 남아서 권한 흐름을 탄다</td></tr>
+        <tr><td><code>disallowedTools</code></td><td>둘 다</td><td>이름만 쓰면 컨텍스트에서 제거, <code>Bash(rm *)</code> 같은 범위 규칙은 도구를 남기고 일치하는 호출만 거부</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>스킬: 필요할 때만 로드되는 노하우</h3><span class="unit-en">Progressive disclosure</span></div>
+    <p>스킬(Agent Skills)은 지시문·메타데이터·선택적 리소스(스크립트·템플릿·참조 문서)를 묶은 파일시스템 기반 디렉터리다. 매번 같은 안내를 프롬프트에 붙이는 대신 스킬로 만들어 두면 Claude가 관련 있을 때 꺼내 쓴다. 핵심은 <strong>단계적 공개(progressive disclosure)</strong>다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">단계</th><th style="width:24%">로드 시점</th><th style="width:20%">토큰 비용</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>1 · 메타데이터</td><td>항상 (시작 시 시스템 프롬프트)</td><td>스킬당 약 100</td><td>YAML 프런트매터의 <code>name</code>과 <code>description</code></td></tr>
+        <tr><td>2 · 지시문</td><td>스킬이 트리거될 때</td><td>5k 미만</td><td>SKILL.md 본문</td></tr>
+        <tr><td>3 · 리소스·코드</td><td>필요할 때</td><td>읽기 전까지 0</td><td>참조 파일은 읽을 때 로드. 스크립트는 bash로 실행되고 <strong>출력만</strong> 컨텍스트에 들어간다</td></tr>
+      </tbody>
+    </table>
+    <div class="code">---
+name: contract-review
+description: Flags risky clauses in supplier contracts and
+  summarizes obligations. Use when the user shares a contract,
+  NDA, or MSA, or asks about liability or termination terms.
+---
+# Contract review
+1. Read the whole contract before commenting.
+2. For tracked-change edits, follow REDLINE_GUIDE.md.</div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① STARTUP</div><div class="ft">모든 스킬의 이름·설명만 시스템 프롬프트에</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② REQUEST</div><div class="ft">"이 공급 계약의 위험 조항을 요약해 줘"</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ READ SKILL.md</div><div class="ft">설명과 맞으므로 bash로 SKILL.md를 읽는다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ SKIP</div><div class="ft">편집 요청이 아니므로 REDLINE_GUIDE.md는 읽지 않는다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ FINISH</div><div class="ft">SKILL.md 지시대로 작업을 마친다</div></div>
+    </div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>Claude가 요청과 대조하는 것은 프런트매터의 <code>description</code>이다. 무엇을 하는지와 <strong>언제 써야 하는지</strong>를 함께 써야 트리거된다 (API 기준 최대 1,024자, <code>name</code>은 소문자·숫자·하이픈 최대 64자)</li>
+      <li>스킬을 많이 설치해도 시작 시 비용은 '스킬 수 × 약 100토큰'이다. 20개면 약 2,000토큰</li>
+      <li>번들 파일은 읽기 전까지, 스크립트 코드는 끝까지 컨텍스트를 쓰지 않는다. 길이가 아니라 <strong>읽은 파일과 출력</strong>이 비용이다</li>
+      <li>Claude Code에서 스킬은 <code>/skill-name</code>으로 직접 부를 수도 있다. 부작용이 있는 절차는 <code>disable-model-invocation: true</code>로 사람만 부르게 하고, 그러면 설명도 컨텍스트에 올라가지 않는다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>스킬이 동작하는 곳과 신뢰</h3><span class="unit-en">Where skills run, and whom to trust</span></div>
+    <p>스킬은 Claude가 파일시스템과 bash를 쓸 수 있는 실행 환경을 전제로 한다. 같은 스킬이라도 쓰는 곳마다 올리는 방법과 실행 환경이 다르고, <strong>표면 사이에 자동으로 동기화되지 않는다.</strong></p>
+    <table class="t">
+      <thead><tr><th style="width:18%">표면</th><th style="width:40%">스킬을 두는 방법</th><th>실행 환경·공유 범위</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Code</td><td><code>~/.claude/skills/</code>(개인) 또는 <code>.claude/skills/</code>(프로젝트)에 디렉터리와 SKILL.md를 둔다. 업로드가 필요 없다</td><td>사용자 컴퓨터와 같은 네트워크 접근. 프로젝트 스킬은 커밋해 팀과 공유하고, 플러그인으로도 배포한다</td></tr>
+        <tr><td>Claude API</td><td>Skills API(<code>/v1/skills</code>)로 올리고 <code>container</code>의 <code>skill_id</code>로 지정한다. code execution 도구가 필요하다</td><td>네트워크 접근 없음, 실행 중 패키지 설치 불가. 워크스페이스 전체 공유</td></tr>
+        <tr><td>claude.ai</td><td>설정에서 zip으로 올린다(코드 실행이 켜진 유료 플랜)</td><td>사용자 개인 단위. 조직 전체 배포나 관리자 중앙 관리는 없다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">스킬은 소프트웨어 설치처럼 다룬다</span><p>스킬은 지시문과 코드로 Claude에게 새 능력을 주므로, 악의적인 스킬은 설명과 다른 방식으로 도구를 부르거나 코드를 실행하게 만들 수 있다. 직접 만들었거나 Anthropic에서 받은 신뢰할 수 있는 출처의 스킬만 쓰고, 그렇지 않으면 번들된 파일 전부(SKILL.md, 스크립트, 리소스)를 검토한다. 외부 URL에서 데이터를 가져오는 스킬은 특히 위험하다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>MCP는 연결, 스킬은 절차</h3><span class="unit-en">MCP and skills work together</span></div>
+    <p>MCP와 스킬은 양자택일이 아니다. 공식 문서는 둘을 이렇게 나눈다. MCP는 외부 시스템을 위한 전용 도구를 주고 <strong>연결과 인증을 서버가 처리</strong>한다. 스킬은 그 도구를 <strong>잘 쓰는 법</strong>, 즉 팀의 스키마·쿼리 패턴·메시지 형식 같은 지식과 <code>/&lt;name&gt;</code>으로 부르는 워크플로를 준다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">MCP 서버가 맡는 것</div><p>데이터 웨어하우스 접속, OAuth 로그인, <code>run_query</code>·<code>list_views</code> 같은 도구. "무엇을 할 수 있는가"</p></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">스킬이 맡는 것</div><p>"항상 <code>tenant_id</code>로 거른다, 원본 테이블 대신 승인된 뷰를 쓴다, 결과는 1만 행 이하". "어떻게 해야 하는가"</p></div>
+    </div>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">재발명</div><p>이슈 트래커가 이미 공식 원격 MCP 서버와 OAuth 로그인을 제공하는데, REST API를 직접 부르는 커스텀 도구를 새로 만든다. 인증·페이지네이션·오류 처리를 다시 짜고 유지해야 한다.</p></div>
+      <div class="pane good"><div class="bh">재사용</div><p>기존 MCP 서버를 연결하고 필요한 도구만 <code>allowedTools</code>로 승인한다. 팀 규칙(라벨 체계, 제목 형식)이 있으면 그것만 스킬로 더한다.</p></div>
+    </div>
+    <p>반대로 기존 통합이 없는 독점 사내 서비스라면 연결할 서버가 없으니 직접 만든다. Agent SDK 앱 안에서만 쓸 것이면 02의 인프로세스 커스텀 도구로 충분하고, 여러 MCP 호스트에서 재사용할 것이면 독립 MCP 서버로 만드는 편이 맞다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">조합</th><th style="width:38%">작동 방식</th><th>예</th></tr></thead>
+      <tbody>
+        <tr><td>스킬 + MCP</td><td>MCP가 연결을, 스킬이 잘 쓰는 법을 준다</td><td>MCP로 DB에 접속하고, 스킬에 스키마와 쿼리 패턴을 적는다</td></tr>
+        <tr><td>스킬 + 서브에이전트</td><td>스킬이 병렬 작업용 서브에이전트를 띄운다</td><td><code>/audit</code>가 보안·성능·스타일 서브에이전트를 격리된 컨텍스트에서 돌린다</td></tr>
+        <tr><td>CLAUDE.md + 스킬</td><td>항상 지킬 규칙은 CLAUDE.md, 참조 자료는 필요할 때 스킬로</td><td>CLAUDE.md에는 "API 규약을 따른다", 스킬에는 규약 전문</td></tr>
+        <tr><td>훅 + MCP</td><td>훅이 MCP를 통해 외부 동작을 일으킨다</td><td>중요 파일이 바뀌면 편집 후 훅이 채팅 알림을 보낸다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>CLAUDE.md·스킬·MCP·서브에이전트·훅·플러그인</h3><span class="unit-en">Match the feature to the goal</span></div>
+    <table class="t">
+      <thead><tr><th style="width:16%">기능</th><th style="width:30%">하는 일</th><th style="width:26%">로드·비용</th><th>이럴 때</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CLAUDE.md</strong></td><td>매 세션 들어가는 지속 컨텍스트</td><td>세션 시작 시 전체, 모든 요청에 비용</td><td>"pnpm을 쓴다", "커밋 전 테스트" 같은 항상 지킬 규칙</td></tr>
+        <tr><td><strong>스킬</strong></td><td>지식·참조 자료·호출 가능한 워크플로</td><td>설명은 시작 시, 본문은 쓸 때</td><td>가끔 필요한 참조 자료, <code>/deploy</code> 같은 반복 절차</td></tr>
+        <tr><td><strong>MCP</strong></td><td>외부 서비스 연결</td><td>시작 시 도구 이름, 스키마는 필요할 때(tool search)</td><td>DB 조회, 채팅 서비스 게시, 브라우저 제어</td></tr>
+        <tr><td><strong>서브에이전트</strong></td><td>격리된 컨텍스트에서 돌고 요약만 반환</td><td>메인 세션과 분리</td><td>많은 파일을 읽는 조사, 병렬 작업</td></tr>
+        <tr><td><strong>훅</strong></td><td>수명 주기 이벤트에서 스크립트 등을 실행</td><td>출력이 없으면 0</td><td>매번 반드시 일어나야 하는 일(편집 후 린트, 위험 명령 차단)</td></tr>
+        <tr><td><strong>플러그인</strong></td><td>스킬·훅·서브에이전트·MCP 서버를 묶는 패키지 층</td><td>담긴 구성 요소를 따른다</td><td>같은 설정을 여러 저장소에서 재사용하거나 배포할 때</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">문서가 주는 '추가 신호'</span><p>같은 실수를 두 번 하면 CLAUDE.md, 같은 프롬프트를 계속 치거나 같은 절차를 세 번째 붙여 넣으면 스킬, Claude가 못 보는 브라우저 탭에서 계속 데이터를 복사해 오면 MCP, 곁가지 작업이 대화를 출력으로 채우면 서브에이전트, 묻지 않고 매번 일어나야 하면 훅, 두 번째 저장소에 같은 설정이 필요하면 플러그인.</p></div>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">CLAUDE.md에 넣으면 손해</div><p>교대 인수인계 때만 쓰는 12단계 절차. 매 세션·매 요청 비용을 내면서 대부분의 작업에는 쓰이지 않는다. 문서 권장대로 CLAUDE.md는 200줄 이하로 유지한다.</p></div>
+      <div class="pane good"><div class="bh">스킬이 맞는 이유</div><p>필요할 때만 본문이 로드되고, <code>/handoff</code>처럼 이름으로 바로 부를 수 있다. 반대로 "<code>.env</code>는 절대 수정하지 말 것"처럼 반드시 지켜야 하는 규칙은 지시문이 아니라 훅으로 강제한다.</p></div>
+    </div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>판단 순서 정리</h3><span class="unit-en">A decision path for extensions</span></div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① BUILT-IN?</div><div class="ft">파일·검색·셸·웹 → 내장 도구</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② EXISTING MCP?</div><div class="ft">외부 서비스에 서버가 있으면 연결</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ BUILD</div><div class="ft">통합이 없으면 커스텀 도구(SDK 인프로세스) 또는 MCP 서버</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ KNOW-HOW</div><div class="ft">반복 절차·팀 규칙 → 스킬</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ SHARE</div><div class="ft">여러 저장소 → 플러그인</div></div>
+    </div>
+    <div class="axis"><span class="lbl">시나리오 신호 → 정답</span><ul>
+      <li>"파일을 읽고 고치고 테스트를 돌린다" → 내장 도구. 이를 위해 MCP 서버나 커스텀 도구를 만드는 보기는 오답</li>
+      <li>"공식 MCP 서버가 이미 있다" → 그 서버와 인증을 재사용. 다시 만드는 보기는 오답</li>
+      <li>"사내 독점 서비스, 기존 통합 없음, Agent SDK 앱" → 인프로세스 SDK MCP 서버에 등록한 커스텀 도구</li>
+      <li>"DB에 접속하면서 팀 쿼리 규칙도 지켜야 한다" → MCP 서버(연결) + 스킬(스키마·규칙)</li>
+      <li>"절차를 매번 붙여 넣는다" → 스킬. "항상 지킬 관례" → CLAUDE.md. "반드시 실행" → 훅</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>bash</code>와 <code>text_editor</code>는 Anthropic이 스키마를 정의했으니 Anthropic이 실행한다.</div><div class="f"><span class="k">사실</span>둘 다 클라이언트 도구다. 실행과 결과 반환은 여러분의 앱이 한다. Anthropic이 실행하는 것은 서버 도구다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>스킬을 많이 설치하면 시작할 때 컨텍스트 창이 가득 찬다.</div><div class="f"><span class="k">사실</span>트리거 전까지는 스킬마다 이름과 설명(약 100토큰)만 올라간다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>스킬에 넣은 스크립트는 코드 길이만큼 컨텍스트를 쓴다.</div><div class="f"><span class="k">사실</span>스크립트는 bash로 실행되고 코드는 컨텍스트에 들어가지 않는다. 출력만 토큰을 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>MCP와 스킬은 같은 문제를 푸는 대안이니 하나만 고르면 된다.</div><div class="f"><span class="k">사실</span>MCP는 연결과 도구, 스킬은 그 도구를 쓰는 지식과 절차다. 함께 쓰도록 설계되었다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>공식 MCP 서버가 있어도 커스텀 도구로 다시 만드는 편이 통제하기 좋다.</div><div class="f"><span class="k">사실</span>기존 서버가 연결·인증을 이미 처리한다. 다시 만들면 유지 보수만 늘어난다. 필요한 도구만 승인한다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works" target="_blank" rel="noopener">How tool use works</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview" target="_blank" rel="noopener">Agent Skills</a> · <a href="https://code.claude.com/docs/en/skills" target="_blank" rel="noopener">Extend Claude with skills (Claude Code)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/custom-tools" target="_blank" rel="noopener">Give Claude custom tools (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/mcp" target="_blank" rel="noopener">Connect to external tools with MCP (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/features-overview" target="_blank" rel="noopener">Extend Claude Code</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인8 도구·MCP</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

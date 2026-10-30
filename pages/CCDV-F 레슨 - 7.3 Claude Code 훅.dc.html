@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 7 · 서브도메인 7.3</span></div>
+    <h1>Claude Code 훅: 이벤트·매처·PreToolUse 결정</h1>
+    <p class="sub">훅 이벤트와 실행 시점 · 막을 수 있는 이벤트 · 매처와 if 조건 · 핸들러 유형과 설정 위치 · 종료 코드와 JSON 결정 · Agent SDK 콜백</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-hooks-as-guardrails-events-matchers-and-handlers" target="_blank" rel="noopener">CertSafari 7.3 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/blocking-destructive-tool-calls-with-pretooluse-decisions" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 7 · Security and Safety (8.1%) · 서브도메인 7.3 Claude Hooks</p>
+    <div class="secrow">
+      <span class="s">7.1 프롬프트 인젝션 방어</span><span class="s">7.2 가드레일·안전한 배포</span><span class="s on">7.3 Claude Code 훅</span><span class="s">7.4 API 키·워크로드 ID</span>
+    </div>
+  </header>
+
+  <p class="lede">훅(hook)은 Claude Code 수명 주기의 정해진 시점에 실행되는 사용자 정의 핸들러다. 모델이 무엇을 의도하든 코드가 매번 같은 방식으로 돌기 때문에, 프롬프트로는 보장할 수 없는 정책을 집행하는 데 쓴다. 시험의 핵심은 세 가지다. <strong>어느 이벤트가 행동을 실제로 막을 수 있는가, 매처와 <code>if</code>가 무엇을 기준으로 거르는가, 그리고 종료 코드와 JSON 결정이 각각 어떤 결과를 내는가.</strong> "exit 0이면 승인", "exit 1이면 차단", "PostToolUse로 되돌린다", "훅의 allow가 deny 규칙을 이긴다"는 모두 단골 오답이다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>주요 훅 이벤트가 언제 실행되는지, 그중 어떤 이벤트가 행동을 막을 수 있는지 구분한다</li>
+      <li>매처 값이 정확한 이름 목록으로 평가되는지 정규식으로 평가되는지 판단하고, <code>if</code>로 인자까지 거른다</li>
+      <li>핸들러 다섯 유형과 설정 위치별 적용 범위를 알고, 팀 전체에 걸 가드레일의 위치를 고른다</li>
+      <li>PreToolUse 입력에서 검사할 필드(<code>tool_input.command</code> 등)를 찾는다</li>
+      <li>종료 코드 0·2·기타와 stdout JSON의 조합이 만드는 결과를 예측하고, <code>permissionDecision</code> 값을 쓴다</li>
+      <li>훅 결정과 권한 규칙의 우선순위, Agent SDK 콜백의 같은 패턴을 설명한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>훅은 모든 도구 호출에서 도는 결정적 계층</h3><span class="unit-en">Hook events and when they fire</span></div>
+    <p>훅 이벤트는 세션·턴·도구 호출 단위로 나뉜다. 가드레일 관점에서 중요한 것은 도구 루프의 이벤트들이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:18%">묶음</th><th style="width:34%">이벤트</th><th>실행 시점</th></tr></thead>
+      <tbody>
+        <tr><td>세션</td><td><code>SessionStart</code>, <code>SessionEnd</code></td><td>세션 시작·재개, 세션 종료</td></tr>
+        <tr><td>턴</td><td><code>UserPromptSubmit</code>, <code>Stop</code></td><td>프롬프트가 제출되어 Claude가 처리하기 전 / Claude가 응답을 마쳤을 때</td></tr>
+        <tr><td>도구 루프</td><td><code>PreToolUse</code>, <code>PermissionRequest</code>, <code>PostToolUse</code>, <code>PostToolUseFailure</code></td><td>도구 호출 실행 전 / 권한 결정이 필요할 때 / 호출 성공 후 / 호출 실패 후</td></tr>
+        <tr><td>설정·기타</td><td><code>ConfigChange</code>, <code>Notification</code>, <code>SubagentStop</code>, <code>PreCompact</code> 등</td><td>세션 중 설정 파일 변경 / 알림 전송 / 서브에이전트 종료 / 압축 전</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">'모든 도구 호출'의 예외</span><p><code>PreToolUse</code>와 <code>PostToolUse</code>는 에이전트 루프의 모든 도구 호출에서 실행되지만, <strong><code>EndConversation</code> 호출만은 둘 다 건너뛴다.</strong> <code>"*"</code> 매처로 모든 도구를 기록하는 감사 훅도 이 호출은 기록하지 못한다. <code>EndConversation</code>은 지속적인 악성 입력에 대한 최후 수단 등으로 세션을 끝내는 도구로, 파일이나 데이터를 읽거나 바꾸지 않으며 권한 프롬프트도 없고, 다른 도구가 남아 있는 한 deny 규칙으로도 막을 수 없다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>어떤 이벤트가 행동을 멈출 수 있나</h3><span class="unit-en">Exit code 2 behavior per event</span></div>
+    <p>행동을 막으려면 그 행동이 <em>일어나기 전에</em> 실행되는 이벤트여야 한다. 행동 뒤에 실행되는 이벤트는 관찰하거나 보고할 수만 있다. 종료 코드 2의 의미가 이벤트마다 다른 이유다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">이벤트</th><th style="width:14%">막을 수 있나</th><th>exit 2를 내면</th></tr></thead>
+      <tbody>
+        <tr><td><code>PreToolUse</code></td><td>예</td><td>도구 호출을 막는다. stderr가 거부 사유로 Claude에 간다</td></tr>
+        <tr><td><code>UserPromptSubmit</code></td><td>예</td><td>프롬프트를 막아 Claude에 닿지 않게 한다</td></tr>
+        <tr><td><code>Stop</code></td><td>예</td><td>Claude가 멈추지 못하게 해 대화를 이어 가게 한다(실행 차단이 아니다)</td></tr>
+        <tr><td><code>ConfigChange</code></td><td>예</td><td>설정 변경이 적용되지 않게 한다. 단 <code>policy_settings</code>는 예외</td></tr>
+        <tr><td><code>PermissionRequest</code></td><td>아니요</td><td>exit 2가 존중되지 않는다. 거부하려면 JSON의 <code>decision</code> 객체를 쓴다</td></tr>
+        <tr><td><code>PostToolUse</code></td><td>아니요</td><td>stderr를 Claude에 보여 줄 뿐이다. <strong>도구는 이미 실행되었다</strong></td></tr>
+        <tr><td><code>Notification</code></td><td>아니요</td><td>종료 코드와 stderr가 무시된다</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"파괴적 명령이 <strong>절대 실행되지 않게</strong>"는 <code>PreToolUse</code>뿐이다. PostToolUse는 너무 늦고, Stop은 턴이 끝날 때 돌며, Notification은 막지 못한다</li>
+      <li>PostToolUse에서 <code>decision: "block"</code>이나 <code>updatedToolOutput</code>을 써도 Claude가 <em>보는 것</em>만 바뀐다. 쓴 파일, 실행된 명령, 보낸 요청은 이미 효과를 냈다</li>
+      <li>PostToolUse exit 2는 '경고를 Claude에 전달'하는 용도로는 유효하다. exit 0의 stderr는 Claude가 보지 못하기 때문이다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>매처와 <code>if</code> 조건으로 겨냥하기</h3><span class="unit-en">Matchers filter tool names, if filters arguments</span></div>
+    <p><code>matcher</code>는 도구 이벤트에서 <strong>도구 이름</strong>만 본다. 값에 어떤 문자가 들어 있느냐에 따라 평가 방식이 갈린다.</p>
+    <table class="t">
+      <thead><tr><th style="width:36%">매처 값</th><th style="width:24%">평가 방식</th><th>예</th></tr></thead>
+      <tbody>
+        <tr><td><code>"*"</code>, <code>""</code>, 생략</td><td>모두 일치</td><td>모든 도구</td></tr>
+        <tr><td>영문자·숫자·<code>_</code>·<code>-</code>·공백·<code>,</code>·<code>|</code>만</td><td>정확한 이름, 또는 정확한 이름 목록</td><td><code>Bash</code>는 Bash만. <code>Edit|Write</code>와 <code>Edit, Write</code>는 그 두 도구만</td></tr>
+        <tr><td>그 밖의 문자가 하나라도 있음</td><td>JavaScript 정규식(앵커 없음)</td><td><code>^Notebook</code>은 Notebook으로 시작하는 도구, <code>mcp__memory__.*</code>는 memory 서버의 모든 도구</td></tr>
+      </tbody>
+    </table>
+    <p>정규식은 부분 일치라서 <code>Edit.*</code>는 <code>Edit</code>과 <code>NotebookEdit</code>을 모두 잡는다. 전체 일치가 필요하면 <code>^Edit$</code>처럼 감싼다. 반대로 <code>mcp__memory</code>(뒤에 <code>.*</code> 없음)는 정확한 문자열로 평가되어 어떤 도구와도 일치하지 않는다.</p>
+    <p>도구 인자까지 거르려면 핸들러에 <code>if</code>를 둔다. <code>if</code>는 권한 규칙 문법으로 도구 이름과 인자를 함께 맞춰 보며, 규칙은 하나만 쓴다(<code>&amp;&amp;</code>·<code>||</code>·목록 없음). <code>PreToolUse</code>, <code>PostToolUse</code>, <code>PostToolUseFailure</code>, <code>PermissionRequest</code>, <code>PermissionDenied</code>에서만 동작하고, 다른 이벤트에 <code>if</code>를 단 훅은 실행되지 않는다. 문서는 <code>if</code>를 최선 노력(best-effort) 필터로 보고, 확실한 허용·거부는 권한 시스템에 맡기라고 한다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① EVENT</div><div class="ft">이벤트 발생 (예: PreToolUse)</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② MATCHER</div><div class="ft">도구 이름이 매처와 맞는지</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ IF</div><div class="ft">인자가 <code>if</code> 규칙과 맞는지</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ HANDLER</div><div class="ft">핸들러 실행 (일치한 훅은 병렬)</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ RESULT</div><div class="ft">Claude Code가 종료 코드·JSON에 따라 진행·차단</div></div>
+    </div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>핸들러 유형과 설정 위치</h3><span class="unit-en">Handler types and where hook configuration lives</span></div>
+    <div class="tri">
+      <div class="pane"><div class="pt">command · http · mcp_tool</div><div class="pd">셸 명령(입력은 stdin), 이벤트 JSON을 URL로 POST, 구성된 MCP 서버의 도구 호출. 결정적 규칙 집행에 쓴다.</div></div>
+      <div class="pane"><div class="pt">prompt</div><div class="pd">Claude 모델에 프롬프트를 보내 한 번의 판단을 받는다. 규칙보다 판단이 필요한 조건에 쓴다.</div></div>
+      <div class="pane"><div class="pt">agent</div><div class="pd">Read·Grep·Glob 같은 도구를 쓸 수 있는 서브에이전트를 띄워 검사한다. 실험적 기능이다.</div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:34%">위치</th><th style="width:26%">범위</th><th>버전 관리로 공유되나</th></tr></thead>
+      <tbody>
+        <tr><td><code>~/.claude/settings.json</code></td><td>내 모든 프로젝트</td><td>아니요. 내 컴퓨터에만 있다</td></tr>
+        <tr><td><code>.claude/settings.json</code></td><td>한 프로젝트</td><td><strong>예.</strong> 저장소에 커밋하면 클론하는 모두에게 적용</td></tr>
+        <tr><td><code>.claude/settings.local.json</code></td><td>한 프로젝트</td><td>아니요. Claude Code가 저장할 때 gitignore 처리</td></tr>
+        <tr><td>관리형 정책 설정</td><td>조직 전체</td><td>예. 관리자가 통제</td></tr>
+        <tr><td>플러그인 <code>hooks/hooks.json</code>, 스킬·서브에이전트 frontmatter</td><td>플러그인 활성화 중 / 스킬 호출 후 / 서브에이전트 실행 중</td><td>예. 해당 파일에 포함</td></tr>
+      </tbody>
+    </table>
+    <p>저장소를 클론하는 모든 개발자에게 같은 가드레일을 걸려면 커밋된 프로젝트 <code>.claude/settings.json</code>에 둔다. 조직 전체에 우회할 수 없게 강제하려면 관리형 설정이다. 사용자 설정과 로컬 설정은 각자의 컴퓨터에만 있으므로, 팀원 한 명이 거기에 훅을 넣어도 다른 사람의 클론에는 적용되지 않는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>PreToolUse가 받는 입력</h3><span class="unit-en">What a PreToolUse hook receives</span></div>
+    <p>command 훅은 stdin으로 JSON을 받는다. 공통 필드(<code>session_id</code>, <code>cwd</code>, <code>permission_mode</code>, <code>hook_event_name</code> 등)에 더해 PreToolUse는 <code>tool_name</code>, <code>tool_input</code>, <code>tool_use_id</code>를 받는다. 가드레일이 검사해야 할 것은 <strong>인자</strong>다. <code>tool_name</code>은 "Bash"라는 사실만 알려 줄 뿐이고, 실제 명령 문자열은 <code>tool_input.command</code>에 있다. Edit·Write라면 <code>tool_input.file_path</code>를 본다.</p>
+    <div class="code">{
+  "hook_event_name": "PreToolUse",
+  "permission_mode": "default",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "terraform destroy -auto-approve",
+    "description": "Tear down staging stack"
+  },
+  "tool_use_id": "toolu_01Qm..."
+}</div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>종료 코드로 막기</h3><span class="unit-en">Exit 0, exit 2, and everything else</span></div>
+    <div class="code">#!/bin/bash
+<span class="c"># .claude/hooks/block-destructive.sh</span>
+INPUT=$(cat)
+CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+if echo "$CMD" | grep -Eq 'terraform +destroy|DROP +DATABASE'; then
+  echo "차단: 이 저장소에서는 '$CMD'를 실행할 수 없습니다" &gt;&amp;2
+  exit 2          <span class="c"># 차단. stderr가 거부 사유로 Claude에 간다</span>
+fi
+exit 0            <span class="c"># 이의 없음. 승인이 아니다</span></div>
+    <div class="code">{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-destructive.sh"
+      }]
+    }]
+  }
+}</div>
+    <table class="t">
+      <thead><tr><th style="width:28%">stdout \ 종료 코드</th><th style="width:22%">exit 0</th><th style="width:22%">exit 2</th><th>그 밖의 코드 (예: 1)</th></tr></thead>
+      <tbody>
+        <tr><td>스키마를 통과한 JSON 객체</td><td>성공. 필드가 적용된다</td><td>차단. 필드는 읽지만 차단을 뒤집지 못한다(<code>allow</code>도 통과 못 함)</td><td>성공 취급. 종료 코드는 무시되고 <strong>필드만으로 결정</strong></td></tr>
+        <tr><td>파싱 실패·스키마 위반 JSON</td><td>비차단 오류</td><td>차단. stderr가 사유</td><td>비차단 오류</td></tr>
+        <tr><td>일반 텍스트 또는 출력 없음</td><td>성공 (결정 없음)</td><td>차단. stderr가 사유</td><td>비차단 오류. 행동은 진행된다</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">exit 0 ≠ 승인</div><p>PreToolUse 훅이 아무것도 출력하지 않고 exit 0으로 끝나면 '결정 없음'이다. 호출은 <strong>일반 권한 흐름</strong>으로 넘어가고, 규칙과 모드에 따라 사용자에게 확인을 물을 수 있다. 훅은 거부할 수는 있지만, 조용히 있는다고 승인하지는 않는다.</p></div>
+      <div class="pane good"><div class="bh">exit 1 ≠ 차단</div><p>Unix 관례와 달리 유효한 JSON 없는 exit 1은 <strong>비차단 오류</strong>다. 행동은 그대로 진행되고 transcript에 <code>hook error</code> 알림만 남는다. 정책을 집행하려면 exit 2를 쓰거나, exit 0 + JSON 결정을 쓴다.</p></div>
+    </div>
+    <p>훅이 시작하지 못하거나(경로 오류), 시간 초과되거나, 잘못된 JSON을 내면 대부분의 이벤트에서 행동이 그대로 진행된다. PreToolUse의 command·http·mcp_tool 훅도 시간 초과 시 호출을 막지 않고 일반 권한 흐름으로 넘긴다. 정책 훅이 실패할 때 막히게 하려면 command·http 훅에 <code>"onFailure": "block"</code>을 설정한다(Claude Code v2.1.295 이상).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>구조화된 결정: deny · ask · allow · defer</h3><span class="unit-en">PreToolUse decision control</span></div>
+    <p>PreToolUse는 다른 이벤트처럼 최상위 <code>decision</code>이 아니라 <code>hookSpecificOutput</code> 안에 결정을 담는다. JSON으로 결정을 돌려줄 때는 exit 0으로 끝내는 것이 의도된 방식이다.</p>
+    <div class="code">{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "운영 DB 스키마 변경은 마이그레이션 PR로만 허용"
+  }
+}</div>
+    <table class="t">
+      <thead><tr><th style="width:16%">값</th><th style="width:40%">효과</th><th>사유(<code>permissionDecisionReason</code>)는</th></tr></thead>
+      <tbody>
+        <tr><td><code>"deny"</code></td><td>도구 호출을 막는다</td><td>Claude에게 보인다</td></tr>
+        <tr><td><code>"ask"</code></td><td>사용자에게 확인을 받는다</td><td>권한 프롬프트에서 사용자에게 보인다</td></tr>
+        <tr><td><code>"allow"</code></td><td>권한 프롬프트를 건너뛴다</td><td>디버그 로그에만 남는다</td></tr>
+        <tr><td><code>"defer"</code></td><td>턴을 끝내 나중에 재개하게 한다(<code>-p</code> 비대화형 모드 필요)</td><td>디버그 로그에만 남는다</td></tr>
+      </tbody>
+    </table>
+    <div class="note best"><span class="lbl">allow는 규칙을 뚫지 못한다</span><p>훅이 <code>"allow"</code>를 돌려줘도 <strong>deny와 ask 규칙은 훅 결과와 무관하게 평가</strong>된다. 일치하는 deny 규칙은 호출을 막고, 일치하는 ask 규칙은 여전히 확인을 받는다. 관리형 설정의 deny도 마찬가지다. 반대로 exit 2로 막는 훅은 권한 규칙 평가 전에 호출을 멈추므로, allow 규칙이 있어도 차단이 적용된다. 여러 PreToolUse 훅이 서로 다른 결정을 내면 <code>deny</code> &gt; <code>defer</code> &gt; <code>ask</code> &gt; <code>allow</code> 순으로 이긴다. <code>updatedInput</code>으로 인자를 바꾸면 권한 규칙은 바뀐 입력을 기준으로 평가된다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>Agent SDK에서 같은 가드레일</h3><span class="unit-en">Callback hooks in the Agent SDK</span></div>
+    <p>Agent SDK의 훅은 종료 코드 대신 <strong>콜백 함수가 돌려주는 객체</strong>로 결정한다. 출력 형식은 셸 훅의 JSON과 같고, 빈 객체 <code>{}</code>는 '변경 없음·결정 없음'이다. 매처 규칙도 설정 파일과 같다.</p>
+    <div class="code">from claude_agent_sdk import ClaudeAgentOptions, HookMatcher
+
+async def block_destructive(input_data, tool_use_id, context):
+    cmd = input_data["tool_input"].get("command", "")
+    if "terraform destroy" in cmd:
+        return {"hookSpecificOutput": {
+            "hookEventName": input_data["hook_event_name"],
+            "permissionDecision": "deny",
+            "permissionDecisionReason": "terraform destroy 금지"}}
+    return {}   <span class="c"># 결정 없음 → 일반 권한 흐름</span>
+
+options = ClaudeAgentOptions(hooks={
+    "PreToolUse": [HookMatcher(matcher="Bash",
+                               hooks=[block_destructive])]})</div>
+    <table class="t">
+      <thead><tr><th style="width:30%">항목</th><th>SDK 콜백의 동작</th></tr></thead>
+      <tbody>
+        <tr><td>평가 순서</td><td>훅이 가장 먼저 실행된다. 훅의 deny는 <code>bypassPermissions</code> 모드에서도 적용된다</td></tr>
+        <tr><td>allow의 한계</td><td>훅이 allow를 돌려줘도 deny·ask 규칙은 그대로 평가된다</td></tr>
+        <tr><td>PreToolUse 시간 초과</td><td>Claude Code가 콜백을 취소하고 <strong>도구 호출을 막는다</strong>(셸 command 훅의 기본 동작과 다르다)</td></tr>
+        <tr><td>여러 훅</td><td>병렬 실행. 권한 결정은 가장 제한적인 결과가 적용된다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>PostToolUse 훅이 exit 2를 내면 방금 실행된 명령의 효과가 취소된다.</div><div class="f"><span class="k">사실</span>도구는 이미 실행되었다. exit 2는 stderr를 Claude에 보여 줄 뿐이고, 되돌리는 기능은 없다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>PreToolUse 훅이 출력 없이 exit 0으로 끝나면 호출이 승인된다.</div><div class="f"><span class="k">사실</span>결정이 없을 뿐이다. 일반 권한 흐름이 그대로 진행되어 확인 프롬프트가 뜰 수 있다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>정책 위반을 찾으면 exit 1로 끝내면 된다.</div><div class="f"><span class="k">사실</span>유효한 JSON 없는 exit 1은 비차단 오류라 행동이 진행된다. 막으려면 exit 2나 deny JSON을 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>훅이 <code>permissionDecision: "allow"</code>를 돌려주면 deny 규칙에 걸린 호출도 실행된다.</div><div class="f"><span class="k">사실</span>deny·ask 규칙은 훅 결과와 무관하게 평가된다. allow는 프롬프트를 건너뛸 뿐이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>Edit|Write</code> 매처는 정규식이라 이름에 Edit이 들어간 도구를 모두 잡는다.</div><div class="f"><span class="k">사실</span>영문자와 <code>|</code>로만 된 값은 정확한 이름 목록이다. 정확히 Edit과 Write만 잡는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>PermissionRequest 훅도 exit 2로 권한 요청을 거부할 수 있다.</div><div class="f"><span class="k">사실</span>이 이벤트에서 exit 2는 존중되지 않는다. JSON의 <code>decision</code> 객체로 거부한다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener">Hooks reference</a> · <a href="https://code.claude.com/docs/en/hooks-guide" target="_blank" rel="noopener">Automate actions with hooks (hooks guide)</a> · <a href="https://code.claude.com/docs/en/permissions" target="_blank" rel="noopener">Configure permissions</a> · <a href="https://code.claude.com/docs/en/tools-reference" target="_blank" rel="noopener">Tools reference</a> · <a href="https://code.claude.com/docs/en/agent-sdk/hooks" target="_blank" rel="noopener">Intercept and control agent behavior with hooks (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/permissions" target="_blank" rel="noopener">Configure permissions (Agent SDK)</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인7 보안·안전</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

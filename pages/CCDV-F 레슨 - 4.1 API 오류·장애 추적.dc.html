@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 4 · 서브도메인 4.1</span></div>
+    <h1>API 오류 복구와 장애 원인 추적</h1>
+    <p class="sub">고칠 오류와 재시도할 오류 · SDK의 기본 재시도 · 413과 긴 요청 · 네 가지 429와 400 · 내 메시지 기록을 가리키는 400 · stop_reason과 빈 end_turn</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-api-error-types-and-recovery-strategies" target="_blank" rel="noopener">CertSafari 4.1 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/tracing-claude-failures-integration-layer-vs-model-output" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 4 · Eval, Testing, and Debugging (2.6%) · 서브도메인 4.1 Debugging and Error Handling</p>
+    <div class="secrow">
+      <span class="s on">4.1 API 오류·장애 추적</span>
+    </div>
+  </header>
+
+  <p class="lede">Claude 통합이 실패할 때 첫 질문은 "다시 보내면 나아지는가"다. 요청이 잘못됐으면 몇 번을 보내도 같은 오류가 나고, 서버가 일시적으로 바쁘면 기다렸다 보내면 된다. <strong>오류가 어디서 왔는지가 '요청을 고칠지, 재시도할지'를 정한다.</strong> 시험은 HTTP 상태와 오류 유형, 재시도 헤더 유무로 이것을 가려내는지, 그리고 아무 예외도 나지 않는 200 응답 속 실패(<code>stop_reason</code>, 빈 응답, 도구 오류)를 통합 계층의 문제와 모델 출력의 문제로 나눌 수 있는지 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>4xx(요청을 고친다)와 5xx·529(물러났다 재시도한다)를 나누고, 409·413·504의 올바른 대응을 고른다</li>
+      <li>SDK가 기본으로 무엇을 몇 번 재시도하는지, 지원 문의에 어떤 요청 ID를 남기는지 안다</li>
+      <li>일반 rate limit, 가속 한도, 등급 월 지출 상한, 직접 정한 지출 한도를 신호로 구별한다</li>
+      <li>tool_use·thinking 블록 관련 400이 통합 코드의 어느 부분을 가리키는지 읽는다</li>
+      <li><code>stop_reason</code>으로 잘림·거절·일시 정지를 판별하고, 빈 <code>end_turn</code>을 메시지 구조부터 고친다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>오류 분류: 고칠 것인가, 재시도할 것인가</h3><span class="unit-en">Sorting an error by its origin</span></div>
+    <p>API 오류는 항상 JSON이며 최상위 <code>error</code> 객체에 <code>type</code>과 <code>message</code>가 있고, 응답 본문에 <code>request_id</code>가 함께 온다.</p>
+    <table class="t">
+      <thead><tr><th style="width:9%">상태</th><th style="width:24%">유형</th><th style="width:34%">의미</th><th>대응</th></tr></thead>
+      <tbody>
+        <tr><td>400</td><td><code>invalid_request_error</code></td><td>요청 형식·내용 문제. 직접 정한 지출 한도에 닿아도 400</td><td>요청을 고친다(또는 한도를 올린다)</td></tr>
+        <tr><td>401 · 403</td><td><code>authentication_error</code> · <code>permission_error</code></td><td>API 키 문제 · 리소스 권한 없음</td><td>키·워크스페이스 설정 확인</td></tr>
+        <tr><td>402</td><td><code>billing_error</code></td><td>결제 정보 문제</td><td>Console에서 결제 정보 확인</td></tr>
+        <tr><td>404</td><td><code>not_found_error</code></td><td>리소스 없음</td><td>경로와 ID 확인</td></tr>
+        <tr><td>409</td><td><code>conflict_error</code></td><td>리소스의 현재 상태와 충돌(동시 수정, 고유 값 중복)</td><td><strong>충돌을 해소한 뒤</strong> 재시도</td></tr>
+        <tr><td>413</td><td><code>request_too_large</code></td><td>요청 바이트가 엔드포인트 최대치를 넘음</td><td>본문을 줄인다. 재시도는 소용없다</td></tr>
+        <tr><td>429</td><td><code>rate_limit_error</code></td><td>rate limit, 등급 월 지출 상한, Claude Code 워크스페이스 한도</td><td>신호에 따라 다르다(04)</td></tr>
+        <tr><td>500</td><td><code>api_error</code></td><td>Anthropic 내부의 예기치 않은 오류</td><td>지수 백오프로 재시도, 계속되면 요청 ID로 지원 문의</td></tr>
+        <tr><td>504</td><td><code>timeout_error</code></td><td>처리 중 시간 초과</td><td>긴 요청은 스트리밍이나 Batches로</td></tr>
+        <tr><td>529</td><td><code>overloaded_error</code></td><td>API가 일시적으로 과부하(전체 사용자 트래픽)</td><td>물러났다 재시도</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">200이라고 성공은 아니다</span><p>스트리밍(SSE) 응답에서는 API가 200을 돌려준 <em>뒤에</em> 오류가 날 수 있다. 이 경우 위의 표준 오류 처리 흐름을 타지 않으므로, 스트림의 오류 이벤트를 따로 처리해야 한다. 또 안전 분류기의 거절(<code>stop_reason: "refusal"</code>)도 오류가 아닌 정상 200 응답으로 온다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>내 코드에 닿기 전에 SDK가 하는 일</h3><span class="unit-en">Typed exceptions, retries, request IDs</span></div>
+    <p>공식 SDK는 오류를 원시 JSON이 아닌 타입 있는 예외로 올린다(Python 예: <code>BadRequestError</code>, <code>RateLimitError</code>, <code>InternalServerError</code>, <code>APIConnectionError</code>). 메시지 문자열을 비교하지 말고 가장 구체적인 클래스부터 잡는다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">SDK 기본 동작</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>자동 재시도 대상</td><td>연결 오류, 408 Request Timeout, 409 Conflict, 429 Rate Limit, 500 이상(529 포함)</td></tr>
+        <tr><td>횟수·간격</td><td>기본 <strong>2회</strong>, 짧은 지수 백오프. <code>retry-after</code> 헤더가 있으면 따른다</td></tr>
+        <tr><td>설정</td><td><code>max_retries</code>(TS <code>maxRetries</code>)로 늘리거나 0으로 끈다. 요청별로도 덮어쓸 수 있다</td></tr>
+        <tr><td>타임아웃</td><td>기본 10분. 비스트리밍 요청이 약 10분을 넘을 것으로 예상되면 SDK가 미리 오류를 낸다</td></tr>
+      </tbody>
+    </table>
+    <div class="code">msg = client.messages.create(model=MODEL, max_tokens=1024,
+                             messages=history)
+log.info("claude call ok", extra={
+    "request_id": msg._request_id,   <span class="c"># req_... 지원 문의용</span>
+    "message_id": msg.id,            <span class="c"># msg_... 응답 객체 ID</span>
+})</div>
+    <p>모든 응답에는 <code>request-id</code> 헤더가 있고, 같은 값이 오류 본문의 <code>request_id</code>로도 온다. Python·TypeScript SDK는 이 값을 응답 객체의 <strong><code>_request_id</code></strong> 속성으로 노출한다(밑줄로 시작하지만 공개 속성이다). 지원팀이 요청을 추적할 때 필요한 것은 메시지 ID(<code>msg_...</code>)가 아니라 이 요청 ID다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>너무 큰 요청과 너무 긴 요청</h3><span class="unit-en">413 and long-running calls</span></div>
+    <table class="t">
+      <thead><tr><th style="width:42%">엔드포인트</th><th>최대 요청 크기 (1st-party API)</th></tr></thead>
+      <tbody>
+        <tr><td>Messages API · Token Counting API</td><td>128 MB</td></tr>
+        <tr><td>Message Batches API</td><td>256 MB</td></tr>
+        <tr><td>Files API</td><td>500 MB</td></tr>
+      </tbody>
+    </table>
+    <p>한도를 넘으면 413 <code>request_too_large</code>가 오며, 1st-party API에서는 요청이 API 서버에 닿기 전에 Cloudflare가 돌려준다. 용량이나 일시적 문제가 아니므로 <strong>재시도해도, 컨텍스트 창이 더 큰 모델로 바꿔도 소용없다.</strong> 문서·이미지를 나눠 보내는 등 요청 본문 자체를 줄인다. 컨텍스트 창(토큰)과 요청 크기(바이트)는 다른 한도다.</p>
+    <div class="note"><span class="lbl">학습 자료의 수치 vs 현재 문서</span><p>일부 학습 자료는 Messages API 요청 한도를 32 MB로 적는다. 2026년 10월 현재 공식 오류 문서의 1st-party API 한도는 Messages API 128 MB, Batch API 256 MB, Files API 500 MB다. 다른 플랫폼(Bedrock 등)의 한도는 API 개요 문서에서 따로 확인한다. 시험에서는 수치보다 '413은 본문을 줄여야 풀린다'는 판단이 핵심이다.</p></div>
+    <div class="note tip"><span class="lbl">긴 요청은 스트리밍으로</span><p>504 <code>timeout_error</code>나 큰 <code>max_tokens</code>가 걸린 요청은 스트리밍 Messages API나 Message Batches API를 쓴다. 일부 네트워크는 유휴 연결을 끊기 때문이다. 이벤트를 하나씩 처리할 필요가 없으면 SDK가 스트림을 대신 소비해 완성된 <code>Message</code>를 돌려주게 할 수 있다(Python <code>stream.get_final_message()</code>).</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>429를 구별하고, 429처럼 보이는 400도 구별한다</h3><span class="unit-en">Rate limits, acceleration, spend caps, spend limits</span></div>
+    <p>Messages API의 rate limit은 모델 등급별 RPM·ITPM·OTPM으로 측정되고, 토큰 버킷 방식이라 고정 주기로 초기화되지 않고 계속 채워진다. 60 RPM이 초당 1건처럼 짧은 간격으로 적용될 수도 있어 짧은 폭주만으로도 걸린다. 한도는 조직 단위로 걸린다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">상황</th><th style="width:38%">신호</th><th>대응</th></tr></thead>
+      <tbody>
+        <tr><td>일반 rate limit</td><td>429 <code>rate_limit_error</code> + <code>retry-after</code> 헤더</td><td>헤더의 초만큼 기다린 뒤 재시도. 반복되면 더 물러난다. 그 전의 재시도는 실패한다</td></tr>
+        <tr><td>가속 한도 (acceleration limit)</td><td>공개된 한도보다 한참 아래인데 트래픽을 급격히 늘린 직후 429</td><td>트래픽을 <strong>점진적으로</strong> 늘리고 사용 패턴을 일정하게 유지</td></tr>
+        <tr><td>등급 월 지출 상한</td><td>429 <code>rate_limit_error</code>, <strong><code>retry-after</code> 없음</strong>, <code>error.details.error_code</code> = <code>enforced_spend_limit_reached</code>, 몇 시간이고 계속 실패</td><td>재시도를 멈추고 알린다. 등급 상향을 요청하거나 다음 달 1일 00:00 UTC까지 기다린다</td></tr>
+        <tr><td>직접 정한 지출 한도</td><td><strong>400</strong> <code>invalid_request_error</code>, 메시지가 "You have reached your specified (workspace) API usage limits"로 시작</td><td>Console의 Billing에서 한도를 올리거나 없앤다</td></tr>
+      </tbody>
+    </table>
+    <table class="t">
+      <thead><tr><th style="width:22%">사용 등급</th><th>월 지출 상한</th></tr></thead>
+      <tbody>
+        <tr><td>Start · Build · Scale</td><td>$500 · $1,000 · $200,000 (Custom 등급은 상한 없음, 계정 팀과 협의)</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>재시도가 답인 429는 <code>retry-after</code>가 있는 것뿐이다. 헤더가 없고 <code>enforced_spend_limit_reached</code>면 SDK 자동 재시도까지 포함해 모두 실패한다</li>
+      <li>'usage limits'라는 말이 있어도 400이면 내가 정한 한도다. 요청 형식을 고치는 400과 헷갈리지 않는다</li>
+      <li>같은 조직의 API 키를 여러 개 돌려 써도 조직 단위 한도는 그대로다</li>
+      <li>프롬프트 캐시에서 읽은 토큰은 대부분의 모델에서 ITPM에 세지 않으므로, 캐싱은 처리량을 늘리는 정공법이다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>400이 내 메시지 기록을 가리킬 때</h3><span class="unit-en">When the bug is in your history-building code</span></div>
+    <p>400의 메시지는 종종 고쳐야 할 블록의 위치(예: <code>messages.1.content.0</code>)까지 알려 준다. 도구와 사고(thinking)를 쓰는 통합에서 자주 나는 것은 다음과 같다.</p>
+    <table class="t">
+      <thead><tr><th style="width:38%">오류 메시지의 핵심</th><th>원인과 수정</th></tr></thead>
+      <tbody>
+        <tr><td><code>tool_use ids were found without tool_result blocks immediately after</code></td><td>일부 <code>tool_use</code>에 결과가 없거나, <code>tool_result</code>가 사용자 메시지의 첫 블록이 아니다. 모든 <code>tool_use</code>에 결과를 하나씩 돌려주고 결과 블록을 텍스트보다 앞에 둔다</td></tr>
+        <tr><td><code>thinking</code> or <code>redacted_thinking</code> blocks … cannot be modified</td><td>통합 코드가 블록을 타입으로 걸러 <code>redacted_thinking</code>을 빠뜨렸거나, 어시스턴트 메시지를 다시 조립했다. <strong>어시스턴트 턴을 받은 그대로 돌려보내고</strong> 그 뒤에 <code>tool_result</code>를 붙인다</td></tr>
+        <tr><td>assistant message prefill 미지원</td><td>최신 모델은 마지막 어시스턴트 메시지 미리 채우기를 받지 않는다. 구조화 출력이나 시스템 프롬프트 지시로 바꾼다</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">400을 부르는 재조립</div><p><code>[b for b in resp.content if b.type in ("text", "tool_use")]</code>로 어시스턴트 메시지를 다시 만든 뒤 도구 결과를 붙인다. thinking 블록이 사라져 다음 요청이 거부된다.</p></div>
+      <div class="pane good"><div class="bh">그대로 돌려보내기</div><p><code>messages.append({"role": "assistant", "content": resp.content})</code>로 받은 턴을 손대지 않고 넣고, 이어서 <code>tool_result</code>만 담은 사용자 메시지를 붙인다.</p></div>
+    </div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>아무것도 throw되지 않을 때: stop_reason 따라가기</h3><span class="unit-en">Silent failures on a 200 response</span></div>
+    <table class="t">
+      <thead><tr><th style="width:28%"><code>stop_reason</code></th><th style="width:34%">의미</th><th>누구의 일인가 · 대응</th></tr></thead>
+      <tbody>
+        <tr><td><code>end_turn</code></td><td>자연스럽게 응답 완료</td><td>정상. 단 내용이 비었으면 07</td></tr>
+        <tr><td><code>tool_use</code></td><td>도구 호출 중</td><td>내 앱이 도구를 실행해 결과를 돌려준다</td></tr>
+        <tr><td><code>max_tokens</code></td><td><code>max_tokens</code> 한도에 닿아 잘림</td><td>마지막 블록이 미완성 <code>tool_use</code>면 <strong>더 큰 <code>max_tokens</code>로 다시 요청</strong>. 사고 토큰도 이 한도에 포함된다</td></tr>
+        <tr><td><code>pause_turn</code></td><td>서버 도구 루프가 반복 상한(기본 10회)에 닿음</td><td>응답을 그대로 대화에 붙여 다시 보내면 이어서 진행</td></tr>
+        <tr><td><code>refusal</code></td><td>모델이 응답을 거절(정상 200)</td><td>요청이 깨진 것이 아니다. <code>stop_details</code>로 정책 범주를 읽고 대체 모델로 재시도를 검토</td></tr>
+        <tr><td><code>model_context_window_exceeded</code></td><td>응답이 모델의 컨텍스트 창을 채움</td><td>입력을 줄이거나 컨텍스트 관리 기법을 쓴다</td></tr>
+      </tbody>
+    </table>
+    <p>도구가 실패할 때의 흐름도 통합 계층의 몫이다. 도구 실행기가 백엔드 연결 오류를 만나면 앱은 그 내용을 <code>is_error: true</code>인 <code>tool_result</code>로 돌려주고, Claude는 그 오류를 응답에 반영해 사용자에게 사과하거나 설명한다. 이때 Claude의 사과는 모델 결함이 아니라 <strong>도구 백엔드가 실패했다는 증상</strong>이다. 도구를 다시 시도할지, 얼마나 기다릴지는 앱이 정한다. 오류 메시지에 무엇이 잘못됐고 다음에 무엇을 하면 되는지를 적으면 Claude가 더 잘 대처한다.</p>
+    <div class="note"><span class="lbl">도구 결과 안의 내 지시</span><p>Claude가 도구 결과를 근거로 움직이지 않거나, 결과에 담긴 지시를 사용자에게 확인받으려 한다면 앱이 자기 지시를 <code>tool_result</code> 안에 넣고 있는지 본다. Claude는 도구 결과 속 지시를 신뢰할 수 없는 제3자 콘텐츠로 다루도록 학습되어 있다. 지시는 도구 결과 밖으로 옮기고(지원 모델의 mid-conversation system message 등), 도구 결과에는 데이터만 남긴다. 반대로 웹 페이지·메일처럼 외부에서 온 신뢰할 수 없는 내용은 시스템 프롬프트가 아니라 <code>tool_result</code> 안에 둔다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>빈 end_turn 응답 고치기</h3><span class="unit-en">Empty responses after tool results</span></div>
+    <p>가끔 Claude가 내용 없이 2~3토큰짜리 응답을 <code>stop_reason: "end_turn"</code>으로 돌려준다. 주로 도구 결과 직후에, Claude가 어시스턴트 턴이 끝났다고 판단할 때 생긴다. 원인은 두 가지다.</p>
+    <ul>
+      <li>도구 결과 <strong>바로 뒤에 텍스트 블록</strong>을 붙인다. 기록에 '도구 결과 뒤엔 사용자 텍스트'라는 패턴이 쌓여 Claude가 그 패턴대로 턴을 끝낸다</li>
+      <li>이미 완료된 Claude의 응답을 아무것도 더하지 않고 다시 보낸다. Claude는 이미 끝났다고 판단했으므로 계속 끝난 상태로 남는다</li>
+    </ul>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① 감지</div><div class="ft">반복되는 빈 <code>end_turn</code>을 로그로 확인</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② 구조 수정</div><div class="ft"><code>tool_result</code> 뒤에 붙인 텍스트 블록을 제거</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ 재전송</div><div class="ft">고친 기록으로 요청</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ 최후 수단</div><div class="ft">그래도 비면 새 사용자 메시지로 계속 진행 요청</div></div>
+    </div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>빈 응답을 <strong>그대로 다시 보내면 같은 결과</strong>가 나온다. 일회성 오류로 보고 단순 재전송하는 보기는 오답이다</li>
+      <li>계속 진행을 요청하는 프롬프트는 구조를 고친 뒤에도 비어 있을 때만, 빈 응답을 재시도하는 대신 새 사용자 메시지로 넣는다</li>
+      <li>서버 도구가 결과 없이 남은 턴에서는 사용자 메시지에 <code>tool_result</code>만 담아야 한다. 뒤에 텍스트를 붙이면 400이 날 수 있다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>증상에서 계층으로: 장애 원인 추적표</h3><span class="unit-en">Integration layer vs model output</span></div>
+    <p>장애 보고를 받으면 먼저 '어느 계층의 문제인가'를 정한다. 계층이 정해지면 고칠 곳과 재시도 주체가 따라 정해진다.</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">관찰한 증상</th><th style="width:20%">계층</th><th>먼저 볼 곳</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP 4xx·5xx, SDK 예외</td><td>API 호출</td><td>상태 코드·오류 유형·<code>retry-after</code>·<code>error_code</code>, 요청 ID</td></tr>
+        <tr><td>400이 특정 <code>messages.N.content.M</code>을 지목</td><td>통합 계층(기록 조립)</td><td>tool_use·tool_result 짝, 블록 순서, thinking 블록 변형</td></tr>
+        <tr><td>Claude가 "도구가 실패해 조회할 수 없다"고 사과</td><td>통합 계층(도구 백엔드)</td><td><code>is_error</code> 결과를 만든 도구 실행기와 그 백엔드의 로그</td></tr>
+        <tr><td>Claude가 도구 결과 속 지시를 사용자에게 확인받음</td><td>통합 계층(프롬프트 배치)</td><td>앱 지시가 <code>tool_result</code> 안에 들어갔는지</td></tr>
+        <tr><td>반복되는 빈 <code>end_turn</code></td><td>통합 계층(메시지 구조)</td><td><code>tool_result</code> 뒤에 붙은 텍스트 블록</td></tr>
+        <tr><td>도구 입력 JSON이 중간에 끊김</td><td>요청 설정</td><td><code>stop_reason: "max_tokens"</code>, <code>max_tokens</code>와 사고 토큰 소비</td></tr>
+        <tr><td>200인데 응답을 거절</td><td>모델 출력</td><td><code>stop_reason: "refusal"</code>과 <code>stop_details</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">로그에 남길 최소 필드</span><p>요청마다 <code>_request_id</code>, 모델, <code>stop_reason</code>, 사용량, 도구 호출 이름과 <code>is_error</code> 여부를 함께 남기면 위 표의 어느 칸인지 재현 없이도 대부분 가릴 수 있다. 스트리밍이라면 200 뒤에 온 오류 이벤트도 같은 요청 ID 아래에 기록한다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>200을 받았으면 요청은 성공했다.</div><div class="f"><span class="k">사실</span>스트리밍은 200 뒤에 오류 이벤트를 보낼 수 있고, 거절·잘림·빈 응답도 200으로 온다. 스트림 오류와 <code>stop_reason</code>을 확인한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>413은 용량 문제라 재시도하거나 컨텍스트 창이 큰 모델로 바꾸면 된다.</div><div class="f"><span class="k">사실</span>요청 바이트 크기 한도다. 본문을 줄이는 것 말고는 해결책이 없다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>400 <code>invalid_request_error</code>는 늘 요청 본문이 잘못됐다는 뜻이다.</div><div class="f"><span class="k">사실</span>직접 정한 조직·워크스페이스 지출 한도에 닿아도 400이다. 메시지를 읽고 한도를 조정한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>429 <code>rate_limit_error</code>는 언젠가 재시도로 풀린다.</div><div class="f"><span class="k">사실</span>등급 지출 상한의 429는 <code>retry-after</code>가 없고 접근이 재개될 때까지 계속 실패한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>refusal</code>이 오면 요청 형식이 깨진 것이다.</div><div class="f"><span class="k">사실</span>모델이 응답을 거절한 정상 응답이다. 요청 구조를 뜯어고칠 문제가 아니다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>빈 <code>end_turn</code>은 일시적 오류라 다시 보내면 된다.</div><div class="f"><span class="k">사실</span>그대로 다시 보내면 계속 비어 있다. 도구 결과 뒤 텍스트 같은 메시지 구조부터 고친다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">Claude API errors</a> · <a href="https://platform.claude.com/docs/en/api/rate-limits" target="_blank" rel="noopener">Rate limits</a> · <a href="https://platform.claude.com/docs/en/cli-sdks-libraries/sdks/python" target="_blank" rel="noopener">Python SDK</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons" target="_blank" rel="noopener">Handling stop reasons</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/troubleshooting-tool-use" target="_blank" rel="noopener">Troubleshooting tool use</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/thinking-troubleshooting" target="_blank" rel="noopener">Troubleshooting thinking</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인4 평가·테스트·디버깅</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.4</span></div>
+    <h1>토큰 비용 관리와 프롬프트 캐싱</h1>
+    <p class="sub">입력·출력 단가 · 가격 수정자와 결합 규칙 · 보내기 전 토큰 카운팅 · usage 필드와 사용량 추적 · 캐시 브레이크포인트와 무효화 · TTL 선택과 적중률</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-token-pricing-token-counting-and-usage-tracking" target="_blank" rel="noopener">CertSafari 5.4 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/prompt-caching-breakpoints-ttls-and-cache-cost-savings" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Model Selection and Optimization (16.8%) · 서브도메인 5.4 Cost and Token Management</p>
+    <div class="secrow">
+      <span class="s">5.1 LLM 기초·사고·effort</span><span class="s">5.2 REST·스트리밍</span><span class="s">5.3 모델 선택·사고 모드</span><span class="s on">5.4 토큰 비용·캐싱</span>
+    </div>
+  </header>
+
+  <p class="lede">Claude 비용은 결국 "어떤 범주의 토큰을 몇 개, 어떤 단가로 썼나"의 합이다. 입력과 출력의 단가가 다르고, 배치·캐싱·데이터 레지던시·fast mode가 그 단가에 배수를 곱한다. 캐싱은 반복되는 접두사를 싸게 만들지만, 접두사가 한 글자라도 바뀌면 다시 비싸게 쓴다. 그래서 <strong>usage의 네 범주(캐시되지 않은 입력, 캐시 쓰기, 캐시 읽기, 출력)를 각자의 단가로 읽고, 바뀌지 않는 내용을 앞에 두어 접두사를 지키는 것</strong>이 비용 관리의 핵심이다. 시험은 단가 계산, 수정자 결합 규칙, 토큰 카운팅의 한계, usage 필드의 의미, 브레이크포인트·TTL·적중률 판단을 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>입력·출력 단가로 요청 비용을 계산하고, 도구 정의처럼 입력에 숨어 있는 토큰을 찾는다</li>
+      <li>배치, 캐시, 데이터 레지던시, fast mode 배수가 어떻게 겹치고 무엇이 함께 쓰일 수 없는지 안다</li>
+      <li><code>count_tokens</code>로 보내기 전에 입력 크기를 재고, 캐싱·토크나이저와 관련된 한계를 안다</li>
+      <li>usage의 <code>input_tokens</code>, <code>cache_creation_input_tokens</code>, <code>cache_read_input_tokens</code>를 정확히 해석한다</li>
+      <li>브레이크포인트 위치, 무효화 규칙, 최소 길이, TTL과 사전 워밍을 이용해 캐시 적중률을 높인다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>입력과 출력은 값이 다르다</h3><span class="unit-en">Input and output token prices</span></div>
+    <p>가격은 100만 토큰(MTok)당으로 매긴다. 현재 라인업은 모두 <strong>출력 단가가 입력의 5배</strong>다. 사고 토큰도 출력으로 과금되므로, 긴 답변과 깊은 사고가 비용의 큰 몫을 차지하기 쉽다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">모델</th><th style="width:20%">입력</th><th style="width:20%">출력</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Fable 5.1</td><td>$10</td><td>$50</td><td></td></tr>
+        <tr><td>Claude Opus 5.5</td><td>$4</td><td>$20</td><td>Opus 5와 Opus 4.5~4.8은 $5 / $25</td></tr>
+        <tr><td>Claude Sonnet 5.5</td><td>$2</td><td>$10</td><td>Sonnet 4.6은 $3 / $15</td></tr>
+        <tr><td>Claude Haiku 5.5</td><td>$0.10</td><td>$0.50</td><td>프롬프트 100k 토큰 초과 요청은 $0.50 / $2.50 (Haiku 4.5는 $1 / $5)</td></tr>
+      </tbody>
+    </table>
+    <div class="code"><span class="c"># Sonnet 5.5, 입력 30,000 / 출력 6,000 토큰</span>
+input  = 30_000 / 1_000_000 * 2.00    <span class="c"># $0.06</span>
+output =  6_000 / 1_000_000 * 10.00   <span class="c"># $0.06  (토큰은 1/5, 단가는 5배)</span>
+total  = input + output               <span class="c"># $0.12</span></div>
+    <p>입력에는 눈에 덜 띄는 토큰도 들어간다. <code>tools</code> 파라미터의 이름·설명·스키마, 요청과 응답의 <code>tool_use</code>·<code>tool_result</code> 블록, 그리고 도구를 쓸 때 API가 자동으로 넣는 도구 사용 시스템 프롬프트(예: Opus 5.5는 <code>tool_choice</code>가 <code>auto</code>·<code>none</code>일 때 286토큰)가 모두 입력 토큰으로 과금된다. 웹 검색처럼 서버 도구는 사용량 요금(1,000회당 $10)이 따로 붙는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>가격 수정자와 결합 규칙</h3><span class="unit-en">Pricing modifiers and how they stack</span></div>
+    <table class="t">
+      <thead><tr><th style="width:26%">수정자</th><th style="width:36%">효과</th><th>조건·제한</th></tr></thead>
+      <tbody>
+        <tr><td>Message Batches API</td><td>입력·출력 50% 할인</td><td>비동기 처리. fast mode와 함께 쓸 수 없다</td></tr>
+        <tr><td>5분 캐시 쓰기</td><td>기본 입력가의 1.25배</td><td>쓰기 토큰에만</td></tr>
+        <tr><td>1시간 캐시 쓰기</td><td>기본 입력가의 2배</td><td>쓰기 토큰에만</td></tr>
+        <tr><td>캐시 읽기(적중·갱신)</td><td>기본 입력가의 0.1배</td><td>Opus 5.5·Sonnet 5.5는 0.05배, Fable 5.1·Mythos 5.1은 0.025배</td></tr>
+        <tr><td><code>inference_geo: "us"</code></td><td>모든 범주(입력·출력·캐시 쓰기·읽기)에 1.1배</td><td>Claude 4.6 이후 모델. 이전 모델에 보내면 400</td></tr>
+        <tr><td>fast mode</td><td>Opus 5.5는 $8 / $40 (표준의 2배)</td><td>지원 Opus 모델만. Batch API·Priority Tier 불가</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">결합 규칙</span><ul>
+      <li>캐시 배수는 Batch 할인, 데이터 레지던시와 <strong>겹쳐 적용</strong>된다. 예: Opus 5.5 배치 + US 추론의 캐시 읽기 = $4 × 0.05 × 0.5 × 1.1 = $0.11/MTok</li>
+      <li>fast mode 가격 위에도 캐시 배수와 데이터 레지던시 배수가 적용된다</li>
+      <li>함께 쓸 수 없는 조합은 <strong>fast mode + Batch API</strong>다</li>
+      <li>배치 안의 캐시 적중은 요청이 동시에, 순서 없이 처리되므로 최선 노력(best-effort)이다</li>
+    </ul></div>
+    <p>1M 컨텍스트 모델은 긴 요청도 같은 단가다(900k 토큰 요청도 9k 토큰 요청과 토큰당 가격이 같다). 예외는 Haiku 5.5로, 프롬프트가 100k 토큰을 넘으면 그 요청 전체가 높은 가격을 낸다. 이때 프롬프트 길이에는 캐시 읽기·쓰기 토큰도 포함된다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>보내기 전에 세기: count_tokens</h3><span class="unit-en">Counting tokens before you send</span></div>
+    <p><code>POST /v1/messages/count_tokens</code>는 메시지 생성과 <strong>같은 구조의 입력</strong>(system, messages, tools, 이미지, PDF)을 받아 <code>input_tokens</code> 하나만 돌려준다. 생성을 하지 않으므로 출력 토큰은 알 수 없다. 사용은 무료이고, 메시지 생성과 별개의 분당 요청 수 제한을 쓴다.</p>
+    <div class="code">count = client.messages.count_tokens(
+    model="claude-opus-5-5",          <span class="c"># 이 모델의 토크나이저로 센다</span>
+    system=SYSTEM_PROMPT,
+    tools=TOOLS,
+    messages=history,
+)
+print(count.input_tokens)             <span class="c"># 입력 토큰 수만</span></div>
+    <table class="t">
+      <thead><tr><th style="width:30%">특성</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td>추정치</td><td>실제 생성 시 입력 토큰과 아주 조금 다를 수 있다</td></tr>
+        <tr><td>캐싱을 적용하지 않음</td><td><code>cache_control</code>을 넣을 수는 있지만 결과는 캐시와 무관한 <strong>전체 입력 크기</strong>다. 캐싱은 실제 생성에서만 일어난다</td></tr>
+        <tr><td>모델별 토크나이저</td><td>Opus 4.7 이후·Claude 5 계열은 약 30% 더 많은 토큰. 모델을 옮길 때는 같은 요청을 두 모델 ID로 각각 세어 비교한다</td></tr>
+        <tr><td>사고 블록</td><td>이전 턴의 사고 블록은 그것을 유지하는 모델에서만 입력으로 센다. 현재 assistant 턴의 사고는 센다</td></tr>
+      </tbody>
+    </table>
+    <p>쓰임새는 세 가지다. 요청이 컨텍스트 윈도에 들어가는지 확인하고, 입력 비용을 미리 계산하고, 프롬프트 크기에 따라 모델을 고르는 라우팅 판단을 내린다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>usage 필드로 실제 지출 읽기</h3><span class="unit-en">Usage fields and spend tracking</span></div>
+    <p>모든 응답의 <code>usage</code>가 그 요청이 실제로 쓴 토큰을 알려 준다. 캐싱을 쓰면 입력이 세 필드로 나뉜다는 점이 핵심이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">필드</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><code>cache_read_input_tokens</code></td><td>기존 캐시 항목에서 읽은 접두사 토큰</td></tr>
+        <tr><td><code>cache_creation_input_tokens</code></td><td>이번 요청에서 브레이크포인트에 새로 쓴 토큰. <code>cache_creation</code> 객체가 5분·1시간 TTL별로 나눠 준다</td></tr>
+        <tr><td><code>input_tokens</code></td><td><strong>마지막 브레이크포인트 뒤</strong>의 캐시되지 않는 토큰. 전체 입력이 아니다</td></tr>
+        <tr><td><code>output_tokens</code></td><td>사고를 포함한 출력. <code>output_tokens_details.thinking_tokens</code>는 그중 사고 몫(스트리밍은 마지막 <code>message_delta</code>에만)</td></tr>
+        <tr><td><code>speed</code></td><td>fast mode 요청에서 실제 적용된 속도</td></tr>
+      </tbody>
+    </table>
+    <div class="code">total_input = cache_read_input_tokens \
+            + cache_creation_input_tokens \
+            + input_tokens
+<span class="c"># 예: 200,000 캐시 읽기 + 0 쓰기 + 50 → 전체 입력 200,050</span></div>
+    <div class="note tip"><span class="lbl">캐시는 속도 제한에도 유리하다</span><p>대부분의 모델에서 입력 토큰 분당 제한(ITPM)에는 <code>input_tokens</code>와 <code>cache_creation_input_tokens</code>만 들어가고 <code>cache_read_input_tokens</code>는 들어가지 않는다. 캐시 적중률 80%면 같은 ITPM 한도로 훨씬 많은 전체 입력을 처리할 수 있다.</p></div>
+    <p>조직 단위 추적은 Claude Console의 Usage·Cost 페이지와 Admin API로 한다. 새 연동에는 Usage and Cost Analytics API를 권하며, 기존 Usage and Cost API(<code>/v1/organizations/usage_report/messages</code>, <code>/v1/organizations/cost_report</code>)도 계속 지원된다. 사용량은 모델, 워크스페이스, API 키, 서비스 티어, 데이터 레지던시(<code>inference_geo</code>), 속도(<code>speed</code>)로 묶어 볼 수 있다. 응답의 <code>anthropic-ratelimit-*</code> 헤더는 현재 속도 제한의 남은 양과 초기화 시각을 알려 준다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>캐시 적중의 조건: 똑같은 접두사</h3><span class="unit-en">How a prompt prefix becomes a cache hit</span></div>
+    <p>캐시는 <strong><code>tools</code> → <code>system</code> → <code>messages</code></strong> 순서로 이어지는 접두사를 <code>cache_control</code>이 붙은 블록까지 통째로 해시한다. 적중하려면 그 구간이 텍스트와 이미지까지 100% 같아야 하고, 어느 단계가 바뀌면 그 단계와 뒤의 모든 단계가 무효화된다. 브레이크포인트는 요청당 최대 4개이며 <strong>브레이크포인트 자체에는 비용이 없다</strong>. 비용은 쓰기·읽기·캐시되지 않은 입력 토큰에서만 생긴다.</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">바뀌는 것</th><th style="width:13%">도구</th><th style="width:13%">시스템</th><th style="width:13%">메시지</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>도구 정의 (이름·설명·파라미터)</td><td>무효</td><td>무효</td><td>무효</td><td>맨 앞이라 전부 다시 쓴다</td></tr>
+        <tr><td>웹 검색·인용 토글, <code>speed</code></td><td>유지</td><td>무효</td><td>무효</td><td>시스템 프롬프트가 바뀐다</td></tr>
+        <tr><td><code>tool_choice</code>, 이미지 추가·제거</td><td>유지</td><td>유지</td><td>무효</td><td></td></tr>
+        <tr><td>thinking 설정, 최상위 effort</td><td>모델별</td><td>모델별</td><td>무효</td><td>기본값과 같은 값을 명시하는 것은 생략과 같다</td></tr>
+        <tr><td>새 턴을 뒤에 덧붙임</td><td>유지</td><td>유지</td><td>기존 부분 유지</td><td>정상적인 대화 패턴</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">그 밖의 규칙</span><p>가장 쉬운 시작은 요청 최상위에 <code>cache_control</code> 하나를 넣는 자동 캐싱으로, 대화가 길어지면 브레이크포인트를 알아서 옮긴다(4개 슬롯 중 하나를 쓴다). 캐시는 조직 단위로 분리되고, Claude API에서는 워크스페이스 단위로도 분리된다. 새 항목은 첫 응답이 시작된 뒤에야 쓸 수 있으므로, 같은 접두사로 병렬 요청을 보낼 때는 첫 응답이 시작된 다음에 보내야 적중한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>브레이크포인트 위치와 최소 길이</h3><span class="unit-en">Where to put cache_control breakpoints</span></div>
+    <p>원칙은 하나다. <strong>요청 간에 그대로 유지되는 마지막 블록</strong>에 브레이크포인트를 두고, 요청마다 바뀌는 내용(타임스탬프, 사용자 입력, 요청 ID)은 그 뒤로 보낸다. 바뀌는 속도가 다른 층(도구, 고정 지시, 참고 문서, 대화)은 브레이크포인트를 나눠 두면 한 층이 바뀌어도 앞쪽 층은 계속 적중한다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">맨 앞의 타임스탬프</div><p>시스템 프롬프트 첫 줄이 <code>Current time: 09:14</code>이고 그 뒤 6,000토큰 고정 지시 끝에 브레이크포인트가 있다. 분이 바뀔 때마다 접두사 전체가 새 항목이 되어 쓰기 비용만 내고 적중률은 바닥이다. 자동 캐싱으로 바꿔도, TTL을 늘려도 해결되지 않는다.</p></div>
+      <div class="pane good"><div class="bh">안정 블록 뒤로</div><p>고정 지시 끝에 명시적 브레이크포인트를 두고, 시각 정보는 최근 user 턴에 넣는다. 접두사가 매번 같아 캐시를 읽고, 바뀌는 부분은 <code>input_tokens</code>로만 과금된다.</p></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:22%">최소 캐시 길이</th><th>모델</th></tr></thead>
+      <tbody>
+        <tr><td>512토큰</td><td>Fable 5.1, Opus 5.5, Sonnet 5.5, Haiku 5.5, Opus 5, Fable 5</td></tr>
+        <tr><td>1,024토큰</td><td>Opus 4.8, Sonnet 5, Sonnet 4.6</td></tr>
+        <tr><td>2,048토큰</td><td>Opus 4.7</td></tr>
+        <tr><td>4,096토큰</td><td>Opus 4.6, Opus 4.5, Haiku 4.5</td></tr>
+      </tbody>
+    </table>
+    <p>최소 길이보다 짧은 접두사는 <code>cache_control</code>을 붙여도 <strong>오류 없이 캐싱 없이</strong> 처리된다. 캐시 쓰기와 읽기가 모두 0이면 가장 먼저 이것을 의심한다. 또 캐시 미스가 나면 시스템은 이전 쓰기를 찾아 최대 20개 블록까지만 거슬러 확인하므로, 대화가 길어져 브레이크포인트가 마지막 쓰기에서 20블록 이상 멀어질 것 같으면 중간에 브레이크포인트를 하나 더 둔다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>TTL 고르기와 캐시 데우기</h3><span class="unit-en">5-minute vs 1-hour TTL, pre-warming</span></div>
+    <p>기본 TTL은 5분이고 적중할 때마다 무료로 갱신된다. <code>"ttl": "1h"</code>를 주면 1시간 동안 유지되지만 쓰기가 2배다. 문서 기준으로 5분 캐시는 읽기 1번, 1시간 캐시는 읽기 2번이면 본전이다. 한 요청에서 TTL을 섞을 때는 1시간 항목이 5분 항목보다 앞에 와야 한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:38%">트래픽 모양</th><th>고를 TTL</th></tr></thead>
+      <tbody>
+        <tr><td>몇 초~몇십 초 간격으로 이어지는 대화</td><td>5분. 계속 갱신되므로 비싼 1시간 쓰기가 필요 없다</td></tr>
+        <tr><td>5분보다 긴 간격으로 몰려오는 요청</td><td>1시간. 5분이면 매번 만료되어 1.25배로 다시 쓴다</td></tr>
+        <tr><td>생성·사고가 길어 다음 요청이 늦게 시작</td><td>1시간. 수명은 <strong>요청 시작 시점</strong>부터 재므로 생성 시간만큼 창이 줄어든다</td></tr>
+        <tr><td>배치 작업 (보통 5분~1시간 소요)</td><td>1시간 + 아래의 워밍 순서</td></tr>
+      </tbody>
+    </table>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① 모으기</div><div class="ft">같은 접두사를 공유하는 요청을 묶는다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② 하나 먼저</div><div class="ft">접두사 + 1시간 캐시 블록을 담은 요청 하나짜리 배치</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ 모니터링</div><div class="ft">그 배치가 끝날 때까지 상태 확인</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ 나머지 제출</div><div class="ft">끝나는 즉시 나머지 요청을 보낸다</div></div>
+    </div>
+    <p>실시간 서비스는 <code>max_tokens: 0</code> 요청으로 캐시를 미리 데울 수 있다. 응답은 <code>content: []</code>, <code>stop_reason: "max_tokens"</code>이고 출력 토큰은 과금되지 않는다(새로 쓰면 캐시 쓰기 비용은 든다).</p>
+    <div class="code"><span class="c"># 트래픽 전·주기적으로 (5분 TTL이면 5분 안쪽 간격)</span>
+client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=0,                      <span class="c"># 출력 없이 접두사만 캐시</span>
+    system=SYSTEM_BLOCKS,              <span class="c"># 마지막 공유 블록에 cache_control</span>
+    output_config={"effort": "high"},  <span class="c"># 실제 요청과 같은 effort</span>
+    messages=[{"role": "user", "content": "warmup"}],
+)</div>
+    <div class="note"><span class="lbl">사전 워밍의 조건</span><p>브레이크포인트는 자리표시 메시지가 아니라 실제 요청과 공유하는 마지막 블록에 둔다(자동 캐싱 대신 명시적 브레이크포인트). thinking 설정과 effort도 실제 요청과 같아야 한다. <code>max_tokens: 0</code>은 <code>stream: true</code>, 확장 사고, 구조화 출력, <code>tool_choice</code> <code>tool</code>·<code>any</code>, Message Batches와 함께 쓰면 거부된다. 토큰 카운팅 호출로는 캐시가 데워지지 않는다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>적중률 측정과 비용 모델</h3><span class="unit-en">Measuring hit rate and blended cost</span></div>
+    <p>적중률은 전체 입력 가운데 캐시에서 읽은 비율로 본다. 비용 모델은 네 범주를 각자의 단가로 곱해야 청구서와 맞는다.</p>
+    <div class="code">total_in = u.cache_read_input_tokens + \
+           u.cache_creation_input_tokens + u.input_tokens
+hit_rate = u.cache_read_input_tokens / total_in
+
+<span class="c"># Sonnet 5.5, 5분 TTL 기준 (MTok당 단가)</span>
+cost = (u.input_tokens                * 2.00     <span class="c"># 기본 입력</span>
+      + u.cache_creation_input_tokens * 2.50     <span class="c"># 쓰기 1.25배</span>
+      + u.cache_read_input_tokens     * 0.10     <span class="c"># 읽기 0.05배</span>
+      + u.output_tokens               * 10.00    <span class="c"># 사고 포함</span>
+       ) / 1_000_000</div>
+    <div class="axis"><span class="lbl">적중률이 낮을 때 확인할 것</span><ul>
+      <li>접두사 앞쪽에 요청마다 바뀌는 값(타임스탬프, ID, 사용자 이름)이 있는가</li>
+      <li>도구 정의, thinking 설정, 최상위 effort, <code>speed</code>를 요청마다 바꾸고 있는가</li>
+      <li>접두사가 모델의 최소 캐시 길이보다 짧은가 (쓰기·읽기 모두 0)</li>
+      <li>요청 간격이 TTL보다 긴가, 생성이 길어 수명이 먼저 소진되는가</li>
+      <li>같은 접두사로 첫 응답이 시작되기 전에 병렬 요청을 보내고 있는가</li>
+    </ul></div>
+    <div class="note"><span class="lbl">CertSafari와 다른 점</span><p>CertSafari 레슨의 캐시 가격표는 Claude Sonnet 5.5의 캐시 읽기를 0.1배($0.20/MTok)로 적는다. 현재 공식 가격표는 Opus 5.5와 Sonnet 5.5의 캐시 읽기를 0.05배로 정하고 있어, Sonnet 5.5는 $0.10/MTok다. 이 가이드와 문제의 계산은 공식 가격표를 따른다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>input_tokens</code>가 요청 전체의 입력 크기다.</div><div class="f"><span class="k">사실</span>마지막 브레이크포인트 뒤의 캐시되지 않은 부분일 뿐이다. 전체 입력은 캐시 읽기 + 캐시 쓰기 + <code>input_tokens</code>다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>캐시된 접두사가 있으면 <code>count_tokens</code>도 그만큼 적게 센다.</div><div class="f"><span class="k">사실</span>토큰 카운팅은 캐싱 로직을 쓰지 않는다. 캐시와 무관한 전체 입력 크기를 보고한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>브레이크포인트를 많이 두면 그만큼 비용이 든다.</div><div class="f"><span class="k">사실</span>브레이크포인트 자체는 무료다. 비용은 캐시 쓰기, 캐시 읽기, 캐시되지 않은 입력 토큰에서만 생긴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>캐시 수명은 응답이 끝난 시점부터 잰다.</div><div class="f"><span class="k">사실</span>캐시를 쓰거나 읽은 요청이 시작된 시점부터 잰다. 3분 걸린 응답이면 5분 캐시의 남은 창은 약 2분이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>1시간 TTL이 언제나 더 싸다.</div><div class="f"><span class="k">사실</span>쓰기가 2배라 읽기 2번은 있어야 본전이다. 몇 초 간격으로 이어지는 대화는 5분 TTL이 더 싸다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>할인은 하나만 적용되고, fast mode는 어떤 수정자와도 함께 쓸 수 있다.</div><div class="f"><span class="k">사실</span>캐시·배치·데이터 레지던시 배수는 겹쳐 적용된다. fast mode는 캐싱·레지던시와는 되지만 Batch API와는 함께 쓸 수 없다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Pricing</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching" target="_blank" rel="noopener">Prompt caching</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/token-counting" target="_blank" rel="noopener">Token counting</a> · <a href="https://platform.claude.com/docs/en/api/rate-limits" target="_blank" rel="noopener">Rate limits</a> · <a href="https://platform.claude.com/docs/en/manage-claude/usage-cost-api" target="_blank" rel="noopener">Usage and Cost API</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/fast-mode" target="_blank" rel="noopener">Fast mode</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost" target="_blank" rel="noopener">Steering thinking</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/context-windows" target="_blank" rel="noopener">Context windows</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인5 모델 선택·최적화</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

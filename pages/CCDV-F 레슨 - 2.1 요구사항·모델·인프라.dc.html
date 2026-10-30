@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 2 · 서브도메인 2.1</span></div>
+    <h1>기능 요구사항에서 모델·플랫폼·용량 고르기</h1>
+    <p class="sub">요구사항 → 선택 기준 · 컨텍스트 창과 최대 출력 · 완료 과업당 비용 · 고객 클라우드별 플랫폼 · 데이터 레지던시와 ZDR · 레이트 리밋·지출 한도</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/choosing-a-claude-model-from-functional-requirements" target="_blank" rel="noopener">CertSafari 2.1 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-infrastructure-requirements-data-residency-retention-and-capacity" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 · Applications and Integration (33.1%) · 서브도메인 2.1 Understanding Requirements</p>
+    <div class="secrow">
+      <span class="s on">2.1 요구사항·모델·인프라</span><span class="s">2.2 모델 수명주기·변경 관리</span><span class="s">2.3 Messages API·배치</span><span class="s">2.4 API 호출 패턴·Git·CI</span><span class="s">2.5 앱 설계·세션·플러그인</span><span class="s">2.6 구성 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">고객은 "빠르고, 싸고, 정확하게, 그리고 데이터는 미국 밖으로 나가지 않게"라고 말한다. 개발자는 이 문장을 <strong>측정할 수 있는 기준과 넘을 수 없는 한계</strong>로 바꿔야 한다. 모델은 능력·속도·비용·effort로 고르고, 컨텍스트 창과 최대 출력으로 후보를 걸러 낸 다음, 실제 과업으로 평가해 확정한다. 인프라 쪽에서는 고객이 이미 쓰는 클라우드, 추론이 실행되는 위치, 데이터 보존 약정, 확보할 수 있는 처리량이 선택지를 좁힌다. 시험은 각 요구사항이 <strong>어느 설정·플랫폼·약정으로 풀리는지</strong>, 그리고 그 장치가 하지 <em>못하는</em> 일이 무엇인지를 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>비즈니스 요구사항을 능력·속도·비용·effort 기준으로 옮기고, 모델 교체보다 effort 조정을 먼저 검토한다</li>
+      <li>컨텍스트 창·최대 출력을 하드 리밋으로 보고, 요청 크기에서 탈락하는 후보를 골라낸다</li>
+      <li>토큰 단가가 아니라 실제 과업으로 측정한 완료 과업당 비용으로 모델을 비교한다</li>
+      <li>고객의 클라우드·청구 방식·데이터 처리자 요건으로 Claude API, Claude Platform on AWS, Bedrock, Google Cloud 중 하나를 고른다</li>
+      <li><code>inference_geo</code>·워크스페이스 geo·ZDR이 각각 무엇을 보장하고 무엇을 보장하지 않는지 구분한다</li>
+      <li>레이트 리밋·지출 한도·Priority Tier의 성격을 알고 용량 요구사항을 판단한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>요구사항을 선택 기준으로 번역하기</h3><span class="unit-en">From business requirements to selection criteria</span></div>
+    <p>공식 가이드는 모델 선택의 기준으로 <strong>능력(capabilities)</strong>, <strong>속도(speed)</strong>, <strong>비용(cost)</strong>, 그리고 <strong>effort</strong>를 든다. effort는 한 모델 안에서 지능과 지연·비용을 맞바꾸는 파라미터(<code>output_config.effort</code>)이고, 문서는 "effort 조정이 모델 교체보다 나은 레버인 경우가 많다"고 적는다. 응답이 느리고 비싸다는 불만이 나오면 모델을 바꾸기 전에 effort부터 낮춰 평가해 보는 것이 순서다.</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">고객이 하는 말</th><th style="width:20%">기준</th><th>먼저 검토할 레버</th></tr></thead>
+      <tbody>
+        <tr><td>"상담 화면에서 답이 1~2초 안에 떠야 한다"</td><td>속도</td><td>빠른 모델(Haiku 5.5), 낮은 effort. 출력 속도가 더 필요하면 지원 모델의 fast mode(최대 2.5배, 할증 가격)</td></tr>
+        <tr><td>"하루 200만 건의 반품 사유를 분류한다"</td><td>비용</td><td>저비용 모델, 프롬프트 캐싱. 당장 결과가 필요 없으면 Batch API(50% 할인)</td></tr>
+        <tr><td>"여러 시간 걸리는 리팩터링을 에이전트가 끝까지 해야 한다"</td><td>능력</td><td>Opus 5.5부터 시작. 높은 effort에서도 평가가 부족하면 Fable 5.1</td></tr>
+        <tr><td>"지금 쓰는 모델이 품질은 괜찮은데 비싸다"</td><td>effort</td><td>같은 모델에서 effort를 한 단계씩 낮추며 평가 점수를 확인</td></tr>
+      </tbody>
+    </table>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">효율 우선으로 시작</div><p>Haiku 5.5로 구현하고 충분히 테스트한 뒤, 능력이 부족한 지점이 확인될 때만 올린다. 프로토타입, 지연 요건이 빡빡한 앱, 대량의 단순 작업에 맞다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">능력 우선으로 시작</div><p>Opus 5.5로 구현하고 프롬프트를 다듬은 뒤, effort를 낮추거나 하위 모델로 내려 효율을 찾는다. <code>xhigh</code>·<code>max</code>에서도 부족한 장기 에이전트 작업이면 Fable 5.1로 간다.</p></div>
+    </div>
+    <div class="note tip"><span class="lbl">기본 출발점</span><p>모델 비교표 문서는 "어떤 모델을 쓸지 모르겠으면 대부분의 워크로드는 Claude Opus 5.5에서 시작하라"고 권한다. Opus 5.5와 Haiku 5.5의 기본 effort는 <code>medium</code>, Fable 5.1과 Sonnet 5.5는 <code>high</code>다. 같은 이름의 effort라도 모델마다 결과가 다르니, 모델을 바꾸면 effort 스윕을 다시 한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>컨텍스트 창과 최대 출력은 하드 리밋이다</h3><span class="unit-en">Context window and max output as hard limits</span></div>
+    <p>속도·비용은 맞바꿀 수 있지만 크기 제한은 협상이 안 된다. 요청 하나에 넣어야 하는 입력과 받아야 하는 출력이 한도를 넘는 후보는 평가하기 전에 지운다. 현재 라인업(2026년 10월 문서 기준)은 다음과 같다.</p>
+    <table class="t">
+      <thead><tr><th style="width:18%">모델</th><th style="width:24%">입력 / 출력 (USD/MTok)</th><th style="width:16%">컨텍스트</th><th style="width:14%">최대 출력</th><th>지연·용도</th></tr></thead>
+      <tbody>
+        <tr><td>Fable 5.1</td><td>$10 / $50</td><td>1M</td><td>128K</td><td>느림. 까다로운 추론, 장기 에이전트 작업</td></tr>
+        <tr><td>Opus 5.5</td><td>$4 / $20</td><td>1M</td><td>128K</td><td>보통. 장시간 에이전트 코딩·지식 작업</td></tr>
+        <tr><td>Sonnet 5.5</td><td>$2 / $10</td><td>1M</td><td>128K</td><td>빠름. 속도와 지능의 균형</td></tr>
+        <tr><td>Haiku 5.5</td><td>$0.10 / $0.50 (프롬프트 10만 토큰 초과 시 $0.50 / $2.50)</td><td>1M</td><td>128K</td><td>가장 빠름. 분류·추출·라우팅 같은 대량 작업</td></tr>
+      </tbody>
+    </table>
+    <p>현재 모델 넷은 모두 1M 컨텍스트라서 이들 사이에서는 크기로 탈락하는 모델이 없다. 갈리는 지점은 <strong>레거시 모델</strong>이다. Claude Sonnet 4.5(deprecated)와 Haiku 4.5를 포함한 그 밖의 모델은 컨텍스트가 200K다. 이미지·PDF 페이지는 요청당 600개까지(200K 모델은 100개)이고, 토큰 한도보다 요청 크기 한도에 먼저 걸릴 수도 있다.</p>
+    <table class="t">
+      <thead><tr><th style="width:40%">상황</th><th>API 동작</th></tr></thead>
+      <tbody>
+        <tr><td>입력만으로 컨텍스트 창을 넘는다</td><td>모든 모델에서 400 <code>invalid_request_error</code>("prompt is too long")</td></tr>
+        <tr><td>입력 + <code>max_tokens</code>가 창을 넘는다 (Claude 4.5 이후 모델)</td><td>요청은 받아들이고, 생성이 창 끝에 닿으면 <code>stop_reason: "model_context_window_exceeded"</code>로 멈춘다</td></tr>
+        <tr><td>128K보다 긴 출력이 필요하다</td><td>동기 호출로는 불가. Message Batches API에서 지원 모델에 <code>output-300k-2026-03-24</code> 베타 헤더를 붙이면 300K까지</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">토큰 수는 모델마다 다르다</span><p>Claude Opus 4.7부터 쓰는 새 토크나이저는 같은 텍스트를 약 30% 더 많은 토큰으로 센다. 크기 판단은 글자 수 어림이 아니라 대상 모델로 <a href="https://platform.claude.com/docs/en/build-with-claude/token-counting" target="_blank" rel="noopener">토큰 카운팅 API</a>를 돌려서 한다. 각 모델의 <code>max_input_tokens</code>·<code>max_tokens</code>는 Models API로도 조회된다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>단가가 아니라 완료 과업당 비용으로 비교한다</h3><span class="unit-en">Compare candidates with an eval before committing</span></div>
+    <p>크기 조건을 통과한 후보가 둘 이상 남으면 평가로 정한다. 공식 절차는 ① 사용 사례에 맞는 벤치마크(평가 세트)를 만들고 ② 실제 프롬프트와 데이터로 돌려 ③ 정확도·응답 품질·엣지 케이스 처리를 비교한 뒤 ④ 성능과 비용을 함께 따지는 것이다. 문서는 좋은 평가 세트를 "가장 중요한 단계"라고 부른다.</p>
+    <p>비용 비교의 단위는 <strong>완료된 과업</strong>이다. 값싼 모델이 실패한 과업도 토큰 비용은 그대로 나가고, 재시도 비용과 실패가 남긴 후처리 비용이 그 위에 붙는다. 더 유능한 모델이 적은 작업량으로 끝내 토큰 단가 차이를 상당 부분 메우기도 한다. 공식 문서가 공개한 측정 예시(SWE-bench Pro 일부)에서도 그 차이가 보인다.</p>
+    <table class="t">
+      <thead><tr><th style="width:32%">모델 · effort</th><th style="width:22%">해결률</th><th>해결 과업당 비용</th></tr></thead>
+      <tbody>
+        <tr><td>Sonnet 5.5 · <code>high</code>(기본)</td><td>87.6%</td><td>$0.11</td></tr>
+        <tr><td>Opus 5.5 · <code>low</code></td><td>87.4%</td><td>$0.12</td></tr>
+        <tr><td>Opus 5.5 · <code>medium</code>(기본)</td><td>92.8%</td><td>$0.22</td></tr>
+      </tbody>
+    </table>
+    <p>입력 단가는 Opus 5.5가 Sonnet 5.5의 두 배지만, effort를 낮춘 Opus 5.5의 과업당 비용은 Sonnet 5.5와 거의 같다. 비용은 <code>usage</code>의 토큰 항목마다 해당 단가를 곱해 과업에 속한 요청 전체를 더해서 구한다.</p>
+    <div class="code"><span class="c"># 과업 하나에 속한 모든 응답의 usage를 단가별로 합산 (예: Sonnet 5.5 정가)</span>
+RATE = {"in": 2.00, "w5m": 2.50, "w1h": 4.00,   <span class="c"># USD / MTok</span>
+        "read": 0.10, "out": 10.00}
+
+def task_cost(usages):
+    total = 0.0
+    for u in usages:
+        cc = u.cache_creation  <span class="c"># TTL별 캐시 쓰기 내역</span>
+        w5 = cc.ephemeral_5m_input_tokens if cc else 0
+        w1 = cc.ephemeral_1h_input_tokens if cc else 0
+        total += (u.input_tokens * RATE["in"]
+                  + w5 * RATE["w5m"] + w1 * RATE["w1h"]
+                  + (u.cache_read_input_tokens or 0) * RATE["read"]
+                  + u.output_tokens * RATE["out"])
+    return total / 1_000_000</div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"가장 싼 모델은?"이라는 질문에 토큰 단가표만 보고 답하는 보기는 함정이다. 실제 과업으로 측정한 완료 과업당 비용이 기준이다</li>
+      <li>평균이 아니라 <strong>어려운 꼬리</strong>(가장 어려운 10%)에서 비교하라는 것이 문서의 권고다</li>
+      <li>평가 세트 없이 모델부터 바꾸는 순서는 틀린다. 평가 세트 구축이 첫 단계다</li>
+      <li>밤사이 돌려도 되는 대량 분석이면 Batch API의 50% 할인을 먼저 떠올린다(→ 2.3)</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>고객의 클라우드에서 플랫폼을 고른다</h3><span class="unit-en">Choosing the platform from the customer's cloud</span></div>
+    <p>같은 Claude라도 어디서 호출하느냐에 따라 <strong>운영 주체(데이터 처리자)</strong>, 청구 경로, 쓸 수 있는 기능, 모델 ID, 폐기 일정이 달라진다. 고객이 이미 계약한 클라우드에서 출발해, 기능 요구와 규제 요구로 좁힌다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">플랫폼</th><th style="width:20%">운영 주체</th><th style="width:28%">청구 · 모델 ID</th><th>특징</th></tr></thead>
+      <tbody>
+        <tr><td>Claude API</td><td>Anthropic</td><td>Anthropic 직접 · <code>claude-opus-5-5</code></td><td>새 기능·베타가 가장 먼저 들어오는 기준 플랫폼</td></tr>
+        <tr><td>Claude Platform on AWS</td><td>Anthropic (AWS는 인증·IAM·청구)</td><td>AWS Marketplace · Claude API와 같은 ID</td><td>Claude API와 기능이 거의 같고 보통 같은 날 출시. Agent Skills·코드 실행·<code>anthropic-beta</code> 사용 가능. HIPAA 준비 미지원</td></tr>
+        <tr><td>Amazon Bedrock</td><td>AWS</td><td>AWS 서비스 요금 · <code>anthropic.claude-opus-5-5</code></td><td>AWS 경계 안에서만 처리. Files API·URL 소스, 웹 검색·웹 페치·코드 실행, Message Batches, Agent Skills, Managed Agents는 미지원</td></tr>
+        <tr><td>Claude Models on Google Cloud (Anthropic managed)</td><td>Anthropic (Google은 접근·청구)</td><td>Google Cloud Marketplace · Claude API ID</td><td>Google Cloud 프로젝트에서 쓰는 Claude API</td></tr>
+        <tr><td>Claude Models on Google Cloud (Google managed)</td><td>Google</td><td>GCP 청구 · Claude API 형식 ID</td><td>예전 Vertex AI 통합. 전역·멀티리전·리전 엔드포인트</td></tr>
+        <tr><td>Microsoft Foundry</td><td>Anthropic 또는 Azure 호스팅</td><td>Azure 청구 · 배포 이름</td><td>Azure 중심 조직용</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">고르는 기준</span><ul>
+      <li>AWS 고객이 <strong>AWS Marketplace 청구</strong>를 원하면서 Agent Skills·코드 실행·베타 기능도 필요하면 Claude Platform on AWS다</li>
+      <li>FedRAMP High·IL4/IL5·HIPAA 준비가 필요하거나 <strong>AWS가 유일한 데이터 처리자</strong>여야 하면 Bedrock이다</li>
+      <li>Claude Platform on AWS는 Claude API·Bedrock과 별도의 용량 풀을 쓴다. 여러 플랫폼에 워크로드를 두고 장애 시 넘기는 구성이 가능하다</li>
+      <li>Claude Code를 조직에 배포할 때도 같은 표가 적용된다. AWS 중심이면 Bedrock, AWS Marketplace 청구와 Claude API 기능이면 Claude Platform on AWS, GCP·Azure 중심이면 각 클라우드다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>데이터 레지던시: 추론 위치와 저장 위치</h3><span class="unit-en">Inference geo vs workspace geo</span></div>
+    <p>데이터 레지던시(data residency) 설정은 서로 독립인 두 가지다. <strong>inference geo</strong>는 모델 추론이 실행되는 곳을 요청 단위로 정하고, <strong>workspace geo</strong>는 저장 데이터와 엔드포인트 처리(이미지 변환, 코드 실행 등)가 일어나는 곳을 워크스페이스 단위로 정한다.</p>
+    <div class="code">resp = client.messages.create(
+    model="claude-sonnet-5-5",
+    max_tokens=2048,
+    inference_geo="us",      <span class="c"># 미국 인프라에서만 추론 (기본값 "global")</span>
+    messages=[{"role": "user", "content": claim_text}],
+)
+print(resp.usage.inference_geo)   <span class="c"># 실제로 추론이 실행된 곳</span></div>
+    <table class="t">
+      <thead><tr><th style="width:24%">설정</th><th style="width:36%">정하는 것</th><th>알아 둘 점</th></tr></thead>
+      <tbody>
+        <tr><td><code>inference_geo</code></td><td>요청별 추론 위치. <code>"us"</code> 또는 <code>"global"</code></td><td>Claude 4.6 이후 모델만 지원. Haiku 4.5·Opus 4.5·Sonnet 4.5에 붙이면 400. <code>"us"</code>는 모든 토큰 항목에 1.1배 가격</td></tr>
+        <tr><td><code>default_inference_geo</code> · <code>allowed_inference_geos</code></td><td>워크스페이스 기본값과 허용 목록</td><td>허용 목록에 없는 geo를 요청하면 오류. Console 또는 Admin API에서 설정</td></tr>
+        <tr><td>workspace geo</td><td>저장 위치와 엔드포인트 처리 위치</td><td>워크스페이스를 만들 때 정하고 바꿀 수 없다. 현재 값은 <code>"us"</code>뿐</td></tr>
+      </tbody>
+    </table>
+    <p><code>inference_geo</code>는 Claude API, Claude Platform on AWS, Google Cloud(Anthropic managed)에서 쓴다. Bedrock과 Google Cloud(Google managed)에서는 엔드포인트 URL이나 추론 프로필이 리전을 정하므로 이 파라미터가 해당하지 않는다. Bedrock의 리전 엔드포인트는 전역 엔드포인트보다 10% 비싸다.</p>
+    <div class="note"><span class="lbl">레지던시는 용량을 늘리지 않는다</span><p>레이트 리밋은 모든 geo가 공유한다. <code>inference_geo: "us"</code> 요청과 <code>"global"</code> 요청은 같은 한도 풀에서 빠져나가므로, 미국 추론으로 바꾼다고 처리량이 따로 생기지 않는다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>Zero Data Retention: 무엇을 덮고 무엇이 벗어나는가</h3><span class="unit-en">What ZDR covers and what breaks it</span></div>
+    <p>기본 정책에서 Claude API 입력·출력은 받거나 생성한 지 30일 안에 백엔드에서 삭제된다. <strong>ZDR(Zero Data Retention)</strong> 약정이 있으면 API 응답이 반환된 뒤 프롬프트와 응답을 저장하지 않는다. ZDR은 영업팀을 통해 <strong>조직 단위</strong>로 켜고, 같은 계정의 다른 조직으로 자동 확장되지 않는다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">항목</th><th style="width:16%">ZDR</th><th>이유·비고</th></tr></thead>
+      <tbody>
+        <tr><td>Messages·Token Counting API(적격 기능)</td><td>적용</td><td>Commercial 조직 API 키로 쓰는 Claude Code도 포함</td></tr>
+        <tr><td>프롬프트 캐싱</td><td>적격</td><td>프롬프트·출력은 저장하지 않는다. KV 캐시 표현은 TTL 동안 메모리에만 있다</td></tr>
+        <tr><td>웹 검색 · 웹 페치 도구</td><td>적격</td><td>웹 페이지·PDF 전체 내용은 웹 페치로 가져온다. 동적 필터링은 제외</td></tr>
+        <tr><td>Message Batches</td><td>비적격</td><td>비동기 처리라 저장이 필요하다. 29일 보존</td></tr>
+        <tr><td>Files API · 코드 실행</td><td>비적격</td><td>파일은 삭제하거나 만료될 때까지, 컨테이너 데이터는 최대 30일</td></tr>
+        <tr><td>Claude Console(플레이그라운드 포함), Managed Agents</td><td>미적용</td><td>Managed Agents 세션 기록은 지울 때까지 남는 상태 저장형 리소스다</td></tr>
+        <tr><td>Fable 5.1 등 Covered Models</td><td>미적용</td><td>30일 보존이 필수다. ZDR 조직은 특정 워크스페이스에만 30일 보존을 켜서 쓴다(Default Workspace는 불가)</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">API가 막아 주지 않는다</div><p>ZDR 조직이 Batch API나 Files API를 호출해도 요청은 그대로 성공한다. 비적격 기능을 쓰는 것은 그 데이터만큼 ZDR 약정 밖으로 나가는 <strong>선택</strong>이고, 데이터는 그 기능의 보존 정책을 따른다. 아키텍처 검토 단계에서 걸러야 한다.</p></div>
+      <div class="pane good"><div class="bh">약정과 무관한 보존</div><p>ZDR이나 HIPAA 약정이 있어도 법이 요구하거나 자동 신뢰·안전 시스템이 플래그한 경우에는 보존될 수 있다. 플래그된 채팅·세션의 입력과 출력은 최대 2년까지 남을 수 있다.</p></div>
+    </div>
+    <p>Bedrock과 Google Cloud(Google managed)에서는 클라우드 사업자가 데이터 처리자이므로, 보존·컴플라이언스 조건은 그 플랫폼 문서를 따른다. ZDR 조직에서는 CORS도 지원하지 않으니 브라우저 앱은 백엔드 프록시를 거쳐 호출한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>용량 산정: 레이트 리밋·지출 한도·Priority Tier</h3><span class="unit-en">Sizing capacity</span></div>
+    <p>조직에는 두 종류의 한도가 걸린다. <strong>지출 한도(spend limit)</strong>는 한 달에 쓸 수 있는 최대 금액이고, <strong>레이트 리밋(rate limit)</strong>은 일정 시간에 보낼 수 있는 요청·토큰의 최댓값이다. 둘 다 사용 등급(usage tier)에 따라 정해지고, 사용 이력이 쌓이면 등급이 올라간다.</p>
+    <table class="t">
+      <thead><tr><th style="width:26%">한도</th><th style="width:36%">단위·값</th><th>넘었을 때</th></tr></thead>
+      <tbody>
+        <tr><td>등급별 월 지출 상한</td><td>Start $500 · Build $1,000 · Scale $200,000 (Custom은 별도 협의)</td><td>429 <code>rate_limit_error</code>, <code>error_code: enforced_spend_limit_reached</code>. <code>retry-after</code> 없음, 다음 달 1일 00:00 UTC까지 재시도해도 실패</td></tr>
+        <tr><td>직접 정한 지출 한도</td><td>조직·워크스페이스별로 등급 상한 이하</td><td>400 <code>invalid_request_error</code></td></tr>
+        <tr><td>레이트 리밋</td><td>모델 클래스별 RPM·ITPM·OTPM. 토큰 버킷 방식으로 계속 채워진다</td><td>429와 어떤 한도를 넘었는지 설명. <code>retry-after</code>가 있으면 그만큼 기다린다</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li><strong>캐시 인지 ITPM</strong>: 대부분의 모델에서 캐시에서 읽은 입력(<code>cache_read_input_tokens</code>)은 ITPM에 들어가지 않는다. 반복되는 시스템 프롬프트를 캐싱하면 비용과 실효 처리량이 함께 좋아진다</li>
+      <li>OTPM은 실제 생성된 토큰으로 센다. <code>max_tokens</code>를 크게 잡아도 OTPM 불이익은 없다</li>
+      <li>사용량이 갑자기 늘면 가속 한도(acceleration limit)로 429가 날 수 있다. 트래픽은 점진적으로 올린다</li>
+      <li>워크스페이스별로 더 낮은 한도를 걸어 한 팀이 조직 전체 한도를 다 쓰지 못하게 할 수 있다</li>
+    </ul>
+    <div class="note"><span class="lbl">한도는 보장이 아니다</span><p>문서에 나온 레이트 리밋은 허용되는 <strong>최댓값</strong>이지 보장된 최솟값이 아니다. 이전에는 Priority Tier 약정(분당 입력·출력 토큰, 1·3·6·12개월, 특정 모델 버전, 99.5% 가동 목표)이 확정 용량을 주는 수단이었다. 그러나 현재 문서는 서비스 티어를 <strong>레거시</strong>로 표시하고, Priority Tier 약정은 <strong>더 이상 판매하지 않으며</strong> 기존 약정은 계약 종료일까지만 쓴다고 적는다. Fable 5.1, Opus 5.5, Sonnet 5.5, Haiku 5.5 같은 5.x 모델은 Priority Tier를 지원하지 않는다. 보장 용량이 필요하면 영업팀에 문의하라는 것이 현재 안내다. CertSafari 레슨은 "확정 처리량에는 Priority Tier 약정이 필요하다"고 설명하는데, 이 가이드는 공식 문서를 따랐다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>입력이 아주 크면 가장 비싼 최상위 모델만 처리할 수 있다.</div><div class="f"><span class="k">사실</span>현재 모델 넷은 모두 1M 컨텍스트다. 크기로 탈락하는 것은 200K 창을 가진 레거시 모델이고, 남은 후보는 비용과 평가 결과로 고른다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>토큰 단가가 가장 낮은 모델이 운영비도 가장 적게 든다.</div><div class="f"><span class="k">사실</span>실패한 과업도 토큰이 청구되고 재시도 비용이 더해진다. 실제 과업으로 잰 완료 과업당 비용을 비교한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>inference_geo: "us"</code>를 쓰면 미국 리전 몫의 처리량이 추가된다.</div><div class="f"><span class="k">사실</span>레이트 리밋은 모든 geo가 공유한다. 바뀌는 것은 추론 위치와 1.1배 가격이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>ZDR 조직에서는 어떤 기능을 써도 데이터가 남지 않는다.</div><div class="f"><span class="k">사실</span>Batch·Files API·코드 실행은 비적격이라 각자의 보존 정책을 따르고, 법적 요구나 안전 플래그가 걸린 데이터는 최대 2년 보존될 수 있다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>AWS를 쓰는 고객이면 무조건 Bedrock으로 연결한다.</div><div class="f"><span class="k">사실</span>Marketplace 청구와 Claude API 기능(Agent Skills, 코드 실행, 베타 헤더)이 필요하면 Claude Platform on AWS가 맞다. AWS가 유일한 데이터 처리자여야 할 때 Bedrock을 고른다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>요금 등급표의 레이트 리밋까지는 처리량이 보장된다.</div><div class="f"><span class="k">사실</span>표의 값은 최댓값일 뿐이다. 확정 용량을 주던 Priority Tier는 신규 판매가 끝났고 5.x 모델은 지원하지 않는다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/about-claude/models/choosing-a-model" target="_blank" rel="noopener">Choosing the right model</a> · <a href="https://platform.claude.com/docs/en/models/overview" target="_blank" rel="noopener">Models overview</a> · <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Pricing</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/context-windows" target="_blank" rel="noopener">Context windows</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/effort" target="_blank" rel="noopener">Effort</a> · <a href="https://platform.claude.com/docs/en/about-claude/models/optimizing-for-cost-and-intelligence" target="_blank" rel="noopener">Optimizing for cost and intelligence</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/claude-platform-on-aws" target="_blank" rel="noopener">Claude Platform on AWS</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/claude-in-amazon-bedrock" target="_blank" rel="noopener">Claude in Amazon Bedrock</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/claude-models-on-google-cloud/anthropic-managed" target="_blank" rel="noopener">Claude Models on Google Cloud (Anthropic managed)</a> · <a href="https://code.claude.com/docs/en/third-party-integrations" target="_blank" rel="noopener">Enterprise deployment overview (Claude Code)</a> · <a href="https://platform.claude.com/docs/en/manage-claude/data-residency" target="_blank" rel="noopener">Data residency</a> · <a href="https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" target="_blank" rel="noopener">API and data retention</a> · <a href="https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data" target="_blank" rel="noopener">How long do you store my organization's data?</a> · <a href="https://platform.claude.com/docs/en/api/rate-limits" target="_blank" rel="noopener">Rate limits</a> · <a href="https://platform.claude.com/docs/en/api/service-tiers" target="_blank" rel="noopener">Service tiers</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인2 애플리케이션·통합</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

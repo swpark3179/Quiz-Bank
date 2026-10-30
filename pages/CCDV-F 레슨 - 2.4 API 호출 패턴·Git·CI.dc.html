@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 2 · 서브도메인 2.4</span></div>
+    <h1>API 호출 패턴과 Git·CI의 Claude Code</h1>
+    <p class="sub">REST·JSON과 필수 헤더 · 동기·비동기·스트리밍·제출 후 폴링 · 스트림 속 오류 · 계획 → 구현 → 커밋·PR · GitHub Actions와 자동 PR 리뷰 · Edit 리팩터링과 대규모 마이그레이션</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/rest-json-and-asynchronous-calls-with-the-claude-api" target="_blank" rel="noopener">CertSafari 2.4 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/version-control-ci-code-review-and-refactoring-with-claude-code" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 · Applications and Integration (33.1%) · 서브도메인 2.4 Software Engineering Foundations</p>
+    <div class="secrow">
+      <span class="s">2.1 요구사항·모델·인프라</span><span class="s">2.2 모델 수명주기·변경 관리</span><span class="s">2.3 Messages API·배치</span><span class="s on">2.4 API 호출 패턴·Git·CI</span><span class="s">2.5 앱 설계·세션·플러그인</span><span class="s">2.6 구성 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">이 레슨은 두 갈래다. 앞부분은 Claude API를 평범한 HTTP 서비스로 다루는 법이다. 같은 요청을 보내고 같은 Message를 받지만, <strong>기다리는 방식</strong>(블로킹, <code>await</code>, 스트리밍, 제출 후 폴링)을 작업 모양에 맞게 고르는 것이 핵심이다. 뒷부분은 Claude Code를 Git과 CI 안에 넣는 법이다. 계획을 먼저 합의하고 검증 가능한 단위로 구현해 커밋하는 흐름, GitHub Actions의 두 가지 실행 모드와 트리거 규칙, 자동 리뷰가 <strong>어디에 결과를 남기는지</strong>를 시험이 자주 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>Messages API 호출을 엔드포인트·헤더·JSON 본문·응답 헤더·오류 형태로 설명하고, 직접 HTTP로 부를 때 빠뜨리면 안 되는 헤더를 안다</li>
+      <li>동기·비동기·스트리밍·배치 중 작업 모양에 맞는 호출 방식을 고르고, SDK의 재시도·타임아웃 기본값을 안다</li>
+      <li>긴 출력에 스트리밍이 필요한 이유와, 200 응답 뒤 스트림 안에서 오는 오류를 처리한다</li>
+      <li>계획 모드 → 검증 가능한 구현 → 커밋·PR 흐름과 워크트리 병렬 세션, 독립 리뷰어를 설명한다</li>
+      <li>claude-code-action의 대화형·자동화 모드, 실행할 수 있는 주체, Code Review의 트리거·명령·비용 구조를 구분한다</li>
+      <li>정밀 수정에는 Edit를 쓰고, 대규모 마이그레이션은 <code>claude -p</code> 루프를 소수 파일로 먼저 시험한 뒤 확장한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>Messages API는 JSON을 주고받는 REST 엔드포인트다</h3><span class="unit-en">Endpoint, headers, size limits, errors</span></div>
+    <p>Claude API는 <code>https://api.anthropic.com</code>의 RESTful API이고, 대화 호출은 <code>POST /v1/messages</code>에 JSON 본문을 보내는 것이다. SDK를 쓰면 인증·버전·content-type 헤더를 자동으로 붙여 주지만, 직접 HTTP 래퍼를 만들면 이것을 손으로 챙겨야 한다.</p>
+    <div class="code">curl https://api.anthropic.com/v1/messages \
+  -H "Authorization: Bearer $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2026-10-21" \
+  -H "content-type: application/json" \
+  -d '{"model": "claude-sonnet-5-5", "max_tokens": 512,
+       "messages": [{"role": "user",
+                     "content": "반품 규정을 세 줄로 요약해 줘"}]}'</div>
+    <table class="t">
+      <thead><tr><th style="width:28%">요청 헤더</th><th style="width:22%">필수 여부</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>Authorization: Bearer &lt;token&gt;</code></td><td><code>x-api-key</code>가 없으면 필수</td><td>API 키 또는 워크로드 아이덴티티 페더레이션으로 받은 단기 토큰</td></tr>
+        <tr><td><code>x-api-key</code></td><td>선택</td><td><code>Authorization</code>의 레거시 대안. 여전히 지원된다</td></tr>
+        <tr><td><code>anthropic-version</code></td><td>필수</td><td>API 버전. 최신은 <code>2026-10-21</code>이고 <code>2023-06-01</code>도 목록에 남아 있다</td></tr>
+        <tr><td><code>content-type</code></td><td>필수</td><td><code>application/json</code></td></tr>
+        <tr><td><code>anthropic-workspace-id</code></td><td>조건부</td><td>워크스페이스에 묶이지 않은 키를 쓸 때 필수. 워크스페이스 전용 키는 생략하면 그 워크스페이스에서 실행. SDK도 이 헤더는 자동으로 붙이지 않는다</td></tr>
+      </tbody>
+    </table>
+    <p>응답 헤더의 <code>request-id</code>(예: <code>req_…</code>)는 지원 문의 때 쓰는 요청 식별자이고, 오류 본문에도 <code>request_id</code>로 들어간다. 오류는 언제나 <code>{"type": "error", "error": {"type", "message"}}</code> 모양의 JSON이다. 대표 상태 코드는 400 <code>invalid_request_error</code>, 401 인증, 403 권한, 404, 413 <code>request_too_large</code>, 429 <code>rate_limit_error</code>, 500 <code>api_error</code>, 504 <code>timeout_error</code>, 529 <code>overloaded_error</code>다.</p>
+    <table class="t">
+      <thead><tr><th style="width:44%">요청 크기 한도</th><th>값</th></tr></thead>
+      <tbody>
+        <tr><td>Claude API · Messages, Token Counting</td><td>128MB</td></tr>
+        <tr><td>Claude API · Message Batches / Files</td><td>256MB / 500MB</td></tr>
+        <tr><td>Claude API · Sessions, Agents, Environments</td><td>32MB</td></tr>
+        <tr><td>Claude Platform on AWS, Anthropic 관리형 Google Cloud, Foundry</td><td>Messages·Token Counting 32MB</td></tr>
+        <tr><td>Bedrock / Google 관리형 Google Cloud</td><td>20MB / 30MB</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">참고: 32MB는 어디의 한도인가</span><p>CertSafari 1부는 Messages·Token Counting 한도를 32MB로 적었지만, 공식 API 개요와 오류 문서는 1차 Claude API의 Messages·Token Counting 한도를 <strong>128MB</strong>로 적는다. 32MB는 Claude Platform on AWS·Anthropic 관리형 Google Cloud·Foundry의 Messages 한도이자 Claude API의 Sessions·Agents·Environments 한도다. 이 가이드는 공식 문서를 따른다.</p></div>
+    <div class="note tip"><span class="lbl">버전 헤더가 바꾸는 것</span><p><code>2026-10-21</code>부터는 <code>temperature</code>·<code>top_p</code>·<code>top_k</code>를 보내면 모든 모델에서 400이 난다. 각 SDK 메이저 버전은 기본으로 하나의 API 버전을 보낸다(Python SDK는 2.0.0부터 <code>2026-10-21</code>). 그래서 SDK 메이저 버전을 올리는 일은 API 버전을 올리는 변경으로 다뤄야 한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>같은 요청, 기다리는 방식만 넷</h3><span class="unit-en">Choosing a call pattern by workload shape</span></div>
+    <p>네 방식 모두 같은 요청 본문을 보내고 같은 Message 객체를 얻는다. 바뀌는 것은 결과를 기다리는 방법뿐이므로, 고르는 기준은 지연 허용치와 작업량의 모양이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:20%">방식</th><th style="width:38%">어떻게 기다리나</th><th>맞는 작업</th></tr></thead>
+      <tbody>
+        <tr><td>블로킹 호출</td><td><code>messages.create</code>가 끝날 때까지 스레드가 멈춤</td><td>짧은 스크립트, 순서대로 한 건씩 처리하는 배치 잡의 한 단계</td></tr>
+        <tr><td>비동기 클라이언트</td><td><code>await</code> 동안 이벤트 루프가 다른 일을 처리</td><td>요청을 동시에 많이 받는 웹 서버·봇, 여러 호출을 겹쳐 보내는 서비스</td></tr>
+        <tr><td>스트리밍</td><td>토큰이 생기는 대로 SSE로 받음</td><td>사용자가 화면에서 답을 기다리는 채팅 UI, 출력이 긴 요청</td></tr>
+        <tr><td>제출 후 폴링</td><td>Message Batches에 넣고 상태를 주기적으로 확인</td><td>아무도 응답을 기다리지 않는 대량 작업. 비용 50%</td></tr>
+      </tbody>
+    </table>
+    <p>어느 방식이든 API는 이전 턴을 기억하지 않는다. 대화를 이어 가려면 대화별 이력을 애플리케이션 저장소에 두고 매 요청에 전체를 담는다. 비동기 서버에서 여러 대화를 동시에 처리할 때는 대화마다 이력을 따로 두어, 한 코루틴이 다른 대화의 이력 목록에 메시지를 덧붙이지 않게 설계한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>동기 호출과 비동기 클라이언트</h3><span class="unit-en">Anthropic vs AsyncAnthropic, retries, timeouts</span></div>
+    <p>Python SDK는 동기 <code>Anthropic</code>과 비동기 <code>AsyncAnthropic</code> 두 클라이언트를 제공하고 인터페이스는 같다. 비동기 클라이언트의 <code>messages.create</code>는 대기 가능한(awaitable) 객체를 돌려주므로 코루틴 안에서 <code>await</code>를 붙여야 결과 Message를 얻는다.</p>
+    <div class="code">import asyncio
+from anthropic import AsyncAnthropic
+
+client = AsyncAnthropic()           <span class="c"># ANTHROPIC_API_KEY를 환경에서 읽음</span>
+
+async def triage(ticket: str) -&gt; str:
+    msg = await client.messages.create(   <span class="c"># await 없으면 결과가 아니다</span>
+        model="claude-haiku-5-5", max_tokens=200,
+        messages=[{"role": "user", "content": ticket}],
+    )
+    return next(b.text for b in msg.content if b.type == "text")
+
+async def main(tickets: list[str]) -&gt; list[str]:
+    return await asyncio.gather(*(triage(t) for t in tickets))</div>
+    <table class="t">
+      <thead><tr><th style="width:24%">SDK 동작</th><th>기본값과 조절법 (Python SDK 문서)</th></tr></thead>
+      <tbody>
+        <tr><td>자동 재시도</td><td>연결 오류, 408, 409, 429, 500 이상을 짧은 지수 백오프로 <strong>2번</strong> 재시도. <code>retry-after</code> 헤더를 따른다. <code>max_retries</code>로 바꾸거나 0으로 끈다</td></tr>
+        <tr><td>타임아웃</td><td>기본 <strong>10분</strong>. <code>timeout</code>에 초 단위 실수나 세분화된 타임아웃 객체를 준다. 시간 초과는 <code>APITimeoutError</code>이고 역시 2번 재시도된다</td></tr>
+        <tr><td>오류 클래스</td><td>상태 코드별 타입이 있다. 429는 <code>RateLimitError</code>, 500 이상은 <code>InternalServerError</code>, 연결 실패는 <code>APIConnectionError</code>. 문자열 매칭보다 타입으로 잡는다</td></tr>
+        <tr><td>비동기 처리량</td><td>기본 HTTP 백엔드 대신 <code>pip install "anthropic[aiohttp]"</code> 후 <code>http_client=DefaultAioHttpClient()</code>를 넘기면 동시성이 좋아진다</td></tr>
+        <tr><td>요청 ID</td><td>응답 객체의 <code>_request_id</code> 속성에 <code>request-id</code> 헤더 값이 들어 있다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>긴 요청: 스트리밍하거나, 제출하고 폴링하거나</h3><span class="unit-en">Long outputs, mid-stream errors, submit-and-poll</span></div>
+    <p>스트리밍은 화면용 기능만이 아니다. 출력이 길면 응답이 올 때까지 연결이 오래 놀게 되고, 일부 네트워크는 유휴 연결을 끊는다. 그래서 Python SDK는 비스트리밍 요청이 <strong>약 10분을 넘을 것으로 예상되면 <code>ValueError</code></strong>를 낸다. <code>stream=True</code>를 쓰거나 <code>timeout</code>을 직접 지정하면 이 검사는 꺼진다. 사람이 보지 않는 긴 작업이라도 SDK가 스트림을 대신 소비하고 완성된 Message만 돌려주게 할 수 있다.</p>
+    <div class="code">with client.messages.stream(            <span class="c"># 야간 감사 보고서, 보는 사람 없음</span>
+    model="claude-opus-5-5", max_tokens=96000,
+    messages=[{"role": "user", "content": audit_prompt}],
+) as stream:
+    report = stream.get_final_message()  <span class="c"># create()와 같은 Message 객체</span></div>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">재시도를 켰는데도 답이 중간에 끊긴다</div><p>스트리밍 응답은 HTTP 200으로 시작한 <strong>뒤에</strong> 실패할 수 있다. 사용량이 몰리면 스트림 안에 <code>event: error</code>로 <code>overloaded_error</code>가 오는데, 비스트리밍이었다면 529였을 오류다. 이때는 상태 코드 기반의 표준 오류 처리가 적용되지 않는다고 문서에 적혀 있다. 529 재시도 설정만으로는 막을 수 없다.</p></div>
+      <div class="pane good"><div class="bh">스트림 오류를 따로 처리한다</div><p>스트림을 읽는 코드에서 오류 이벤트(SDK에서는 스트림 반복 중 발생하는 예외)를 잡고, 받은 부분을 저장한 뒤 다시 요청하거나 이어 쓰기를 요청한다(2.3 05 참고). 모르는 이벤트 타입은 무시하도록 짠다.</p></div>
+    </div>
+    <p>연결을 오래 붙잡아 둘 이유조차 없다면 <strong>제출 후 폴링</strong>이 낫다. 오류 문서는 10분이 넘는 긴 요청에 스트리밍 또는 Message Batches를 권하는데, 배치는 끊기지 않는 연결 대신 결과를 폴링하므로 네트워크 위험이 줄어든다. 배치를 제출하면 응답의 배치 <code>id</code>를 DB에 저장해 두고, 프로세스가 재시작돼도 그 ID로 <code>processing_status</code>가 <code>ended</code>가 될 때까지 폴링을 이어 간다. 결과는 순서가 보장되지 않으므로 <code>custom_id</code>로 원래 요청과 맞춘다(배치 세부 규칙은 2.3 08·09).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>브랜치·커밋·PR 흐름 속의 Claude Code</h3><span class="unit-en">Plan, implement with a check, commit, open a PR</span></div>
+    <p>공식 문서의 권장 흐름을 이어 붙이면 다음과 같다. 핵심은 <strong>설계에 합의하기 전에 파일이 바뀌지 않게</strong> 하고, <strong>통과·실패로 답하는 검사</strong>를 Claude 손에 쥐여 주는 것이다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① 탐색</div><div class="ft">관련 파일을 찾고 동작 흐름을 질문</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② 계획</div><div class="ft">계획 모드에서 읽기만 하고 계획 제안, 승인 전에는 편집 없음</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ 구현·검증</div><div class="ft">테스트·빌드·린터를 돌려 통과할 때까지 수정, 실행한 명령과 출력이라는 증거 요구</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ 커밋·PR</div><div class="ft">변경 요약 → "create a pr". <code>gh</code>로 만든 PR은 세션과 연결된다</div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:28%">장치</th><th>쓰는 법과 주의점</th></tr></thead>
+      <tbody>
+        <tr><td>계획 모드</td><td><code>claude --permission-mode plan</code>으로 시작하거나 세션 중 <code>Shift+Tab</code>을 눌러 상태 표시줄에 <code>⏸ plan mode on</code>이 보이게 한다</td></tr>
+        <tr><td><code>acceptEdits</code> 모드</td><td>범위 안 파일 편집과 <code>mkdir</code>·<code>touch</code>·<code>rm</code>·<code>rmdir</code>·<code>mv</code>·<code>cp</code>·<code>sed</code>만 자동 승인한다. <code>git commit</code>은 여전히 묻는다</td></tr>
+        <tr><td>예외 없는 규칙</td><td>"migrations 폴더는 건드리지 말 것"처럼 예외가 없는 규칙은 <code>CLAUDE.md</code>가 아니라 하네스가 집행하는 훅(<code>PreToolUse</code> 훅이 종료 코드 2로 막음)이나 deny 규칙으로 옮긴다. 편집 전 감사 기록도 <code>PreToolUse</code> 훅의 일이다</td></tr>
+        <tr><td>병렬 세션</td><td><code>claude --worktree feature-auth</code>(또는 <code>-w</code>)로 브랜치별 워크트리에서 세션을 연다. 새 체크아웃이라 gitignore된 <code>.env</code>나 설치된 의존성은 없다(<code>.worktreeinclude</code>로 작은 파일만 복사)</td></tr>
+        <tr><td>독립 리뷰어</td><td>코드를 쓴 세션과 다른 세션, 또는 <code>/code-review</code>가 띄우는 새 서브에이전트가 리뷰하면 작성 과정의 추론에 끌려가지 않는다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>GitHub Actions에서 Claude Code 돌리기</h3><span class="unit-en">claude-code-action, modes, who can trigger</span></div>
+    <p>Claude Code GitHub Actions는 <code>anthropics/claude-code-action@v1</code> 액션이다. 가장 쉬운 설정은 로컬 Claude Code에서 <code>/install-github-app</code>을 실행하는 것으로, GitHub 앱 설치·시크릿 등록·워크플로 PR 생성까지 해 준다(github.com 저장소만, 저장소 관리자 권한 필요). 수동으로 하려면 Claude GitHub 앱을 설치하고 <code>ANTHROPIC_API_KEY</code>(API 키) 또는 <code>CLAUDE_CODE_OAUTH_TOKEN</code>(<code>claude setup-token</code>으로 만든 구독 토큰) 시크릿을 넣은 뒤 예시 워크플로를 복사한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:18%">모드</th><th style="width:34%">언제 이 모드가 되나</th><th>결과가 남는 곳</th></tr></thead>
+      <tbody>
+        <tr><td>대화형</td><td><code>prompt</code> 입력이 <strong>없을 때</strong>. 이슈·PR 댓글, PR 리뷰, 새 이슈 본문·제목의 트리거 문구(기본 <code>@claude</code>)를 기다린다</td><td>트리거한 이슈·PR의 댓글로 진행 상황과 결과를 갱신</td></tr>
+        <tr><td>자동화</td><td><code>prompt</code> 입력이 <strong>있을 때</strong>. 멘션 없이 어떤 GitHub 이벤트(cron 포함)에서도 실행</td><td>기본은 <strong>워크플로 실행 로그</strong>. 프롬프트가 지시하고 게시할 도구가 있을 때만 이슈·PR에 남긴다</td></tr>
+      </tbody>
+    </table>
+    <div class="code">name: Weekly TODO Digest
+on:
+  schedule:
+    - cron: "0 1 * * 1"            <span class="c"># 매주 월요일 01:00 UTC</span>
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20              <span class="c"># 폭주 방지</span>
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: "Summarize TODO and FIXME comments in src/ by module"
+          claude_args: |
+            --max-turns 8
+            --allowedTools "Read,Bash(grep *)"</div>
+    <p>위 워크플로는 <code>prompt</code>가 있으니 자동화 모드이고, 요약은 PR이 아니라 실행 로그에 남는다. 평문 프롬프트는 <code>claude_args</code>의 <code>--allowedTools</code>나 <code>settings</code>의 허용 규칙으로 도구를 주기 전까지 셸·GitHub API를 쓰지 못한다.</p>
+    <div class="axis"><span class="lbl">누가 실행을 일으킬 수 있나</span><ul>
+      <li><strong>쓰기 권한</strong>: 이슈·PR 이벤트에서는 트리거한 사용자에게 저장소 쓰기 권한이 있어야 한다. 예외를 두려면 <code>allowed_non_write_users</code>와 직접 만든 <code>github_token</code>을 함께 준다. <code>schedule</code>처럼 작성자가 없는 이벤트는 이 검사를 건너뛴다</li>
+      <li><strong>사람 행위자</strong>: 모든 이벤트에서 봇 행위자는 <code>allowed_bots</code>에 없으면 거부된다. 봇끼리 서로 깨우는 무한 루프를 막는 장치다. 예약 실행은 cron을 마지막으로 바꾼 사용자에게 귀속되므로, 그 사용자가 봇이면 목록에 넣어야 한다</li>
+      <li>기본 <code>GITHUB_TOKEN</code>으로 만든 커밋은 다른 워크플로를 트리거하지 않는다. Claude의 커밋에 CI가 안 돈다면 <code>github_token</code> 입력을 빼서 Claude GitHub 앱으로 인증하게 한다</li>
+    </ul></div>
+    <p>비용은 GitHub Actions 실행 시간과 API 토큰 두 가지다. 구체적인 <code>@claude</code> 요청, 짧은 <code>CLAUDE.md</code>(매 실행마다 읽힌다), <code>--max-turns</code>, 잡 타임아웃, 동시 실행 제한으로 줄인다. Bedrock·Google Cloud·Foundry로 추론을 돌리려면 <code>use_bedrock</code>·<code>use_vertex</code>·<code>use_foundry</code>를 켜고 OIDC로 인증한다. <code>@beta</code>에서 올라올 때는 <code>@v1</code>로 바꾸고, <code>mode</code>를 지우고, <code>direct_prompt</code>를 <code>prompt</code>로, CLI 옵션은 <code>claude_args</code>로 옮긴다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>자동 PR 리뷰: 관리형 Code Review와 직접 만든 리뷰</h3><span class="unit-en">Triggers, comment commands, where findings land</span></div>
+    <p><strong>Code Review</strong>는 Team·Enterprise 플랜의 관리형 서비스다. 조직 Owner가 claude.ai 관리자 설정에서 켜면 Anthropic 인프라에서 여러 에이전트가 diff와 주변 코드를 읽고, 검증 단계로 오탐을 거른 뒤, 줄 단위 인라인 댓글·요약·<code>Claude Code Review</code> 체크 런을 남긴다. 리뷰는 PR을 승인하거나 막지 않고 체크 런도 실패로 끝나지 않는다. Zero Data Retention이나 HIPAA 구성을 쓰는 조직, CMEK 조직에서는 쓸 수 없다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">저장소별 Review runs</th><th>리뷰가 도는 때와 비용</th></tr></thead>
+      <tbody>
+        <tr><td>Once after PR creation</td><td>PR을 열거나 다시 열거나 초안을 ready로 바꿀 때 한 번</td></tr>
+        <tr><td>After every push</td><td>PR 브랜치에 푸시할 때마다. 새로 추가한 저장소의 기본값이고 <strong>리뷰 횟수와 지출이 가장 많다</strong>. 비용은 PR 수가 아니라 푸시 수에 비례한다</td></tr>
+        <tr><td>Manual (@claude review)</td><td>댓글로 요청할 때만. 트래픽이 많은 저장소에서 골라 리뷰할 때</td></tr>
+      </tbody>
+    </table>
+    <table class="t">
+      <thead><tr><th style="width:30%">댓글 명령</th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td><code>@claude review</code></td><td>리뷰를 한 번 시작. 이후 푸시에 구독하지 않는다(2026년 7월 이전에는 구독도 했다)</td></tr>
+        <tr><td><code>@claude review always</code></td><td>리뷰를 시작하고 그 PR을 이후 푸시마다 리뷰하도록 구독</td></tr>
+        <tr><td><code>@claude review stop</code></td><td>푸시 구독만 해제. 리뷰를 시작하거나 진행 중인 리뷰를 취소하지 않는다</td></tr>
+      </tbody>
+    </table>
+    <p>명령은 새 최상위 PR 댓글의 첫 줄에 있어야 하고, 쓰기 이상 권한이 있는 사람이 열린 PR에 달아야 한다. 봇 댓글은 리뷰를 시작하지 않는다. 초안과 포크 PR은 자동 리뷰가 건너뛰므로 댓글로 요청한다. 발견 사항은 Important(병합 전에 고칠 버그), Nit(사소함), Pre-existing(이번 PR이 만든 것이 아닌 기존 버그) 세 단계로 표시되고, 리뷰 강도는 Quick·Standard(기본)·Deep 중에서 고른다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">CLAUDE.md</div><p>모든 작업에 읽히는 프로젝트 지시. 리뷰는 이것을 프로젝트 맥락으로 읽고, 규칙 위반을 <strong>문제에 맞는 심각도</strong>의 발견 사항으로 올린다. 변경 파일의 상위 디렉터리에 있는 <code>CLAUDE.md</code>도 읽는다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">REVIEW.md</div><p>리뷰 전용 규칙. Important의 정의, Nit 개수 상한, 건너뛸 경로(생성 파일, CI가 이미 검사하는 것), 항상 볼 항목을 적는다. PR 자신의 변경이 아니라 base·기본 브랜치의 사본을 읽고, 심각도 낮추기·제외·Nit 상한은 기본 브랜치가 보호되어 있어야 지켜진다.</p></div>
+    </div>
+    <div class="note"><span class="lbl">참고: CLAUDE.md 위반의 심각도</span><p>CertSafari는 <code>CLAUDE.md</code> 위반이 Nit로 표시된다고 적었지만, 현재 Customize Code Review 문서는 위반이 <strong>문제에 맞는 심각도</strong>로 올라간다고 하고, <code>REVIEW.md</code>로 위반을 Important로 격상할 수도 있다고 설명한다. 이 가이드는 공식 문서를 따른다.</p></div>
+    <p>플랜에 Code Review가 없거나 프롬프트·모델·트리거를 직접 정하고 싶으면 Actions에 <code>code-review</code> 플러그인을 설치해 돌린다. 이때 결과가 PR에 남으려면 두 가지가 필요하다.</p>
+    <div class="code">- uses: anthropics/claude-code-action@v1
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    plugin_marketplaces: &gt;-
+      https://github.com/anthropics/claude-plugins-official.git
+    plugins: "code-review@claude-plugins-official"
+    prompt: &gt;-              <span class="c"># 접힌 문자열: 두 줄이 한 줄로 합쳐짐</span>
+      /code-review:code-review --comment
+      ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+    claude_args: &gt;-
+      --allowedTools "mcp__github_inline_comment__create_inline_comment"</div>
+    <ul>
+      <li><code>--comment</code>가 없으면 Claude는 PR에 아무것도 게시하지 않고, 발견 사항은 워크플로 실행 로그에만 있다</li>
+      <li>인라인 댓글용 MCP 서버는 <code>claude_args</code>의 <code>--allowedTools</code>가 그 도구를 지정할 때만 시작된다. 스킬 frontmatter에 같은 도구가 있어도 이 줄을 지우면 안 된다</li>
+      <li>공개 저장소에서는 포크 PR 실행에 시크릿이 전달되지 않아 같은 저장소 브랜치의 PR만 리뷰된다. 대화형 액션과 Code Review가 함께 있으면 <code>@claude review</code>가 액션도 깨우므로 액션의 <code>trigger_phrase</code>를 바꾼다</li>
+    </ul>
+    <div class="note"><span class="lbl">참고: 플러그인 마켓플레이스 이름</span><p>CertSafari 2부의 예시는 마켓플레이스 <code>anthropics/claude-code</code>와 <code>code-review@claude-code-plugins</code>를 쓰지만, 현재 GitHub Actions 문서의 리뷰 워크플로는 <code>anthropics/claude-plugins-official</code> 마켓플레이스와 <code>code-review@claude-plugins-official</code>를 쓴다. <code>plugins</code> 값의 <code>@</code> 뒤는 저장소 URL이 아니라 마켓플레이스 매니페스트에 적힌 이름이다. 이 가이드는 공식 문서를 따른다.</p></div>
+    <p>로컬에서는 어떤 플랜에서든 세션 안에서 <code>/code-review</code>를 쓴다. <code>--fix</code>는 리뷰 뒤 발견 사항을 작업 트리에 적용하고(편집은 권한 모드를 따른다), <code>--comment</code>는 GitHub PR에 인라인 댓글로 올린다. 로컬 명령은 <code>CLAUDE.md</code>를 따르고 <code>REVIEW.md</code>는 읽지 않는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>작게 리팩터링하고, 일괄 마이그레이션은 시험 후 확장</h3><span class="unit-en">Edit vs Write, claude -p loops, migration discipline</span></div>
+    <table class="t">
+      <thead><tr><th style="width:16%">도구</th><th style="width:42%">하는 일</th><th>고를 때</th></tr></thead>
+      <tbody>
+        <tr><td><code>Edit</code></td><td><code>old_string</code>을 <code>new_string</code>으로 바꾸는 <strong>정확한 문자열 치환</strong>. 정규식·퍼지 매칭 없음. <code>old_string</code>은 파일에서 정확히 한 번 나와야 하고, 여러 곳이면 문맥을 늘리거나 <code>replace_all: true</code></td><td>함수 이름 하나, 조건문 하나처럼 국소적인 변경</td></tr>
+        <tr><td><code>Write</code></td><td>파일을 새로 만들거나 <strong>전체 내용으로 덮어쓴다</strong>. 덧붙이거나 병합하지 않는다</td><td>새 파일, 통째로 다시 쓰는 파일. 부분 변경에는 Edit</td></tr>
+        <tr><td><code>Read</code> · <code>Bash</code></td><td>파일 읽기 / 셸 명령 실행</td><td>Bash는 정밀 편집용 도구가 아니다. 테스트 실행에 쓴다</td></tr>
+      </tbody>
+    </table>
+    <p>리팩터링은 동작을 유지하라고 명시하고, <strong>작게 테스트 가능한 단위</strong>로 나눠 단위마다 테스트를 돌린다. 수백 개 파일에 같은 기계적 변경을 할 때는 비대화형 <code>claude -p</code>를 셸 루프로 돌린다.</p>
+    <div class="code">TOOLS="Read,Edit,Bash(npm test *),Bash(git add *),Bash(git commit *)"
+while read -r f; do
+  out=$(claude --bare -p "Convert $f from callbacks to async/await,
+run its unit test, then commit. Reply OK or FAIL." \
+    --allowedTools "$TOOLS" \
+    --permission-mode dontAsk --max-turns 15)
+  [ "$out" = "OK" ] || echo "$f" &gt;&gt; retry.txt  <span class="c"># 실패만 따로 모음</span>
+done &lt; handlers.txt</div>
+    <table class="t">
+      <thead><tr><th style="width:30%">플래그</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><code>--bare</code></td><td>훅·스킬·플러그인·MCP 서버·<code>CLAUDE.md</code>를 건너뛰어 어디서 돌려도 같게 동작. 필요한 규칙은 <code>--append-system-prompt</code>·<code>--settings</code>로 명시해 넘긴다</td></tr>
+        <tr><td><code>--allowedTools</code></td><td>쓸 도구를 미리 승인. 커밋까지 하려면 <code>Bash(git commit *)</code>도 넣는다</td></tr>
+        <tr><td><code>--permission-mode dontAsk</code></td><td>물어봐야 할 호출은 모두 거부해 실행이 멈춰 기다리지 않게 한다</td></tr>
+        <tr><td><code>--max-turns</code></td><td>반복 상한. 상한에 닿은 실행은 오류로 끝난다</td></tr>
+      </tbody>
+    </table>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① 목록</div><div class="ft">바꿀 파일·작업 목록을 만든다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② 스크립트</div><div class="ft">위 같은 루프와 OK/FAIL 출력 규약</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ 시험</div><div class="ft">파일 서너 개로 돌려 보고 프롬프트를 고친다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ 전체</div><div class="ft">나머지에 확장, 실패분만 재시도</div></div>
+    </div>
+    <p>세션 안에서는 <code>/batch</code>가 큰 기계적 변경을 5~30개 단위로 나눠 계획을 보여 주고, 단위마다 별도 워크트리에서 실행해 PR을 연다. Anthropic의 대규모 코드 마이그레이션 글은 여기에 규율을 더한다. 먼저 원본에서는 통과하고 일부러 망가뜨린 코드에서는 실패하는 <strong>판정 기준</strong>(테스트)을 세우고, 변환 규칙을 소수 파일로 시험한 뒤 그 출력은 버리고 규칙만 다듬는다. 같은 실수가 반복되면 파일을 하나씩 고치지 말고 규칙을 고쳐 해당 파일을 다시 생성한다. 작업 큐는 디스크 상태에서 다시 계산해 중단돼도 이어 갈 수 있게 한다.</p>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>같은 API 키로 연달아 호출하면 Claude가 앞 대화를 이어서 기억한다.</div><div class="f"><span class="k">사실</span>Messages API는 무상태다. 애플리케이션이 대화별 이력을 저장하고 매 요청에 전체를 다시 보낸다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>보는 사람이 없는 야간 작업이면 <code>max_tokens</code>를 크게 잡고 그냥 <code>create()</code>를 부르면 된다.</div><div class="f"><span class="k">사실</span>약 10분을 넘을 것으로 예상되는 비스트리밍 요청은 Python SDK가 <code>ValueError</code>로 막는다. <code>stream()</code>과 <code>get_final_message()</code>로 완성된 Message를 받거나 배치를 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>529 재시도를 설정했으니 과부하 때문에 답이 반쯤 끊기는 일은 없다.</div><div class="f"><span class="k">사실</span>스트리밍에서는 200 뒤에 <code>overloaded_error</code> 이벤트가 올 수 있고, 상태 코드 기반 재시도가 적용되지 않는다. 스트림 오류를 따로 잡는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Actions에 <code>code-review</code> 플러그인을 설치하고 프롬프트로 실행하면 PR에 리뷰 댓글이 달린다.</div><div class="f"><span class="k">사실</span><code>--comment</code> 인자와 인라인 댓글 도구를 허용하는 <code>claude_args</code>가 있어야 게시된다. 없으면 결과는 실행 로그에만 남는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>의존성 업데이트 봇이 PR 댓글에 <code>@claude</code>를 쓰면 액션이 실행된다.</div><div class="f"><span class="k">사실</span>봇 행위자는 <code>allowed_bots</code>에 등록하지 않으면 모든 이벤트에서 거부된다. 봇끼리 무한히 깨우는 것을 막기 위해서다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>파일의 함수 이름 하나를 바꾸는 데는 Write로 새 내용을 쓰는 것이 확실하다.</div><div class="f"><span class="k">사실</span>Write는 파일 전체를 덮어쓴다. 국소 변경은 정확한 문자열 치환인 Edit가 맞다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/api/overview" target="_blank" rel="noopener">API overview</a> · <a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">Claude API errors</a> · <a href="https://platform.claude.com/docs/en/api/versioning" target="_blank" rel="noopener">Versions</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/working-with-messages" target="_blank" rel="noopener">Using the Messages API</a> · <a href="https://platform.claude.com/docs/en/cli-sdks-libraries/sdks/python" target="_blank" rel="noopener">Python SDK</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/streaming" target="_blank" rel="noopener">Streaming messages</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/batch-processing" target="_blank" rel="noopener">Batch processing</a> · <a href="https://code.claude.com/docs/en/common-workflows" target="_blank" rel="noopener">Common workflows</a> · <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Best practices for Claude Code</a> · <a href="https://code.claude.com/docs/en/permission-modes" target="_blank" rel="noopener">Permission modes</a> · <a href="https://code.claude.com/docs/en/github-actions" target="_blank" rel="noopener">Claude Code GitHub Actions</a> · <a href="https://code.claude.com/docs/en/code-review" target="_blank" rel="noopener">Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-setup" target="_blank" rel="noopener">Set up Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-pull-requests" target="_blank" rel="noopener">Read and request reviews on a pull request</a> · <a href="https://code.claude.com/docs/en/code-review-customize" target="_blank" rel="noopener">Customize Code Review</a> · <a href="https://code.claude.com/docs/en/code-review-local" target="_blank" rel="noopener">Review locally with /code-review</a> · <a href="https://code.claude.com/docs/en/tools-reference" target="_blank" rel="noopener">Tools reference</a> · <a href="https://claude.com/blog/ai-code-migration" target="_blank" rel="noopener">How Anthropic runs large-scale code migrations</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인2 애플리케이션·통합</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>
