@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.2</span></div>
+    <h1>에이전트 구축 경로: Agent SDK·Managed Agents·query() 루프</h1>
+    <p class="sub">하네스를 누가 돌리나 · Managed Agents 네 개념 · 자체 호스팅 샌드박스 · query() 메시지 흐름 · 훅과 권한 · 서브에이전트 선언</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-agent-sdk-build-paths-and-the-query-agent-loop" target="_blank" rel="noopener">CertSafari 1.2 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/agent-sdk-hooks-and-managed-agent-deployment" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agents and Workflows (14.7%) · 서브도메인 1.2 Agent Construction with Claude</p>
+    <div class="secrow">
+      <span class="s">1.1 에이전트 아키텍처</span><span class="s on">1.2 Agent SDK·Managed Agents</span><span class="s">1.3 에이전트 패턴·메모리</span>
+    </div>
+  </header>
+
+  <p class="lede">에이전트를 만드는 방법은 여러 가지지만, 갈림길은 하나로 모인다. <strong>모델의 루프를 돌리는 코드(하네스, harness)를 누가 운영하느냐</strong>다. 직접 루프를 짜면 Client SDK, Claude Code의 루프를 내 프로세스에 들이면 Agent SDK, 루프와 실행 환경까지 Anthropic에 맡기면 Managed Agents다. 시험은 요구사항(인프라 운영 여력, 사설망 접근, 데이터 보존 조건)을 보고 경로를 고르게 하고, 고른 뒤에는 <code>query()</code>가 내보내는 메시지 순서, 도구 허용 옵션의 진짜 의미, 훅이 끼어드는 지점을 정확히 아는지 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>Client SDK·Agent SDK·Managed Agents·Claude Code CLI를 '루프를 누가 돌리고 도구를 누가 실행하나'로 구분한다</li>
+      <li>Managed Agents의 agent·environment·session·events를 설명하고, 클라우드 샌드박스와 자체 호스팅 샌드박스에서 무엇이 어디서 실행되는지 말한다</li>
+      <li><code>query()</code> 한 번의 메시지 흐름과 <code>ResultMessage</code>의 subtype으로 종료 원인을 읽는다</li>
+      <li><code>allowedTools</code>·<code>disallowedTools</code>·권한 모드·<code>canUseTool</code>이 각각 무엇을 하는지 구분한다</li>
+      <li>훅으로 도구 호출을 막거나 입력을 고치는 방법과, 훅 결정이 권한 모드보다 앞선다는 점을 안다</li>
+      <li><code>agents</code> 옵션으로 서브에이전트를 선언하고, <code>description</code>이 위임을 좌우한다는 점을 안다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>네 가지 구축 경로</h3><span class="unit-en">Who runs the agent harness</span></div>
+    <p>하네스는 "모델에 묻고, 도구 호출 요청을 받아 실행하고, 결과를 다시 넣는" 반복을 맡는 코드다. 네 경로는 이 하네스와 도구 실행을 누가 맡느냐로 갈린다.</p>
+    <table class="t">
+      <thead><tr><th style="width:20%">경로</th><th style="width:27%">루프·도구 실행</th><th style="width:25%">실행 위치</th><th>맞는 상황</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Client SDK</strong></td><td>내가 루프를 짠다(또는 beta tool runner에 맡긴다). 도구도 내가 정의·실행</td><td>내 애플리케이션</td><td>Claude API를 직접 호출하며 세밀하게 제어하고 싶을 때</td></tr>
+        <tr><td><strong>Agent SDK</strong></td><td>Claude Code의 루프·내장 도구·권한·세션·훅이 라이브러리로 들어온다</td><td>내가 운영하는 프로세스(Python·TypeScript)</td><td>Claude Code 수준의 에이전트를 내 제품 안에 넣을 때</td></tr>
+        <tr><td><strong>Managed Agents</strong></td><td>Anthropic이 호스팅하는 하네스가 루프를 돌린다</td><td>Anthropic 관리 클라우드 샌드박스 또는 자체 호스팅 샌드박스</td><td>오래 걸리는 비동기 작업, 인프라를 직접 운영하기 싫을 때</td></tr>
+        <tr><td><strong>Claude Code CLI</strong></td><td>터미널 앱이 루프를 돌린다</td><td>개발자 터미널</td><td>일상적인 대화형 개발, 일회성 작업</td></tr>
+      </tbody>
+    </table>
+    <p>Agent SDK는 Claude Code 바이너리를 함께 묶어 배포하므로 대부분 별도 설치가 필요 없다. Python·TypeScript 밖의 언어에서 같은 루프를 쓰려면 CLI를 <code>-p</code>와 <code>--output-format json</code>으로 하위 프로세스처럼 부른다.</p>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"도구 정의와 실행을 직접 하고 루프도 직접 짠다" → Client SDK</li>
+      <li>"Claude Code의 내장 도구·훅·세션을 <strong>우리 프로세스 안에서</strong>" → Agent SDK</li>
+      <li>"루프도 샌드박스도 운영하고 싶지 않다, 몇 시간짜리 작업" → Managed Agents</li>
+      <li>Agent SDK로 만든 제품에 claude.ai 로그인이나 구독 한도를 제공하는 것은 사전 승인 없이는 허용되지 않는다. API 키 인증을 쓴다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>Managed Agents의 네 개념</h3><span class="unit-en">Agent, environment, session, events</span></div>
+    <p>Managed Agents는 미리 만들어진 설정형 하네스를 관리형 인프라에서 돌려 준다. 공식 문서는 Messages API를 '직접 루프와 세밀한 제어', Managed Agents를 '장시간·비동기 작업'에 맞는 선택으로 나눈다. 모든 엔드포인트에 <code>managed-agents-2026-04-01</code> 베타 헤더가 필요하고, SDK는 이 헤더를 자동으로 붙인다.</p>
+    <table class="t">
+      <thead><tr><th style="width:18%">개념</th><th style="width:42%">정의</th><th>헷갈리는 점</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Agent</strong></td><td>모델·시스템 프롬프트·도구·MCP 서버·스킬을 묶은 설정. 한 번 만들고 ID로 여러 세션에서 재사용</td><td>실행 중인 것이 아니라 '재사용 설정'이다. 모델은 environment가 아니라 agent에 정한다</td></tr>
+        <tr><td><strong>Environment</strong></td><td>세션이 <em>어디서</em> 도는지에 대한 설정. Anthropic 관리 클라우드 샌드박스 또는 내 인프라의 자체 호스팅 샌드박스</td><td>코드를 실행할 장소의 설정이지 에이전트의 성격이 아니다</td></tr>
+        <tr><td><strong>Session</strong></td><td>environment 안에서 특정 작업을 수행하며 산출물을 만드는 실행 중인 에이전트 인스턴스</td><td>상태를 가진다. 대화 기록·샌드박스 상태·산출물이 서버 측에 저장된다</td></tr>
+        <tr><td><strong>Events</strong></td><td>내 애플리케이션과 에이전트 사이를 오가는 메시지(사용자 턴, 도구 결과, 상태 업데이트)</td><td>결과는 SSE로 스트리밍되고, 이벤트 기록은 서버에 남아 전체를 다시 조회할 수 있다</td></tr>
+      </tbody>
+    </table>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① AGENT</div><div class="ft">모델·프롬프트·도구 정의, ID 발급</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② ENVIRONMENT</div><div class="ft">클라우드 또는 자체 호스팅 선택</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ SESSION</div><div class="ft">agent + environment를 참조해 시작</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ EVENTS</div><div class="ft">사용자 이벤트 전송, 결과 스트림 수신</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ STEER</div><div class="ft">실행 중 추가 지시나 중단</div></div>
+    </div>
+    <div class="note"><span class="lbl">데이터 보존 조건</span><p>Managed Agents는 설계상 상태를 가진다. 세션 기록·샌드박스 상태·산출물을 서버에 저장하므로 현재 <strong>Zero Data Retention(ZDR)과 HIPAA BAA 적용 대상이 아니다.</strong> 이 제한은 자체 호스팅 샌드박스를 포함한 모든 하위 기능에 똑같이 적용된다. 데이터는 API로 세션과 업로드 파일을 지워 직접 정리할 수 있다. ZDR이 필수 요건이면 Managed Agents는 후보에서 빠진다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>내 프로세스, Anthropic 클라우드, 내 샌드박스</h3><span class="unit-en">Where each part runs</span></div>
+    <p>같은 '에이전트'라도 루프, 모델 호출, 도구 실행이 각각 어디서 일어나는지가 경로마다 다르다. 특히 자체 호스팅 샌드박스(self-hosted sandbox)를 '완전한 온프레미스'로 착각하기 쉽다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">구성</th><th style="width:20%">에이전트 루프</th><th style="width:20%">도구 실행</th><th>내가 운영할 것</th></tr></thead>
+      <tbody>
+        <tr><td>Agent SDK 자체 호스팅</td><td>내 프로세스(하위 <code>claude</code> 프로세스)</td><td>내 컨테이너</td><td>샌드박싱, 세션 저장(재시작하면 로컬 기록이 사라짐), 확장, 관측, 테넌트 격리</td></tr>
+        <tr><td>Managed Agents + 클라우드 샌드박스</td><td>Anthropic</td><td>Anthropic 관리 샌드박스</td><td>agent·environment 설정과 이벤트 처리</td></tr>
+        <tr><td>Managed Agents + 자체 호스팅 샌드박스</td><td><strong>Anthropic</strong></td><td><strong>내 인프라의 워커</strong></td><td>워커 프로세스(아웃바운드 HTTPS만 필요)와 그 호스트</td></tr>
+      </tbody>
+    </table>
+    <p>자체 호스팅 environment는 작업 큐처럼 동작한다. 세션을 만들면 Anthropic이 작업 항목을 큐에 넣고, 내 인프라의 <strong>environment worker</strong>가 그것을 가져가 스킬과 메모리 저장소를 내려받는다. Claude는 Anthropic 쪽에서 실행되며 도구 호출을 요청하고, 워커는 그 호출을 로컬에서 실행해 결과를 돌려 보낸다. 모델이 다음 행동을 정하려면 결과를 받아야 하므로 <strong>도구 입력과 출력은 여전히 Anthropic 제어 평면을 거친다.</strong> 연결된 워커가 없으면 세션은 실패하지 않고 큐에서 기다린다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">자체 호스팅이 맞는 경우</div><p>에이전트의 셸 명령이 사내망에서만 닿는 빌드 서버·파일 저장소를 다뤄야 할 때, 도구 실행·파일·네트워크 송신을 내 경계 안에 두어야 할 때. 루프는 여전히 Anthropic이 돌리므로 루프 운영 부담은 없다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">MCP 터널과의 차이</div><p>자체 호스팅은 <em>에이전트의 코드가 어디서 도는가</em>, MCP 터널은 <em>Anthropic이 내 망의 MCP 서버에 어떻게 닿는가</em>를 다룬다. 둘은 독립적이다. 클라우드 샌드박스 세션도 터널로 사설 MCP 서버에 닿을 수 있다(터널은 현재 제한된 연구 프리뷰).</p></div>
+    </div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"인프라를 운영하지 않고 몇 시간짜리 비동기 작업" → Managed Agents. 서버리스나 VM에 Agent SDK를 올리면 샌드박싱·오케스트레이션·세션 저장을 내가 맡는다</li>
+      <li>"Anthropic이 루프를 돌리되 도구는 사설망에서" → Managed Agents + 자체 호스팅 샌드박스</li>
+      <li>"모델 추론까지 전부 우리 데이터센터에서" → 자체 호스팅 샌드박스로는 충족되지 않는다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>query() 한 번의 메시지 흐름</h3><span class="unit-en">The query() agent loop</span></div>
+    <p>Agent SDK의 <code>query()</code>는 프롬프트를 받아 루프를 돌리면서 메시지를 차례로 내보낸다. 한 턴(turn)은 Claude의 출력과, 그 출력에 도구 호출이 있으면 실행과 결과 반환까지를 말한다. 이 반복은 내 코드로 제어권을 넘기지 않고 이어진다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">SystemMessage</div><div class="ft">subtype <code>init</code>: 세션 메타데이터</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">AssistantMessage</div><div class="ft">텍스트 또는 <code>tool_use</code> 블록</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">UserMessage</div><div class="ft">도구 실행 결과(<code>tool_result</code>)</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">… 반복 …</div><div class="ft">도구 호출이 없는 응답이 나올 때까지</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">최종 Assistant</div><div class="ft">도구 호출 없는 텍스트</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">ResultMessage</div><div class="ft">최종 텍스트·사용량·비용·세션 ID</div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:22%">메시지</th><th>내용과 주의점</th></tr></thead>
+      <tbody>
+        <tr><td><code>AssistantMessage</code></td><td>콘텐츠 블록마다 하나씩 나온다. 한 응답에서 나온 메시지들은 같은 메시지 ID를 공유한다. TypeScript에서는 블록이 <code>message.message.content</code>에 있다</td></tr>
+        <tr><td><code>StreamEvent</code></td><td>부분 메시지 옵션(<code>include_partial_messages</code> / <code>includePartialMessages</code>)을 켰을 때만 나온다</td></tr>
+        <tr><td><code>SystemMessage</code></td><td><code>init</code> 외에 압축 뒤의 <code>compact_boundary</code> 등. <code>SessionStart</code>·<code>Setup</code> 훅의 수명 주기 메시지는 <code>init</code>보다 먼저 올 수 있다</td></tr>
+        <tr><td><code>ResultMessage</code></td><td>루프의 끝을 표시한다. 그러나 <code>prompt_suggestion</code> 같은 시스템 이벤트가 <strong>그 뒤에 몇 개 더 올 수 있으므로</strong> 결과에서 바로 빠져나오지 말고 스트림을 끝까지 읽는다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>도구·한도·컨텍스트 옵션과 종료 원인</h3><span class="unit-en">Options and result subtypes</span></div>
+    <p>도구 관련 세 옵션은 이름이 비슷해 시험의 단골 함정이다. 평가 순서는 <strong>훅 → deny 규칙 → ask 규칙 → 권한 모드 → allow 규칙 → <code>canUseTool</code></strong>이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:26%">옵션</th><th style="width:38%">하는 일</th><th>흔한 오해</th></tr></thead>
+      <tbody>
+        <tr><td><code>allowedTools</code></td><td>나열한 도구를 묻지 않고 자동 승인</td><td>목록에 없는 도구도 <strong>그대로 쓸 수 있다.</strong> 승인이 필요한 호출은 권한 모드와 <code>canUseTool</code>로 넘어간다</td></tr>
+        <tr><td><code>disallowedTools</code></td><td>나열한 도구를 차단. 이름만 쓰면 도구 정의가 요청에서 빠진다</td><td><code>Bash(rm *)</code>처럼 범위를 주면 도구는 남고 일치하는 호출만 모든 모드에서 거부된다</td></tr>
+        <tr><td><code>permissionMode</code></td><td><code>default</code>·<code>acceptEdits</code>·<code>plan</code>·<code>dontAsk</code>·<code>auto</code>·<code>bypassPermissions</code></td><td><code>bypassPermissions</code>에서는 <code>allowedTools</code>에 없는 도구까지 승인된다. 막으려면 <code>disallowedTools</code></td></tr>
+        <tr><td><code>maxTurns</code> · <code>maxBudgetUsd</code></td><td>턴 수 상한, 추정 지출 상한(서브에이전트 지출 포함). 기본은 둘 다 제한 없음</td><td>턴은 '도구를 부른 턴 + 마지막 텍스트 1턴'으로 센다</td></tr>
+        <tr><td><code>effort</code></td><td>추론 깊이(<code>low</code>~<code>max</code>). 서브에이전트별로 덮어쓸 수 있다</td><td>확장 사고(thinking)와는 별개 설정이다</td></tr>
+        <tr><td><code>settingSources</code></td><td>CLAUDE.md·스킬·설정 파일 훅을 어느 출처에서 읽을지</td><td>CLAUDE.md는 매 요청에 들어가지만 프롬프트 캐시된다</td></tr>
+      </tbody>
+    </table>
+    <table class="t">
+      <thead><tr><th style="width:36%"><code>ResultMessage.subtype</code></th><th>의미 (<code>result</code> 필드는 <code>success</code>에만 있다)</th></tr></thead>
+      <tbody>
+        <tr><td><code>success</code></td><td>정상 완료</td></tr>
+        <tr><td><code>error_max_turns</code> · <code>error_max_budget_usd</code></td><td>턴·예산 상한 도달. 세션 ID로 재개해 이어 갈 수 있다</td></tr>
+        <tr><td><code>error_during_execution</code></td><td>요청 취소 등 실행 중 오류</td></tr>
+        <tr><td><code>error_max_structured_output_retries</code></td><td>재시도 한도 안에 유효한 구조화 출력이 나오지 않음</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">오류 결과 뒤의 예외</span><p>단발성 <code>query()</code>는 오류 결과 메시지를 내보낸 <em>뒤</em> 예외를 던진다. 의도된 동작이므로 루프를 try 블록으로 감싸고, 결과의 subtype부터 확인한다. 모든 subtype에 <code>total_cost_usd</code>·<code>usage</code>·<code>num_turns</code>·<code>session_id</code>가 있어 실패 후에도 비용 추적과 재개가 가능하다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>훅: 루프의 정해진 지점에 끼어드는 콜백</h3><span class="unit-en">Hooks for control, logging, and lifecycle</span></div>
+    <p>훅은 내 애플리케이션 프로세스에서 실행되므로 컨텍스트를 소비하지 않는다. 옵션의 <code>hooks</code>에 이벤트 이름을 키로, 매처(matcher)와 콜백 목록을 값으로 넣는다. 도구 훅의 매처는 <strong>도구 이름</strong>에만 맞춰지므로, 파일 경로로 거르려면 콜백 안에서 <code>tool_input.file_path</code>를 검사한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">이벤트</th><th style="width:36%">발생 시점</th><th>대표 용도</th></tr></thead>
+      <tbody>
+        <tr><td><code>PreToolUse</code></td><td>도구가 <strong>실행되기 전</strong></td><td>위험 명령 차단, 입력 수정, 자동 승인</td></tr>
+        <tr><td><code>PostToolUse</code></td><td>도구가 결과를 돌려준 <strong>뒤</strong></td><td>감사 로그, 결과에 맥락 추가·교체</td></tr>
+        <tr><td><code>UserPromptSubmit</code></td><td>프롬프트가 제출될 때</td><td>추가 맥락 주입</td></tr>
+        <tr><td><code>Stop</code> · <code>SubagentStart</code>/<code>SubagentStop</code></td><td>에이전트 종료, 서브에이전트 시작·종료</td><td>상태 저장, 병렬 작업 결과 집계</td></tr>
+        <tr><td><code>PreCompact</code></td><td>컨텍스트 압축 직전</td><td>전체 기록 보관</td></tr>
+        <tr><td><code>PermissionRequest</code></td><td>도구 호출에 권한 결정이 필요할 때</td><td>맞춤 승인 처리</td></tr>
+      </tbody>
+    </table>
+    <p><code>PreToolUse</code> 콜백은 <code>hookSpecificOutput</code>에 결정을 담아 돌려준다. 빈 객체 <code>{}</code>는 '바꾸지 않고 허용'이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:20%"><code>permissionDecision</code></th><th style="width:40%">효과</th><th><code>updatedInput</code>과 함께 쓰면</th></tr></thead>
+      <tbody>
+        <tr><td><code>"allow"</code></td><td>호출 승인(단, deny·ask 규칙은 여전히 평가된다)</td><td>수정된 입력으로 <strong>묻지 않고</strong> 실행</td></tr>
+        <tr><td><code>"deny"</code></td><td>호출 차단. 이유는 <code>permissionDecisionReason</code>으로 모델에 전달</td><td>해당 없음</td></tr>
+        <tr><td><code>"ask"</code></td><td>사용자 확인 요청</td><td>수정된 입력을 사람에게 보여 주고 승인받는다</td></tr>
+        <tr><td><code>"defer"</code></td><td>턴을 끝내고 <code>stop_reason</code> <code>"tool_deferred"</code>로 나중에 재개</td><td><strong><code>updatedInput</code>이 무시된다</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="code">async def guard_env(input_data, tool_use_id, context):
+    path = input_data["tool_input"].get("file_path", "")
+    if path.split("/")[-1].lower() == ".env":
+        return {"hookSpecificOutput": {
+            "hookEventName": input_data["hook_event_name"],
+            "permissionDecision": "deny",
+            "permissionDecisionReason": "secrets file is read-only",
+        }}
+    return {}   <span class="c"># 그 밖의 호출은 그대로 통과</span>
+
+options = ClaudeAgentOptions(
+    permission_mode="bypassPermissions",  <span class="c"># 격리된 CI 컨테이너</span>
+    hooks={"PreToolUse": [
+        HookMatcher(matcher="Write|Edit", hooks=[guard_env])]},
+)</div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>훅은 권한 평가의 <strong>첫 단계</strong>다. 훅의 deny는 <code>bypassPermissions</code>에서도 유효하다. 반면 <code>canUseTool</code>은 자동 승인된 호출에는 불리지 않으므로 bypass 모드의 안전장치가 되지 못한다</li>
+      <li>프롬프트의 "절대 .env를 건드리지 마라"는 유도일 뿐 강제가 아니다</li>
+      <li>위 예시처럼 <code>Write|Edit</code> 매처만 걸면 Bash로 쓰는 경우는 훅이 돌지 않는다. 필요하면 Bash 훅이나 샌드박스 설정을 더한다</li>
+      <li>여러 훅의 결정이 엇갈리면 deny &gt; defer &gt; ask &gt; allow 순으로 우선한다. 같은 이벤트의 훅은 병렬로 실행되므로 서로의 실행 순서에 기대지 않는다</li>
+    </ul></div>
+    <div class="note"><span class="lbl">언어별로 다른 훅 지원</span><p><code>SessionStart</code>·<code>SessionEnd</code>·<code>PostCompact</code>·<code>PostToolBatch</code> 등 상당수 이벤트는 TypeScript SDK에서만 콜백으로 등록할 수 있다. Python SDK에서 <code>SessionStart</code>·<code>SessionEnd</code>가 필요하면 <code>.claude/settings.json</code> 같은 설정 파일의 셸 명령 훅으로 정의하고, <code>setting_sources</code>에 그 출처를 포함한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>agents 옵션으로 서브에이전트 선언하기</h3><span class="unit-en">Declaring and spotting subagents</span></div>
+    <p>SDK 애플리케이션에서는 <code>query()</code> 옵션의 <code>agents</code>로 서브에이전트를 코드에 선언하는 방식이 권장된다. <code>.claude/agents/</code>의 파일 정의와 이름이 겹치면 코드에서 선언한 쪽이 우선한다. 아무것도 정의하지 않아도 Claude는 내장 <code>general-purpose</code> 서브에이전트를 부를 수 있다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">필드</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><code>description</code> (필수)</td><td>Claude가 <strong>언제</strong> 이 서브에이전트에 맡길지 판단하는 자연어 설명. 위임이 안 되면 가장 먼저 고칠 곳</td></tr>
+        <tr><td><code>prompt</code> (필수)</td><td>서브에이전트의 시스템 프롬프트. 실행 중 행동을 정한다</td></tr>
+        <tr><td><code>tools</code> · <code>disallowedTools</code></td><td>쓸 수 있는 도구 목록 / 상속 목록에서 뺄 도구</td></tr>
+        <tr><td><code>model</code> · <code>effort</code> · <code>maxTurns</code></td><td>모델 별칭 또는 <code>inherit</code>, 추론 깊이, 턴 상한</td></tr>
+      </tbody>
+    </table>
+    <p>스트림에서 위임을 알아보려면 <code>name</code>이 <code>"Agent"</code>인 <code>tool_use</code> 블록을 찾고, 서브에이전트 안에서 나온 메시지는 <code>parent_tool_use_id</code>로 구분한다. 이 도구는 <code>system:init</code>의 도구 목록에는 <code>"Task"</code>로 나오고 예전 버전의 <code>tool_use</code>도 <code>"Task"</code>였으므로 두 이름을 모두 확인하는 것이 안전하다. 이름으로 지목하면("code-reviewer 에이전트로 검토해") 자동 매칭을 건너뛰고 바로 호출된다.</p>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>자체 호스팅 샌드박스를 쓰면 에이전트 전체가 우리 인프라에서 돈다.</div><div class="f"><span class="k">사실</span>도구 실행만 옮겨 온다. Claude와 에이전트 루프는 Anthropic에서 실행되고, 도구 입력·출력은 Anthropic 제어 평면을 거친다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Managed Agents는 Anthropic 관리형이니 ZDR 계약으로 쓸 수 있다.</div><div class="f"><span class="k">사실</span>세션 기록·샌드박스 상태·산출물을 서버에 저장하므로 현재 ZDR과 HIPAA BAA 적용 대상이 아니다. 자체 호스팅 샌드박스도 마찬가지다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>ResultMessage</code>가 오면 스트림 읽기를 멈춰도 된다.</div><div class="f"><span class="k">사실</span>몇몇 시스템 이벤트가 그 뒤에 올 수 있다. 결과를 처리한 뒤에도 스트림을 끝까지 소비한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>allowedTools</code>에 없는 도구는 에이전트가 쓸 수 없다.</div><div class="f"><span class="k">사실</span>자동 승인 목록일 뿐이다. 빠진 도구의 호출은 권한 모드와 <code>canUseTool</code>로 넘어가고, 차단은 <code>disallowedTools</code>로 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>훅 이벤트는 Python과 TypeScript SDK에서 똑같이 쓸 수 있다.</div><div class="f"><span class="k">사실</span><code>SessionStart</code>·<code>SessionEnd</code>·<code>PostCompact</code> 등 여러 이벤트가 TypeScript 전용이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>updatedInput</code>은 어떤 결정과 함께 돌려줘도 적용된다.</div><div class="f"><span class="k">사실</span><code>"defer"</code>와 함께면 무시된다. 조용히 고쳐 실행하려면 <code>"allow"</code>와 함께 돌려준다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Agent SDK overview</a> · <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop" target="_blank" rel="noopener">How the agent loop works</a> · <a href="https://code.claude.com/docs/en/agent-sdk/permissions" target="_blank" rel="noopener">Configure permissions (Agent SDK)</a> · <a href="https://code.claude.com/docs/en/agent-sdk/hooks" target="_blank" rel="noopener">Intercept and control agent behavior with hooks</a> · <a href="https://code.claude.com/docs/en/agent-sdk/subagents" target="_blank" rel="noopener">Subagents in the SDK</a> · <a href="https://code.claude.com/docs/en/agent-sdk/hosting" target="_blank" rel="noopener">Hosting the Agent SDK</a> · <a href="https://platform.claude.com/docs/en/managed-agents/overview" target="_blank" rel="noopener">Claude Managed Agents overview</a> · <a href="https://platform.claude.com/docs/en/managed-agents/self-hosted-sandboxes" target="_blank" rel="noopener">Self-hosted sandboxes</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인1 에이전트·워크플로</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

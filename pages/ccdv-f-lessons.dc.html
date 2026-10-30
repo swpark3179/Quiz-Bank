@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#2A241D; --soft:#6E6358; --faint:#938A7E; --accent:#BC5A38; --accent-deep:#8E3E22;
+    --accent-tint:#F7EDE6; --line:#E7DED3; --paper:#FBF7F2; }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{ font-family:'Pretendard','Pretendard Variable',system-ui,sans-serif; color:var(--ink);
+    -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  .shell{ display:flex; height:100vh; height:100dvh; overflow:hidden; }
+
+  .side{ width:316px; flex:none; display:flex; flex-direction:column; background:var(--paper);
+    border-right:1px solid var(--line); z-index:40; }
+  .brand{ padding:18px 22px 14px; border-bottom:1px solid var(--line); }
+  .back{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent-deep);
+    text-decoration:none; font-weight:600; margin-bottom:12px; }
+  .back:hover{ text-decoration:underline; }
+  .brand .ey{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .brand .bt{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:19px; color:var(--ink); line-height:1.3; margin-top:8px; }
+  .brand .bs{ font-size:12px; color:var(--faint); margin-top:6px; }
+  nav{ flex:1; overflow-y:auto; padding:14px 12px 36px; }
+  nav::-webkit-scrollbar{ width:8px; } nav::-webkit-scrollbar-thumb{ background:#ddd2c4; border-radius:8px; }
+
+  .navrow{ display:block; text-decoration:none; color:#3a342c; padding:9px 12px; border-radius:8px;
+    font-size:14px; font-weight:600; border-left:3px solid transparent; margin:2px 0; transition:background .12s; }
+  .navrow:hover{ background:#F1E8DE; }
+  .navrow.active{ background:var(--accent-tint); color:var(--accent-deep); border-left-color:var(--accent); }
+  .navrow .en{ display:block; font-size:11px; color:var(--faint); font-weight:500; margin-top:2px; }
+  .navrow.active .en{ color:var(--accent); }
+  .navgroup{ margin-top:16px; }
+  .navgrouphd{ font-family:'Noto Serif KR',serif; font-size:12px; letter-spacing:.03em; color:var(--accent);
+    font-weight:700; padding:8px 12px 6px; }
+  .navgrouphd .gs{ display:block; font-size:10.5px; color:var(--faint); font-weight:500; letter-spacing:0; text-transform:none; margin-top:1px; }
+  .navrow.sub{ font-weight:500; font-size:13px; padding:7px 12px 7px 16px; color:#5a5249; }
+  .navrow.sub.active{ font-weight:700; }
+  .navrow.sub .num{ color:var(--accent); font-weight:700; margin-right:7px; display:inline-block; min-width:24px; }
+
+  .content{ flex:1; display:flex; flex-direction:column; min-width:0; background:#fff; }
+  .topbar{ flex:none; display:flex; align-items:center; gap:10px; padding:11px 18px; border-bottom:1px solid var(--line); }
+  .hamb{ display:none; flex:none; width:38px; height:38px; border:1px solid var(--line); border-radius:9px;
+    background:#fff; cursor:pointer; align-items:center; justify-content:center; padding:0; color:var(--ink); }
+  .hamb svg{ width:20px; height:20px; }
+  .crumb{ font-size:13px; color:var(--faint); min-width:0; overflow:hidden; }
+  .crumb .mut{ color:var(--faint); }
+  .crumb .sep{ margin:0 7px; color:#cdc3b6; }
+  .crumb b{ color:var(--ink); font-size:15px; font-weight:700; }
+  .crumb .secline{ display:block; font-size:11px; color:var(--faint); }
+  .spacer{ flex:1; }
+  .openbtn{ flex:none; font-size:12.5px; color:var(--accent-deep); text-decoration:none; border:1px solid var(--line);
+    padding:6px 13px; border-radius:7px; font-weight:600; white-space:nowrap; }
+  .openbtn:hover{ background:var(--accent-tint); }
+  .frameWrap{ flex:1; min-height:0; position:relative; background:#faf7f2; }
+  iframe{ width:100%; height:100%; border:0; display:block; }
+
+  .scrim{ display:none; position:fixed; inset:0; background:rgba(40,32,24,.42); z-index:35; opacity:0; transition:opacity .2s; }
+
+  @media (max-width:760px){
+    .shell{ position:relative; }
+    .hamb{ display:inline-flex; }
+    .crumb b{ font-size:14px; }
+    .crumb .sep{ display:none !important; }
+    .openbtn{ padding:6px 10px; }
+    .side{ position:fixed; top:0; left:0; bottom:0; height:100%; width:84vw; max-width:330px;
+      transform:translateX(-104%); transition:transform .26s ease; box-shadow:2px 0 22px rgba(0,0,0,.16); }
+    .side.open{ transform:translateX(0); }
+    .scrim.show{ display:block; opacity:1; }
+  }
+</style>
+</helmet>
+
+<div class="shell">
+  <aside class="side" id="side">
+    <div class="brand">
+      <a class="back" href="index.dc.html">← 주제 선택으로</a>
+      <div class="ey">CCDV-F · 서브도메인 레슨</div>
+      <div class="bt">CCDV-F 레슨 자습 가이드</div>
+      <div class="bs">8개 도메인 · 25개 서브도메인 레슨 · 공식 문서 근거</div>
+    </div>
+    <nav id="guideNav">
+      <div class="navgroup" style="margin-top:4px">
+        <div class="navgrouphd">시작하기<span class="gs">시험 구조 · 레슨 지도 · 학습법</span></div>
+        <a class="navrow sub" href="#overview" data-slug="overview" data-sec="시작하기" data-title="레슨 안내와 도메인 지도" data-file="CCDV-F 레슨 - 00 레슨 안내.dc.html"><span class="num">⓪</span>레슨 안내·도메인 지도</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 1 · 에이전트·워크플로<span class="gs">14.7% · 레슨 3개</span></div>
+        <a class="navrow sub" href="#l1-1" data-slug="l1-1" data-sec="도메인 1 · 에이전트·워크플로" data-title="워크플로·에이전트·오케스트레이터 계층 고르기" data-file="CCDV-F 레슨 - 1.1 에이전트 아키텍처.dc.html"><span class="num">1.1</span>에이전트 아키텍처</a>
+        <a class="navrow sub" href="#l1-2" data-slug="l1-2" data-sec="도메인 1 · 에이전트·워크플로" data-title="에이전트 구축 경로: Agent SDK·Managed Agents·query() 루프" data-file="CCDV-F 레슨 - 1.2 Agent SDK·Managed Agents.dc.html"><span class="num">1.2</span>Agent SDK·Managed Agents</a>
+        <a class="navrow sub" href="#l1-3" data-slug="l1-3" data-sec="도메인 1 · 에이전트·워크플로" data-title="워크플로 패턴·서브에이전트·메모리" data-file="CCDV-F 레슨 - 1.3 에이전트 패턴·메모리.dc.html"><span class="num">1.3</span>에이전트 패턴·메모리</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 2 · 애플리케이션·통합<span class="gs">33.1% · 레슨 6개</span></div>
+        <a class="navrow sub" href="#l2-1" data-slug="l2-1" data-sec="도메인 2 · 애플리케이션·통합" data-title="기능 요구사항에서 모델·플랫폼·용량 고르기" data-file="CCDV-F 레슨 - 2.1 요구사항·모델·인프라.dc.html"><span class="num">2.1</span>요구사항·모델·인프라</a>
+        <a class="navrow sub" href="#l2-2" data-slug="l2-2" data-sec="도메인 2 · 애플리케이션·통합" data-title="모델 수명주기와 변경 관리: 폐기·마이그레이션·평가·롤아웃" data-file="CCDV-F 레슨 - 2.2 모델 수명주기·변경 관리.dc.html"><span class="num">2.2</span>모델 수명주기·변경 관리</a>
+        <a class="navrow sub" href="#l2-3" data-slug="l2-3" data-sec="도메인 2 · 애플리케이션·통합" data-title="Messages API 동작과 Message Batches" data-file="CCDV-F 레슨 - 2.3 Messages API·배치.dc.html"><span class="num">2.3</span>Messages API·배치</a>
+        <a class="navrow sub" href="#l2-4" data-slug="l2-4" data-sec="도메인 2 · 애플리케이션·통합" data-title="API 호출 패턴과 Git·CI의 Claude Code" data-file="CCDV-F 레슨 - 2.4 API 호출 패턴·Git·CI.dc.html"><span class="num">2.4</span>API 호출 패턴·Git·CI</a>
+        <a class="navrow sub" href="#l2-5" data-slug="l2-5" data-sec="도메인 2 · 애플리케이션·통합" data-title="실행 환경·지시 배치·출력 스키마와 세션·플러그인" data-file="CCDV-F 레슨 - 2.5 앱 설계·세션·플러그인.dc.html"><span class="num">2.5</span>앱 설계·세션·플러그인</a>
+        <a class="navrow sub" href="#l2-6" data-slug="l2-6" data-sec="도메인 2 · 애플리케이션·통합" data-title="구성 관리: CLAUDE.md·settings·모델·프롬프트 고정" data-file="CCDV-F 레슨 - 2.6 구성 관리.dc.html"><span class="num">2.6</span>구성 관리</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 3 · Claude Code<span class="gs">3.1% · 레슨 1개</span></div>
+        <a class="navrow sub" href="#l3-1" data-slug="l3-1" data-sec="도메인 3 · Claude Code" data-title="Claude Code 운영: 프로젝트 설정부터 헤드리스·권한 모드까지" data-file="CCDV-F 레슨 - 3.1 Claude Code 운영.dc.html"><span class="num">3.1</span>Claude Code 운영</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 4 · 평가·테스트·디버깅<span class="gs">2.6% · 레슨 1개</span></div>
+        <a class="navrow sub" href="#l4-1" data-slug="l4-1" data-sec="도메인 4 · 평가·테스트·디버깅" data-title="API 오류 복구와 장애 원인 추적" data-file="CCDV-F 레슨 - 4.1 API 오류·장애 추적.dc.html"><span class="num">4.1</span>API 오류·장애 추적</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 5 · 모델 선택·최적화<span class="gs">16.8% · 레슨 4개</span></div>
+        <a class="navrow sub" href="#l5-1" data-slug="l5-1" data-sec="도메인 5 · 모델 선택·최적화" data-title="LLM 기초: 토큰·컨텍스트·샘플링과 사고·effort" data-file="CCDV-F 레슨 - 5.1 LLM 기초·사고·effort.dc.html"><span class="num">5.1</span>LLM 기초·사고·effort</a>
+        <a class="navrow sub" href="#l5-2" data-slug="l5-2" data-sec="도메인 5 · 모델 선택·최적화" data-title="REST 기초와 SSE 스트리밍" data-file="CCDV-F 레슨 - 5.2 REST·스트리밍.dc.html"><span class="num">5.2</span>REST·스트리밍</a>
+        <a class="navrow sub" href="#l5-3" data-slug="l5-3" data-sec="도메인 5 · 모델 선택·최적화" data-title="모델 선택과 모델 간 사고 모드 변경점" data-file="CCDV-F 레슨 - 5.3 모델 선택·사고 모드.dc.html"><span class="num">5.3</span>모델 선택·사고 모드</a>
+        <a class="navrow sub" href="#l5-4" data-slug="l5-4" data-sec="도메인 5 · 모델 선택·최적화" data-title="토큰 비용 관리와 프롬프트 캐싱" data-file="CCDV-F 레슨 - 5.4 토큰 비용·캐싱.dc.html"><span class="num">5.4</span>토큰 비용·캐싱</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 6 · 프롬프트·컨텍스트 엔지니어링<span class="gs">11.0% · 레슨 3개</span></div>
+        <a class="navrow sub" href="#l6-1" data-slug="l6-1" data-sec="도메인 6 · 프롬프트·컨텍스트 엔지니어링" data-title="컨텍스트 예산: 도구 출력 정리·컴팩션·서브에이전트 격리" data-file="CCDV-F 레슨 - 6.1 컨텍스트 예산·컴팩션.dc.html"><span class="num">6.1</span>컨텍스트 예산·컴팩션</a>
+        <a class="navrow sub" href="#l6-2" data-slug="l6-2" data-sec="도메인 6 · 프롬프트·컨텍스트 엔지니어링" data-title="프롬프트 엔지니어링: 명확한 지시·예시·배치·형식" data-file="CCDV-F 레슨 - 6.2 프롬프트 엔지니어링.dc.html"><span class="num">6.2</span>프롬프트 엔지니어링</a>
+        <a class="navrow sub" href="#l6-3" data-slug="l6-3" data-sec="도메인 6 · 프롬프트·컨텍스트 엔지니어링" data-title="구조화 출력·strict 도구 사용과 응답 검증" data-file="CCDV-F 레슨 - 6.3 구조화 출력·응답 검증.dc.html"><span class="num">6.3</span>구조화 출력·응답 검증</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 7 · 보안·안전<span class="gs">8.1% · 레슨 4개</span></div>
+        <a class="navrow sub" href="#l7-1" data-slug="l7-1" data-sec="도메인 7 · 보안·안전" data-title="프롬프트 인젝션 방어와 에이전트 권한·비밀 보호" data-file="CCDV-F 레슨 - 7.1 프롬프트 인젝션 방어.dc.html"><span class="num">7.1</span>프롬프트 인젝션 방어</a>
+        <a class="navrow sub" href="#l7-2" data-slug="l7-2" data-sec="도메인 7 · 보안·안전" data-title="가드레일 계층과 안전한 배포" data-file="CCDV-F 레슨 - 7.2 가드레일·안전한 배포.dc.html"><span class="num">7.2</span>가드레일·안전한 배포</a>
+        <a class="navrow sub" href="#l7-3" data-slug="l7-3" data-sec="도메인 7 · 보안·안전" data-title="Claude Code 훅: 이벤트·매처·PreToolUse 결정" data-file="CCDV-F 레슨 - 7.3 Claude Code 훅.dc.html"><span class="num">7.3</span>Claude Code 훅</a>
+        <a class="navrow sub" href="#l7-4" data-slug="l7-4" data-sec="도메인 7 · 보안·안전" data-title="API 키 관리와 워크로드 ID 페더레이션" data-file="CCDV-F 레슨 - 7.4 API 키·워크로드 ID.dc.html"><span class="num">7.4</span>API 키·워크로드 ID</a>
+      </div>
+      <div class="navgroup">
+        <div class="navgrouphd">도메인 8 · 도구·MCP<span class="gs">10.6% · 레슨 3개</span></div>
+        <a class="navrow sub" href="#l8-1" data-slug="l8-1" data-sec="도메인 8 · 도구·MCP" data-title="도구 정의와 도구 호출 처리" data-file="CCDV-F 레슨 - 8.1 도구 정의·호출 처리.dc.html"><span class="num">8.1</span>도구 정의·호출 처리</a>
+        <a class="navrow sub" href="#l8-2" data-slug="l8-2" data-sec="도메인 8 · 도구·MCP" data-title="MCP 서버: 프리미티브·트랜스포트·연결" data-file="CCDV-F 레슨 - 8.2 MCP 서버·트랜스포트.dc.html"><span class="num">8.2</span>MCP 서버·트랜스포트</a>
+        <a class="navrow sub" href="#l8-3" data-slug="l8-3" data-sec="도메인 8 · 도구·MCP" data-title="Claude 확장 방식 고르기: 내장 도구·커스텀 도구·스킬·MCP" data-file="CCDV-F 레슨 - 8.3 확장 방식 선택.dc.html"><span class="num">8.3</span>확장 방식 선택</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="scrim" id="scrim"></div>
+
+  <main class="content">
+    <div class="topbar">
+      <button class="hamb" id="hamb" aria-label="메뉴 열기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="crumb"><span class="mut secline" id="crumbSec"></span><span class="sep" id="crumbSep" style="display:none">›</span><b id="crumbTitle">불러오는 중…</b></div>
+      <div class="spacer"></div>
+      <a class="openbtn" id="openNew" href="#" target="_blank" rel="noopener">새 탭 ↗</a>
+    </div>
+    <div class="frameWrap">
+      <iframe id="guideFrame" title="학습 가이드" src="about:blank"></iframe>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const nav = document.getElementById('guideNav');
+    const frame = document.getElementById('guideFrame');
+    const crumbSec = document.getElementById('crumbSec');
+    const crumbSep = document.getElementById('crumbSep');
+    const crumbTitle = document.getElementById('crumbTitle');
+    const openNew = document.getElementById('openNew');
+    const side = document.getElementById('side');
+    const scrim = document.getElementById('scrim');
+    const hamb = document.getElementById('hamb');
+    if (!nav || !frame) return;
+
+    const rows = Array.from(nav.querySelectorAll('[data-slug]'));
+    const bySlug = {};
+    rows.forEach(r => { bySlug[r.getAttribute('data-slug')] = r; });
+
+    const isMobile = () => window.matchMedia('(max-width:760px)').matches;
+    const openMenu = () => { side.classList.add('open'); scrim.classList.add('show'); };
+    const closeMenu = () => { side.classList.remove('open'); scrim.classList.remove('show'); };
+
+    if (hamb) hamb.addEventListener('click', openMenu);
+    if (scrim) scrim.addEventListener('click', closeMenu);
+
+    const activate = (slug) => {
+      const row = bySlug[slug] || rows[0];
+      const file = row.getAttribute('data-file');
+      const title = row.getAttribute('data-title');
+      const sec = row.getAttribute('data-sec') || '';
+      const encoded = encodeURI(file);
+
+      rows.forEach(r => r.classList.toggle('active', r === row));
+
+      if (frame.getAttribute('data-file') !== file) {
+        frame.src = encoded;
+        frame.setAttribute('data-file', file);
+      }
+      crumbTitle.textContent = title;
+      if (sec) { crumbSec.textContent = sec; crumbSep.style.display = ''; }
+      else { crumbSec.textContent = ''; crumbSep.style.display = 'none'; }
+      openNew.href = encoded;
+      document.title = title + ' — CCDV-F 레슨 자습 가이드';
+    };
+
+    // close drawer when a menu item is tapped on mobile
+    rows.forEach(r => r.addEventListener('click', () => { if (isMobile()) closeMenu(); }));
+
+    window.addEventListener('hashchange', () => {
+      activate(decodeURIComponent(location.hash.slice(1)));
+    });
+
+    const initial = decodeURIComponent(location.hash.slice(1));
+    if (initial && bySlug[initial]) {
+      activate(initial);
+    } else {
+      const def = rows[0].getAttribute('data-slug');
+      history.replaceState(null, '', '#' + def);
+      activate(def);
+    }
+  }
+}
+</script>
+</body>
+</html>

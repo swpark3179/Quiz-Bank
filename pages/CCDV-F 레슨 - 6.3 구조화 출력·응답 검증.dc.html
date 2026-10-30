@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 6 · 서브도메인 6.3</span></div>
+    <h1>구조화 출력·strict 도구 사용과 응답 검증</h1>
+    <p class="sub">프롬프트 JSON의 한계 · output_config.format · strict 도구 사용 · 구체적인 도구 오류 · stop_reason 먼저 읽기 · 거부와 빈 응답 · 사실성 검증</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/structured-outputs-and-strict-tool-use-for-reliable-json" target="_blank" rel="noopener">CertSafari 6.3 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/validating-claude-responses-stop-reason-empty-turns-and-hallucination-checks" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 6 · Prompt and Context Engineering (11.0%) · 서브도메인 6.3 Output Handling</p>
+    <div class="secrow">
+      <span class="s">6.1 컨텍스트 예산·컴팩션</span><span class="s">6.2 프롬프트 엔지니어링</span><span class="s on">6.3 구조화 출력·응답 검증</span>
+    </div>
+  </header>
+
+  <p class="lede">Claude의 응답을 코드가 받아 쓰는 순간, 질문은 '답이 좋은가'에서 <strong>'이 응답을 그대로 믿고 처리해도 되는가'</strong>로 바뀐다. 이 레슨은 그 판단을 세 겹으로 나눈다. 첫째, 형식은 프롬프트가 아니라 Structured Outputs와 strict 도구 사용으로 보장한다. 둘째, 내용을 읽기 전에 <code>stop_reason</code>으로 응답이 끝났는지, 잘렸는지, 거절되었는지 확인한다. 셋째, 형식이 맞아도 사실은 따로 검증한다. 시험은 이 세 겹 각각에서 흔한 착각을 골라낸다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>프롬프트로 요청한 JSON이 왜 보장되지 않는지 설명하고, <code>output_config.format</code>으로 JSON 출력을 설정한다</li>
+      <li>SDK 도우미가 지원되지 않는 스키마 제약을 어떻게 처리하는지, Structured Outputs를 못 쓸 때 코드가 무엇을 맡아야 하는지 안다</li>
+      <li><code>strict: true</code>의 위치와 보장 범위, 컴퓨터·브라우저 사용 툴셋에서의 예외를 안다</li>
+      <li>도구 실패를 <code>is_error</code>와 구체적인 메시지로 돌려줘 같은 호출의 반복을 막는다</li>
+      <li><code>stop_reason</code> 값별 처리, 특히 잘린 <code>tool_use</code>, 잘린 JSON, 빈 <code>end_turn</code>을 구분한다</li>
+      <li>거절이 HTTP 200으로 온다는 점과 대체 모델 재시도 절차, 환각 검증 기법을 설명한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>프롬프트로 요청한 JSON이 깨지는 이유</h3><span class="unit-en">Why prompted JSON breaks pipelines</span></div>
+    <p>"JSON으로만 답하라"는 지시와 예시는 올바른 JSON이 나올 <strong>확률을 높일 뿐, 형식을 강제하지 않는다</strong>. 대량 처리에서는 드문 실패도 매일 일어난다. 일관성 문서는 스키마를 항상 지키는 유효한 JSON이 필요하면 프롬프트 기법 대신 Structured Outputs를 쓰라고 못 박는다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">프롬프트 JSON의 실패</th><th style="width:34%">다음 단계에서 생기는 일</th><th>제약 디코딩에서는</th></tr></thead>
+      <tbody>
+        <tr><td>앞뒤에 붙는 설명 문장</td><td><code>json.loads</code> 실패</td><td>스키마 밖의 토큰이 나올 수 없다</td></tr>
+        <tr><td>필수 필드 누락</td><td><code>KeyError</code>, 빈 값이 조용히 저장됨</td><td><code>required</code> 필드가 항상 있다</td></tr>
+        <tr><td>타입 오류(<code>"2"</code> 대신 <code>2</code>가 필요)</td><td>계산·비교 오류</td><td>타입이 스키마대로 나온다</td></tr>
+      </tbody>
+    </table>
+    <p>Structured Outputs는 토큰 샘플링 자체를 스키마에 맞는 출력으로 제한한다(문법 제약 샘플링, grammar-constrained sampling). 그래서 대문자 강조나 예시 추가, 정규식 후처리, 무조건 재시도로는 같은 보장을 얻을 수 없다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>JSON 출력: output_config.format</h3><span class="unit-en">JSON outputs with constrained decoding</span></div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① DEFINE</div><div class="ft">JSON Schema 정의. 객체마다 <code>additionalProperties: false</code></div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② SEND</div><div class="ft"><code>output_config.format</code>에 <code>type: "json_schema"</code>로</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ READ</div><div class="ft">응답의 <strong>텍스트 블록</strong>에서 JSON을 읽는다</div></div>
+    </div>
+    <div class="code">response = client.messages.create(
+    model="claude-sonnet-5-5",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": card_text}],
+    output_config={"format": {
+        "type": "json_schema",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "email": {"type": "string", "format": "email"},
+                "phone": {"anyOf": [{"type": "string"},
+                                    {"type": "null"}]},
+            },
+            "required": ["name", "email", "phone"],
+            "additionalProperties": False,
+        },
+    }},
+)
+contact = json.loads(response.content[0].text)</div>
+    <table class="t">
+      <thead><tr><th style="width:30%">알아 둘 점</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>옛 파라미터</td><td><code>output_format</code>은 사용 중단되어 <code>output_config.format</code>으로 옮겨졌고 베타 헤더도 필요 없다. 옛 이름을 쓰려면 <code>structured-outputs-2025-11-13</code> 헤더가 필요하며, 없으면 400</td></tr>
+        <tr><td>지원되지 않는 스키마 기능</td><td>재귀 스키마, 외부 <code>$ref</code>, 숫자 제약(<code>minimum</code>·<code>maximum</code>·<code>multipleOf</code>), 문자열 길이 제약, <code>minItems</code> 0·1 이외 값 등. 쓰면 400 오류</td></tr>
+        <tr><td>첫 요청 지연</td><td>스키마를 처음 쓸 때 문법 컴파일로 지연이 생기고, 컴파일 결과는 마지막 사용 후 24시간 캐시된다. <code>name</code>·<code>description</code>만 바꾸면 캐시가 유지된다</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">SDK 도우미는 제약을 '옮겼다가 다시 검사'한다</span><p>Python의 <code>client.messages.parse()</code>에 Pydantic 모델을 넘기면 SDK가 스키마를 변환해 보내고, 응답을 검증해 <code>parsed_output</code>으로 돌려준다. 변환 과정에서 지원되지 않는 제약은 스키마에서 빠져 <strong>필드 설명(description)으로 옮겨지고</strong>, 응답이 오면 도우미가 <strong>원래 제약을 코드에서 다시 검증</strong>한다. <code>Field(ge=100)</code>은 일반 정수 + 설명 속 <code>{minimum: 100}</code>이 되는 식이다. TypeScript의 <code>jsonSchemaOutputFormat()</code>처럼 응답을 검증하지 않는 도우미는 이런 위반을 잡지 못한다.</p></div>
+    <p>Structured Outputs를 쓸 수 없는 경우(예: 재귀 스키마가 꼭 필요할 때)에는 프롬프트 기반 JSON으로 돌아가되, 코드가 <strong>파싱 오류 처리 + 스키마 검증 + 재시도</strong>를 모두 맡아야 한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>strict 도구 사용: 도구 입력을 보장한다</h3><span class="unit-en">Strict tool use</span></div>
+    <p>도구 정의의 최상위, <code>name</code>·<code>description</code>·<code>input_schema</code>와 나란히 <code>"strict": true</code>를 둔다. 그러면 <code>tool_use</code> 블록의 <code>input</code>이 <code>input_schema</code>를 엄격히 따르고, 도구 <code>name</code>도 항상 유효하다. JSON 출력과 같은 문법 파이프라인을 쓰므로 스키마 제약 목록도 같다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%"></th><th style="width:39%">JSON 출력</th><th>strict 도구 사용</th></tr></thead>
+      <tbody>
+        <tr><td>설정 위치</td><td>요청의 <code>output_config.format</code></td><td>도구 정의의 최상위 <code>strict: true</code></td></tr>
+        <tr><td>보장하는 것</td><td>Claude의 응답 본문이 스키마에 맞음</td><td>도구 입력이 <code>input_schema</code>에 맞고 도구 이름이 유효함</td></tr>
+        <tr><td>결과를 읽는 곳</td><td>텍스트 블록</td><td><code>tool_use</code> 블록의 <code>input</code></td></tr>
+        <tr><td>쓰는 상황</td><td>응답 자체가 고정 형식 데이터여야 할 때</td><td>에이전트가 함수를 정확한 타입으로 호출해야 할 때</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">모든 tools 항목에 붙이면 안 된다</span><p>컴퓨터 사용·브라우저 사용 <strong>툴셋 항목</strong>(<code>computer_toolset_20260801</code>, <code>browser_toolset_20260801</code>)은 <code>strict: true</code>를 받지 않으며, 둘 중 어디에든 설정하면 <strong>요청이 거부된다</strong>. 사용자가 <code>input_schema</code>를 정의하는 사용자 정의 도구에만 붙인다. 여러 사용자 정의 도구에 각각 붙이는 것은 정상이다.</p></div>
+    <p>strict 없이 쓰면 필수 파라미터가 빠지는 등 잘못된 호출에 대해 Claude가 오류 결과를 보고 2~3번 고쳐 재시도한 뒤 사용자에게 사과한다. strict는 이런 잘못된 호출 자체를 없앤다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>도구 실패는 구체적으로 돌려준다</h3><span class="unit-en">is_error with instructive messages</span></div>
+    <p>도구가 실행 중 실패하면 <code>tool_result</code>의 <code>content</code>에 오류 내용을 담고 <code>"is_error": true</code>를 붙인다. 문서는 여기에 더해 <strong>지시가 담긴 오류 메시지</strong>를 쓰라고 한다. 무엇이 잘못됐고 다음에 무엇을 해야 하는지를 알아야 Claude가 추측 없이 회복하거나 방향을 바꾼다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">BAD · 일반 오류</div><div class="code">{"type": "tool_result",
+ "tool_use_id": "toolu_01…",
+ "is_error": true,
+ "content": "failed"}</div><p>일시적 장애인지, 입력이 틀렸는지 알 수 없어 Claude가 같은 입력으로 곧바로 다시 부른다.</p></div>
+      <div class="pane good"><div class="bh">GOOD · 원인 + 다음 행동</div><div class="code">{"type": "tool_result",
+ "tool_use_id": "toolu_01…",
+ "is_error": true,
+ "content": "Stock service timed out
+  (temporary). Retry in 30 s, or
+  answer from the 09:00 snapshot."}</div><p>대기 후 재시도하거나 대안을 쓰는 판단을 Claude가 스스로 내린다.</p></div>
+    </div>
+    <div class="axis"><span class="lbl">형식 규칙</span><ul>
+      <li><code>tool_result</code>는 대응하는 <code>tool_use</code> 바로 다음 메시지에 와야 한다. 결과를 빼먹으면 "tool_use ids were found without tool_result blocks immediately after" 류의 오류가 난다</li>
+      <li>사용자 메시지 안에서 <code>tool_result</code> 블록이 <strong>맨 앞</strong>에 오고, 텍스트는 그 뒤에 온다. 텍스트를 앞에 두면 400</li>
+      <li>실패를 내용이 빈 성공 결과로 꾸미지 않는다. Claude가 '결과 없음'을 사실로 받아들인다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>내용보다 stop_reason을 먼저 읽는다</h3><span class="unit-en">Read stop_reason before the content</span></div>
+    <table class="t">
+      <thead><tr><th style="width:30%"><code>stop_reason</code></th><th style="width:32%">의미</th><th>처리</th></tr></thead>
+      <tbody>
+        <tr><td><code>end_turn</code></td><td>자연스럽게 완료</td><td>응답 사용 (유일한 '완전한 응답')</td></tr>
+        <tr><td><code>max_tokens</code></td><td>출력 한도에서 잘림</td><td>텍스트면 한도를 높이거나 이어 쓰게 함. 마지막 블록이 잘린 <code>tool_use</code>면 <strong>한도를 높여 재요청</strong></td></tr>
+        <tr><td><code>stop_sequence</code></td><td>지정한 중단 문자열에서 멈춤</td><td><code>stop_sequence</code> 필드로 어느 것인지 확인</td></tr>
+        <tr><td><code>tool_use</code></td><td>도구 호출 중 (턴 미완료)</td><td>도구 실행 후 결과 반환</td></tr>
+        <tr><td><code>pause_turn</code></td><td>서버 도구 루프가 반복 한도(기본 10회)에 닿음</td><td>assistant 콘텐츠를 그대로 돌려보내 이어 가게 함</td></tr>
+        <tr><td><code>refusal</code></td><td>안전 분류기가 거절</td><td><code>stop_details</code> 확인 후 대체 모델로 재시도 (→ 06)</td></tr>
+        <tr><td><code>model_context_window_exceeded</code></td><td>응답이 컨텍스트 창을 채움</td><td>잘린 응답으로 취급</td></tr>
+      </tbody>
+    </table>
+    <div class="code">resp = client.messages.create(**params)
+if resp.stop_reason == "max_tokens":
+    last = resp.content[-1] if resp.content else None
+    if last is not None and last.type == "tool_use":
+        <span class="c"># 잘린 도구 호출은 이어 쓸 수 없다: 한도를 올려 다시</span>
+        resp = client.messages.create(**{**params, "max_tokens": 8192})
+    else:
+        raise Incomplete("truncated output; do not parse as final")
+elif resp.stop_reason == "refusal":
+    handle_refusal(resp)                <span class="c"># 예외가 아니라 정상 응답</span></div>
+    <div class="note"><span class="lbl">잘린 JSON</span><p>JSON 디코딩 오류가 <code>max_tokens</code> 중단과 함께 나타나면 형식 문제가 아니라 <strong>잘림</strong>이다. 응답을 불완전한 것으로 처리하고 한도를 높여 재시도한다. Structured Outputs를 써도 마찬가지로, <code>max_tokens</code>로 멈춘 응답은 불완전해 스키마에 맞지 않을 수 있다. 스트리밍에서는 <code>stop_reason</code>이 <code>message_start</code>가 아니라 <code>message_delta</code>에서 온다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>거절은 성공 응답으로 온다</h3><span class="unit-en">Refusals arrive as HTTP 200</span></div>
+    <p>Claude Fable 5.1·Fable 5·Opus 5.5·Opus 5·Sonnet 5.5·Haiku 5.5에는 요청을 거절할 수 있는 안전 분류기가 있다. 거절은 <strong>API 오류가 아니라</strong> HTTP 200 응답으로 오고, <code>stop_reason</code>이 <code>"refusal"</code>이며, 출력 전에 거절되면 <code>content</code>가 빈 배열일 수 있다. 따라서 try/except만으로는 잡히지 않는다.</p>
+    <div class="code">{
+  "role": "assistant",
+  "content": [],
+  "stop_reason": "refusal",
+  "stop_details": {
+    "type": "refusal",
+    "category": "cyber",        <span class="c">// null일 수도 있다</span>
+    "explanation": "…"          <span class="c">// 표시용. 파싱하지 않는다</span>
+  }
+}</div>
+    <table class="t">
+      <thead><tr><th style="width:30%">상황</th><th>처리</th></tr></thead>
+      <tbody>
+        <tr><td>스트리밍 도중 부분 출력 뒤 거절</td><td>부분 출력은 <strong>불완전한 것으로 보고 폐기</strong>한다</td></tr>
+        <tr><td>직접 재시도</td><td>같은 요청을 <code>model</code>만 대체 모델(예: Claude Opus 4.8)로 바꿔 보내고, 이후 턴도 그 모델을 유지. fallback credit으로 캐시 재작성 비용을 돌려받는다</td></tr>
+        <tr><td>재시도를 맡기고 싶을 때</td><td>서버 측 폴백(<code>fallbacks: "default"</code> + <code>server-side-fallback-2026-07-01</code>) 또는 SDK 폴백 미들웨어. 둘 중 하나만 쓴다. Haiku 5.5는 서버 측 폴백이 없어 미들웨어나 직접 재시도</td></tr>
+        <tr><td>같은 모델로 재시도</td><td>대개 다시 거절된다. 재시도는 대체 모델로</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>분기는 <code>stop_reason == "refusal"</code>로 한다. <code>content</code>나 <code>stop_details.category</code>(null 가능)로 분기하지 않는다</li>
+      <li>거절은 HTTP 200이라 오류율·5xx 기반 모니터링에 보이지 않는다. 거절을 별도 지표로 계측한다</li>
+      <li>Structured Outputs 요청에서도 거절 메시지가 스키마보다 우선하므로 출력이 스키마에 맞지 않을 수 있다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>빈 응답을 다루는 법</h3><span class="unit-en">Guard against empty end_turn</span></div>
+    <p>Claude가 내용 없이(2~3토큰) <code>stop_reason: "end_turn"</code>으로 답할 때가 있다. 주로 도구 결과 뒤에서, Claude가 턴이 끝났다고 판단할 때다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">원인</div><ul>
+        <li>도구 결과 바로 뒤에 텍스트 블록을 붙이는 습관. 이력 패턴을 따라 Claude가 턴을 끝낸다</li>
+        <li>완료된 응답을 아무것도 더하지 않고 다시 보내기. 이미 끝났다고 판단했으므로 계속 끝난 상태다</li>
+      </ul></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">처방 (순서대로)</div><ul>
+        <li><code>tool_result</code>만 담은 사용자 메시지를 보낸다</li>
+        <li>빈 응답을 수정 없이 재시도하지 않는다. 빈 응답을 붙여 다시 보내도 소용없다</li>
+        <li>최후의 수단으로 <strong>새 사용자 메시지</strong>에 "계속해 주세요" 같은 요청을 추가한다</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>형식이 맞아도 내용이 맞는 것은 아니다</h3><span class="unit-en">Well-formed output is not correct output</span></div>
+    <p>스키마 검증은 <em>모양</em>을 확인할 뿐 <em>사실</em>을 확인하지 않는다. 사실성은 환각 줄이기 기법으로 따로 다룬다. 문서는 이 기법들이 환각을 크게 줄이지만 완전히 없애지는 못하므로, 중요한 결정에 쓰이는 정보는 항상 검증하라고 덧붙인다.</p>
+    <table class="t">
+      <thead><tr><th style="width:26%">기법</th><th>방법</th></tr></thead>
+      <tbody>
+        <tr><td>"모른다" 허용</td><td>불확실하면 그렇다고 말해도 된다고 명시적으로 허락한다</td></tr>
+        <tr><td>직접 인용 근거화</td><td>긴 문서(2만 토큰 이상)에서 작업 <em>전에</em> 글자 그대로의 인용을 뽑고 그것으로만 작업하게 한다</td></tr>
+        <tr><td>인용 검증</td><td>작업 <em>후에</em> 주장마다 뒷받침하는 인용을 찾게 하고, 찾지 못하면 그 주장을 철회하게 한다</td></tr>
+        <tr><td>사고 과정 검증</td><td>thinking을 <code>display: "summarized"</code>로 받아, 답이 이상할 때 요약된 추론을 검토한다</td></tr>
+        <tr><td>Best-of-N 검증</td><td>같은 프롬프트를 여러 번 돌려 비교한다. 출력 간 불일치는 환각의 신호일 수 있다</td></tr>
+        <tr><td>반복 개선</td><td>출력을 후속 프롬프트의 입력으로 써서 앞선 진술을 검증·보완하게 한다</td></tr>
+        <tr><td>외부 지식 제한</td><td>제공된 문서의 정보만 쓰고 일반 지식은 쓰지 말라고 지시한다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>명확한 프롬프트와 예시가 있으면 JSON을 방어 코드 없이 파싱해도 된다.</div><div class="f"><span class="k">사실</span>프롬프트는 확률을 높일 뿐이다. 깨진 JSON·필드 누락·타입 오류를 배제하는 것은 제약 디코딩(Structured Outputs)뿐이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>안전하게 하려면 <code>tools</code>의 모든 항목에 <code>strict: true</code>를 붙인다.</div><div class="f"><span class="k">사실</span>컴퓨터 사용·브라우저 사용 툴셋 항목은 <code>strict: true</code>를 받지 않으며, 붙이면 요청이 거부된다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>모든 <code>max_tokens</code> 중단은 "계속해 주세요"로 이어 쓰게 하면 된다.</div><div class="f"><span class="k">사실</span>마지막 블록이 잘린 <code>tool_use</code>라면 이어 쓸 수 없다. 더 높은 <code>max_tokens</code>로 재요청한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>거절은 API 오류이므로 try/except로 잡힌다.</div><div class="f"><span class="k">사실</span>거절은 HTTP 200, <code>stop_reason: "refusal"</code>인 정상 응답이다. <code>stop_reason</code>을 직접 확인해야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>빈 응답은 같은 요청을 다시 보내면 해결된다.</div><div class="f"><span class="k">사실</span>수정 없는 재시도는 같은 결론을 낸다. 최후의 수단은 새 사용자 메시지로 이어 가기를 요청하는 것이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>스키마 검증을 통과한 응답은 내용도 정확하다.</div><div class="f"><span class="k">사실</span>스키마는 모양만 보장한다. 사실성은 인용 근거화·인용 검증·Best-of-N 같은 기법으로 따로 확인한다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Structured outputs</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" target="_blank" rel="noopener">Strict tool use</a> · <a href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/increase-consistency" target="_blank" rel="noopener">Increase output consistency</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons" target="_blank" rel="noopener">Stop reasons and fallback</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback" target="_blank" rel="noopener">Refusals and fallback</a> · <a href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" target="_blank" rel="noopener">Reduce hallucinations</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인6 프롬프트·컨텍스트 엔지니어링</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

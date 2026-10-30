@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 2 · 서브도메인 2.2</span></div>
+    <h1>모델 수명주기와 변경 관리: 폐기·마이그레이션·평가·롤아웃</h1>
+    <p class="sub">모델의 네 가지 상태 · 플랫폼별 폐기 일정 · 사용량 감사와 마이그레이션 가이드 · API 버전과 베타 · 평가 주도 반복 · 버전 고정과 점진 롤아웃</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-model-lifecycle-deprecation-retirement-and-migration" target="_blank" rel="noopener">CertSafari 2.2 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/evaluating-versioning-and-rolling-out-changes-to-claude-systems" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 · Applications and Integration (33.1%) · 서브도메인 2.2 Systems Life Cycle</p>
+    <div class="secrow">
+      <span class="s">2.1 요구사항·모델·인프라</span><span class="s on">2.2 모델 수명주기·변경 관리</span><span class="s">2.3 Messages API·배치</span><span class="s">2.4 API 호출 패턴·Git·CI</span><span class="s">2.5 앱 설계·세션·플러그인</span><span class="s">2.6 구성 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">Claude로 만든 시스템은 출시로 끝나지 않는다. 쓰던 모델은 언젠가 폐기되고, API 버전은 바뀌고, 프롬프트는 계속 고쳐진다. 이 레슨의 앞부분은 <strong>바깥에서 오는 변화</strong>(모델 폐기·API 변경)를 마감 전에 흡수하는 법이고, 뒷부분은 <strong>안에서 만드는 변화</strong>(프롬프트·모델 교체)를 평가로 검증하고, 고정된 버전으로 배포하고, 문제가 생기면 되돌리는 법이다. 시험은 deprecated와 retired의 차이, 누구의 일정이 적용되는지, 평가를 언제 시작하는지, 운영 트래픽을 무엇에 고정하는지를 구체적으로 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>Active·Legacy·Deprecated·Retired 상태별로 요청이 어떻게 처리되고 무엇을 해야 하는지 설명한다</li>
+      <li>Anthropic 운영 플랫폼과 파트너 운영 플랫폼(Bedrock, Google Cloud Google managed)의 폐기 일정이 다르다는 점을 적용한다</li>
+      <li>Console 사용량 내보내기로 폐기 대상 사용처를 찾고, 마이그레이션 가이드로 깨지는 설정을 고친다</li>
+      <li><code>anthropic-version</code> 헤더와 베타 기능의 성격을 알고 프로덕션 의존 여부를 판단한다</li>
+      <li>소규모 평가로 바로 시작해 채점을 자동화하고, 사람 검토를 병행하는 평가 주도 반복을 설계한다</li>
+      <li>모델 ID·에이전트 버전을 고정하고, 승격·회귀 감지·롤백·점진 롤아웃을 변경 통제 절차로 묶는다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>모델이 거치는 네 가지 상태</h3><span class="unit-en">Active, legacy, deprecated, retired</span></div>
+    <p>Anthropic은 모델 수명주기를 네 단어로 설명한다. 시험에서 가장 많이 헷갈리는 곳은 deprecated(아직 동작)와 retired(요청 실패)의 경계다.</p>
+    <table class="t">
+      <thead><tr><th style="width:16%">상태</th><th style="width:40%">의미</th><th>지금 호출하면</th></tr></thead>
+      <tbody>
+        <tr><td>Active</td><td>완전히 지원되며 사용을 권장한다</td><td>정상 동작</td></tr>
+        <tr><td>Legacy</td><td>더 이상 업데이트를 받지 않고, 나중에 deprecated될 수 있다</td><td>정상 동작</td></tr>
+        <tr><td>Deprecated</td><td>동작은 하지만 권장하지 않는다. 대체 모델과 retirement 날짜가 정해진다. Models API 설명으로는 기존 사용 조직만 호출할 수 있고 신규 도입은 막힌다</td><td>동작한다. 다만 active 모델보다 안정성이 떨어질 수 있다</td></tr>
+        <tr><td>Retired</td><td>더 이상 사용할 수 없다</td><td>요청이 실패한다. 대체 모델로 자동 전환해 주지 않으므로 호출 코드를 바꿔야 한다</td></tr>
+      </tbody>
+    </table>
+    <p>공개 출시된 모델은 retirement 최소 <strong>60일 전</strong>에 이메일과 문서로 통지된다. 예를 들어 <code>claude-sonnet-4-5-20250929</code>는 2026년 9월 30일 deprecated로 통지되었고, Claude API retirement 날짜는 2026년 11월 30일, 권장 대체 모델은 <code>claude-sonnet-5-5</code>다. 현재 active 모델의 표에 적힌 "Not sooner than …"은 그 날짜 전에는 은퇴시키지 않겠다는 약속이지 은퇴 예정일이 아니다.</p>
+    <div class="note tip"><span class="lbl">코드로 상태 확인하기</span><p>Models API(<code>GET /v1/models</code>)의 모델 객체에는 <code>lifecycle</code>(<code>active</code>·<code>deprecated</code>·<code>retired</code>), <code>deprecated_at</code>, <code>retires_at</code> 필드가 있다. 목록은 기본적으로 active와 deprecated만 돌려주고, retired는 <code>lifecycle</code> 필터로 요청할 때만 나온다. deprecated 모델의 <code>retires_at</code>이 지났다면 은퇴가 늦어진 것이고, 실제 은퇴 신호는 <code>lifecycle</code> 값이다. 이 API의 상태 값에는 legacy가 없다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>누구의 폐기 일정이 적용되는가</h3><span class="unit-en">Whose retirement schedule applies</span></div>
+    <p>모델 폐기 문서에 적힌 날짜는 <strong>Anthropic이 운영하는 플랫폼</strong>에만 적용된다. 파트너가 운영하는 플랫폼은 자기 일정으로 모델을 은퇴시키므로, 같은 모델이라도 상태와 날짜가 다를 수 있다.</p>
+    <table class="t">
+      <thead><tr><th style="width:44%">플랫폼</th><th style="width:22%">일정의 주인</th><th>확인할 곳</th></tr></thead>
+      <tbody>
+        <tr><td>Claude API, Claude Platform on AWS, Claude Models on Google Cloud (Anthropic managed), Microsoft Foundry</td><td>Anthropic</td><td>Model deprecations 문서의 표</td></tr>
+        <tr><td>Amazon Bedrock</td><td>AWS</td><td>Bedrock 문서의 모델 표</td></tr>
+        <tr><td>Claude Models on Google Cloud (Google managed)</td><td>Google</td><td>Google managed 문서의 모델 표</td></tr>
+      </tbody>
+    </table>
+    <p>실제 차이도 있다. 가격 문서는 Claude Opus 4.1을 "retired, except on Bedrock and Claude Models on Google Cloud (Google managed)"로, Claude Haiku 3.5를 "retired, except on Claude Models on Google Cloud (Google managed)"로 표시한다. Claude API에서는 은퇴했지만 파트너 플랫폼에서는 아직 남아 있는 모델이다. 반대로 Bedrock 사용자가 Claude API 일정만 보고 여유가 있다고 판단해서도 안 된다.</p>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"같은 모델의 Claude API retirement 날짜가 Google Cloud에서도 그대로인가?" → Google managed라면 아니다. 그 플랫폼의 표를 본다</li>
+      <li>Claude Platform on AWS는 AWS 위에 있어도 Anthropic의 1st-party 수명주기를 따른다. Bedrock과 혼동하지 않는다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>마감 전에 마이그레이션을 끝낸다</h3><span class="unit-en">Running a migration before the deadline</span></div>
+    <p>deprecated 통지를 받으면 retirement 날짜 전에 모든 사용처를 대체 모델로 옮긴다. 공식 권고는 은퇴 날짜보다 <strong>훨씬 앞서</strong> 새 모델로 애플리케이션을 테스트하는 것이다. 순서는 다음과 같다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① AUDIT</div><div class="ft">Console Usage 페이지 → Export → CSV에서 API 키·모델별 사용량 확인</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② TARGET</div><div class="ft">폐기 표의 권장 대체 모델 확인</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ PATCH</div><div class="ft">마이그레이션 가이드로 거부되는 설정 수정</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ EVAL</div><div class="ft">같은 평가 세트로 기존·신규 모델 비교</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ SWITCH</div><div class="ft">고정 ID로 전환하고 모니터링</div></div>
+    </div>
+    <p>내보낸 CSV는 사용량을 <strong>API 키와 모델별</strong>로 나눠 보여 주므로, 어느 서비스(키)가 아직 폐기 대상 모델을 부르는지 찾을 수 있다. 모델 이름만 바꾸면 끝나는 경우는 드물다. 예를 들어 Claude Opus 5.5로 옮길 때는 다음 설정이 400 오류로 거부된다.</p>
+    <table class="t">
+      <thead><tr><th style="width:42%">예전 코드에 있던 설정</th><th>Opus 5.5에서 바꿀 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>thinking: {"type": "enabled", "budget_tokens": N}</code> (수동 예산)</td><td><code>thinking</code>을 생략하거나 <code>{"type": "adaptive"}</code>. 사고량은 <code>output_config.effort</code>로 조절</td></tr>
+        <tr><td><code>thinking: {"type": "disabled"}</code></td><td>사용 불가. adaptive thinking이 항상 켜져 있다</td></tr>
+        <tr><td><code>tool_choice</code>의 <code>any</code> · <code>tool</code>(강제 호출)</td><td><code>auto</code>(기본) 또는 <code>none</code>만 허용</td></tr>
+        <tr><td><code>temperature</code> · <code>top_p</code> · <code>top_k</code></td><td>제거하고 프롬프트로 동작을 안내</td></tr>
+        <tr><td>assistant 턴 미리 채우기(prefill)</td><td>구조화 출력이나 시스템 프롬프트 지시로 대체</td></tr>
+      </tbody>
+    </table>
+    <div class="code"><span class="c"># 이전: Opus 4.x 시절의 고정 사고 예산 → Opus 5.5에서는 400</span>
+resp = client.messages.create(
+    model="claude-opus-4-6", max_tokens=16000,
+    thinking={"type": "enabled", "budget_tokens": 8000},
+    messages=msgs)
+
+<span class="c"># 이후: thinking 필드는 빼고 effort로 깊이를 정한다</span>
+resp = client.messages.create(
+    model="claude-opus-5-5", max_tokens=16000,
+    output_config={"effort": "high"},
+    messages=msgs)</div>
+    <div class="note"><span class="lbl">기본값이 바뀌는 것도 변경이다</span><p>Opus 5.5의 기본 effort는 <code>medium</code>이다. Opus 5와 이전 Opus의 기본값은 <code>high</code>였으므로, effort를 생략한 코드는 옮기는 순간 한 단계 낮은 effort로 돈다. 오류는 나지 않지만 결과가 달라질 수 있으니 평가로 확인한다. Claude Code에서는 <code>/claude-api migrate this project to claude-opus-5-5</code>로 코드 수정을 맡길 수 있다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>API 버전과 기능 라벨</h3><span class="unit-en">API versions and feature classifications</span></div>
+    <p>모든 API 요청에는 <code>anthropic-version</code> 헤더가 필요하다(SDK는 자동으로 붙인다). 최신 버전은 <code>2026-10-21</code>이고, 그 전 버전은 <code>2023-06-01</code>이다. 한 버전 안에서 Anthropic은 <strong>기존 입력·출력 파라미터를 유지</strong>한다. 대신 선택 입력 추가, 출력 값 추가, 오류 조건 변경, 열거형 출력 값(스트리밍 이벤트 타입 등)의 새 변형 추가는 할 수 있다. 그래서 클라이언트는 모르는 필드나 이벤트 타입이 와도 깨지지 않게 짜야 한다.</p>
+    <p>버전을 올리면 동작이 바뀐다. <code>2026-10-21</code>에서는 <code>temperature</code>·<code>top_p</code>·<code>top_k</code>가 제거되어 모든 모델에서 400을 내고, assistant 메시지에 <code>document</code> 블록을 직접 넣어도 400이다. 파라미터 폐기는 새 모델이 먼저 거부하고, 새 API 버전이 모든 모델에서 제거하는 순서로 진행되기도 한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:18%">라벨</th><th style="width:42%">의미</th><th>프로덕션 판단</th></tr></thead>
+      <tbody>
+        <tr><td>라벨 없음</td><td>표준 API의 일부. 버전 안에서 입력·출력이 유지된다</td><td>핵심 경로에 써도 된다</td></tr>
+        <tr><td>Beta</td><td><code>anthropic-beta: 기능명-YYYY-MM-DD</code> 헤더로 쓰는 실험 기능. 통지 후 호환을 깨는 변경, 폐기·제거, 다른 레이트 리밋·가격, 일부 리전 미제공이 가능하다</td><td>핵심 업무 흐름이 기대기엔 위험하다. 대체 경로를 두고, 플랫폼마다 지원 여부를 확인한다. HIPAA BAA는 명시된 경우가 아니면 베타를 덮지 않는다</td></tr>
+        <tr><td>Deprecated</td><td>아직 동작하지만 권장하지 않는다. 대체 수단과 제거 일정이 제시된다</td><td>신규 사용 금지, 기존 사용은 이전 계획 수립</td></tr>
+        <tr><td>Retired</td><td>더 이상 제공되지 않는다</td><td>호출이 실패한다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">출처 메모</span><p>CertSafari는 이 네 라벨의 정의를 Features overview 문서에서 인용하지만, 2026년 10월 현재 그 문서에는 라벨 정의가 보이지 않는다. 이 표는 Beta headers, Model deprecations(파라미터 폐기 포함), API and data retention 문서의 서술로 구성했다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>Claude 시스템의 수명주기 틀</h3><span class="unit-en">A lifecycle frame for Claude-powered systems</span></div>
+    <p>Anthropic 지원 문서는 Claude Code 활용 사례를 소프트웨어 개발 수명주기 다섯 단계로 정리한다. 시나리오의 작업이 어느 단계에 속하는지 묻는 문항에 이 틀을 쓴다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">단계</th><th>속하는 작업</th></tr></thead>
+      <tbody>
+        <tr><td>1. Discover</td><td>코드베이스·이력 탐색, 문서 검색, 온보딩과 학습</td></tr>
+        <tr><td>2. Design</td><td>프로젝트 계획, 기술 명세 작성, 아키텍처 정의</td></tr>
+        <tr><td>3. Build</td><td>코드 구현, 테스트 작성·실행, 커밋과 PR 생성</td></tr>
+        <tr><td>4. Deploy</td><td>CI/CD 자동화, <strong>환경 구성</strong>, <strong>배포 관리</strong></td></tr>
+        <tr><td>5. Support and scale</td><td>오류 디버깅, 대규모 리팩터링, 사용량·성능 모니터링</td></tr>
+      </tbody>
+    </table>
+    <p>프롬프트나 모델을 바꾸는 일도 이 고리를 돈다. Build 단계에서 평가로 검증하고, Deploy 단계에서 고정 버전으로 내보내고, Support 단계에서 사용량·품질을 지켜보다가 회귀가 보이면 되돌린다. 이 레슨의 06~08이 그 세 지점을 다룬다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>평가 주도 반복: 작게 시작해 채점을 키운다</h3><span class="unit-en">Eval-driven iteration</span></div>
+    <p>큰 평가 세트가 모일 때까지 기다리는 것은 흔한 실수다. Anthropic 리서치 시스템 팀은 <strong>실제 사용 패턴을 대표하는 약 20개의 질의</strong>로 평가를 시작했다. 개발 초기에는 손볼 곳이 많아 변경 하나의 효과가 크게 나타나므로, 적은 사례로도 개선 여부가 드러난다. 세트는 운영 로그에서 실제 트래픽 비율대로 뽑은 과업을 더해 가며 키운다.</p>
+    <div class="tri">
+      <div class="pane" style="border-top:3px solid var(--accent)"><span class="tag" style="background:var(--accent-tint);color:var(--accent-deep)">자동</span><div class="pt">코드 채점</div><div class="pd">정확 일치, 문자열 매칭, 테스트 통과 여부처럼 기준이 분명한 항목. 빠르고 대량으로 돈다</div></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><span class="tag" style="background:var(--teal-tint);color:var(--teal-deep)">자동</span><div class="pt">LLM 심사</div><div class="pd">루브릭(사실 정확성, 인용 정확성, 완전성, 출처 품질, 도구 효율)을 주고 한 번의 호출로 0.0~1.0 점수와 합격·불합격을 받는다</div></div>
+      <div class="pane" style="border-top:3px solid var(--blue)"><span class="tag" style="background:var(--blue-tint);color:#274d6e">사람</span><div class="pt">수동 테스트</div><div class="pd">자동 채점이 놓치는 문제를 잡는다. 리서치 팀은 사람 검토로 에이전트가 권위 있는 출처 대신 SEO용 콘텐츠 농장을 고르는 경향을 발견했다</div></div>
+    </div>
+    <ul>
+      <li>성공 기준은 구체적이고(specific), 측정 가능하고(measurable), 달성 가능하고(achievable), 목적에 맞아야(relevant) 한다. 대부분의 사용 사례는 여러 기준을 함께 본다</li>
+      <li>평가는 실제 작업 분포와 엣지 케이스를 반영하고, 자동 채점이 가능하게 설계한다. 문서는 "신호가 조금 약해도 문항이 많은 자동 채점"이 "적은 수의 정교한 수작업 채점"보다 낫다고 본다</li>
+      <li>LLM 심사는 평가 대상 출력을 만든 모델과 <strong>다른 모델</strong>로 하는 것이 일반적인 모범 사례다</li>
+    </ul>
+    <div class="note best"><span class="lbl">자동 평가가 있어도 사람은 남는다</span><p>LLM 심사를 붙였다고 수동 테스트를 없애는 보기는 오답이다. 공식 글의 결론은 자동 평가와 함께 수동 테스트가 여전히 필수라는 것이다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>모델과 프롬프트를 고정된 구성으로 다룬다</h3><span class="unit-en">Pinned, versioned configuration</span></div>
+    <p>평가로 검증한 것과 운영에서 도는 것이 같아야 한다. 그래서 모델과 프롬프트를 둘 다 <strong>바뀌지 않는 식별자</strong>로 참조한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">ID 형태</th><th style="width:30%">예</th><th>고정되는가</th></tr></thead>
+      <tbody>
+        <tr><td>날짜 없는 ID (4.6 세대부터)</td><td><code>claude-sonnet-5-5</code></td><td>예. 그 자체가 스냅숏이다. 새 버전은 새 ID로 나온다</td></tr>
+        <tr><td>날짜가 붙은 ID (4.6 이전)</td><td><code>claude-haiku-4-5-20251001</code></td><td>예</td></tr>
+        <tr><td>4.6 이전 모델의 별칭</td><td><code>claude-sonnet-4-5</code></td><td>아니다. 해당 마이너 버전의 최신 날짜 스냅숏을 가리키는 편의 포인터다</td></tr>
+      </tbody>
+    </table>
+    <p>같은 ID라면 가중치는 바뀌지 않지만, 요청 라우터·안전 분류기 같은 서빙 인프라는 바뀔 수 있어 관찰되는 동작이 조금 달라질 수 있다. Claude Code를 Bedrock·Google Cloud·Foundry·Claude Platform on AWS로 배포할 때는 <code>ANTHROPIC_DEFAULT_OPUS_MODEL</code> 같은 변수로 모델 버전을 고정해 사용자가 새 모델로 넘어가는 시점을 조직이 정한다.</p>
+    <p>프롬프트도 버전으로 관리한다. Claude Managed Agents에서는 <code>agents.create</code>가 버전 1을 만들고, <code>agents.update</code>를 부를 때마다 같은 ID에 <strong>변경 불가능한 새 버전</strong>이 생긴다. 세션이 어느 버전을 쓸지는 호출하는 쪽이 정한다.</p>
+    <div class="code"><span class="c"># 새 프롬프트로 v4를 만든다 (운영 트래픽은 아직 그대로)</span>
+agent = client.beta.agents.update(
+    AGENT_ID, version=agent.version, system=REFUND_PROMPT_V4)
+
+<span class="c"># 운영 호출부: 검증된 버전에 명시적으로 고정</span>
+session = client.beta.sessions.create(
+    agent={"type": "agent", "id": AGENT_ID, "version": 3},
+    environment_id=ENV_ID)
+
+<span class="c"># 고정하지 않은 참조: 다음 세션부터 최신 버전(v4)이 돈다</span>
+session = client.beta.sessions.create(
+    agent=AGENT_ID, environment_id=ENV_ID)</div>
+    <div class="note"><span class="lbl">bare ID는 운영에서 위험하다</span><p><code>agents.update</code>에는 승인 절차가 따로 없다. 운영 호출부가 버전 없이 에이전트 ID만 넘기면, 누군가 실험 삼아 만든 새 버전이 바로 다음 세션부터 고객에게 나간다. 운영은 명시한 버전에 고정하고, 새 버전은 승격하기 전까지 보이지 않게 둔다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>변경 통제와 점진 롤아웃</h3><span class="unit-en">Change control and gradual rollout</span></div>
+    <p>버전을 만드는 일과 운영에 내보내는 일을 분리하면 변경 통제 지점이 하나로 모인다. 새 버전 생성은 탐색이라 자유롭게 하고, <strong>운영 고정값(어떤 버전을 넘길지 정한 설정)을 바꾸는 일</strong>을 일반 코드 리뷰 절차에 태운다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① CREATE</div><div class="ft">새 프롬프트로 새 버전 생성</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② EVALUATE</div><div class="ft">버전 고정 세션으로 같은 평가 세트 채점</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ SHIP</div><div class="ft">리뷰를 거쳐 운영 고정값을 새 버전으로</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ DETECT</div><div class="ft">같은 채점 도구와 모니터링으로 회귀 감지</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ ROLL BACK</div><div class="ft">고정값을 이전 버전 번호로 되돌림</div></div>
+    </div>
+    <p>이 방식에서 롤백은 재배포가 아니다. 이전 버전이 서버에 그대로 남아 있으므로 호출부가 넘기는 버전 번호만 되돌리면 된다. 새 버전에 일부 트래픽만 보내 비교하면 버전 번호를 기능 플래그처럼 쓰는 카나리 배포가 된다. 비용·지능 최적화 문서도 전환 전에 일부 트래픽에서 새 구성을 그림자(shadow)로 돌려 보고, 전환 후에도 평가 세트를 계속 돌리라고 권한다.</p>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">한 번에 교체</div><p>장시간 도는 상태 저장형 에이전트는 배포 순간에도 작업 중간 어딘가에 있다. 모든 에이전트를 한꺼번에 새 코드로 바꾸면 진행 중이던 작업이 깨지고, 에이전트에서는 작은 실패 하나가 전혀 다른 경로로 이어질 수 있다.</p></div>
+      <div class="pane good"><div class="bh">레인보우 배포</div><p>Anthropic 리서치 시스템은 이전 버전과 새 버전을 <strong>동시에 띄워 둔 채</strong> 트래픽을 조금씩 새 버전으로 옮기는 레인보우 배포(rainbow deployment)를 썼다. 이미 돌고 있는 에이전트는 이전 버전에서 끝까지 가고, 새 작업만 새 버전으로 들어간다.</p></div>
+    </div>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>리뷰를 거쳐야 하는 것은 "새 프롬프트 버전 만들기"가 아니라 "운영이 가리키는 버전 바꾸기"다</li>
+      <li>규제·감사 때문에 동작이 바뀌면 안 되는 시스템은 별칭이 아니라 고정 ID(또는 dated snapshot)를 쓴다</li>
+      <li>상태 저장형 장기 에이전트의 업데이트에는 즉시 전체 교체보다 레인보우 배포가 맞다</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>deprecated가 되면 그날부터 요청이 실패하거나, 대체 모델로 자동 전환된다.</div><div class="f"><span class="k">사실</span>deprecated 모델은 retirement 날짜까지 동작한다. 은퇴한 뒤에는 요청이 실패할 뿐 어디로도 다시 보내 주지 않는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Claude API의 retirement 날짜는 Bedrock과 Google Cloud에서도 같다.</div><div class="f"><span class="k">사실</span>Bedrock과 Google Cloud(Google managed)는 자기 일정으로 은퇴시킨다. Claude API에서 은퇴한 모델이 그쪽에는 남아 있는 경우도 있다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>날짜 없는 모델 ID는 최신 버전으로 계속 갱신되는 별칭이다.</div><div class="f"><span class="k">사실</span>4.6 세대부터 날짜 없는 ID가 곧 고정 스냅숏이다. 움직이는 포인터는 4.6 이전 모델의 별칭(<code>claude-sonnet-4-5</code> 등)이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>의미 있는 평가를 하려면 수백 건짜리 데이터셋부터 만들어야 한다.</div><div class="f"><span class="k">사실</span>실제 사용을 대표하는 20개 안팎으로 바로 시작한다. 초기 변경은 효과가 커서 적은 사례로도 차이가 보인다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>LLM 심사로 채점을 자동화했으면 수동 테스트는 그만해도 된다.</div><div class="f"><span class="k">사실</span>사람 검토는 자동 평가가 놓치는 출처 품질 같은 문제를 잡는다. 둘을 함께 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>운영 코드가 에이전트 ID만 넘겨도, 새 버전은 승격할 때까지 쓰이지 않는다.</div><div class="f"><span class="k">사실</span>버전 없는 참조는 최신 버전을 쓴다. 새 버전을 만드는 즉시 다음 세션부터 반영되므로 운영은 버전을 명시해 고정한다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/about-claude/model-deprecations" target="_blank" rel="noopener">Model deprecations</a> · <a href="https://platform.claude.com/docs/en/api/models/list" target="_blank" rel="noopener">List Models (API reference)</a> · <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Pricing</a> · <a href="https://platform.claude.com/docs/en/models/opus-5-5/migration-guide" target="_blank" rel="noopener">Claude Opus 5.5 migration guide</a> · <a href="https://platform.claude.com/docs/en/api/versioning" target="_blank" rel="noopener">Versions</a> · <a href="https://platform.claude.com/docs/en/api/beta-headers" target="_blank" rel="noopener">Beta headers</a> · <a href="https://platform.claude.com/docs/en/manage-claude/api-and-data-retention" target="_blank" rel="noopener">API and data retention</a> · <a href="https://support.claude.com/en/articles/14553517-claude-code-common-developer-use-cases" target="_blank" rel="noopener">Claude Code common developer use cases</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a> · <a href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" target="_blank" rel="noopener">Define success criteria and build evaluations</a> · <a href="https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions" target="_blank" rel="noopener">Model IDs and versioning</a> · <a href="https://code.claude.com/docs/en/third-party-integrations" target="_blank" rel="noopener">Enterprise deployment overview (Claude Code)</a> · <a href="https://platform.claude.com/docs/en/managed-agents/sessions" target="_blank" rel="noopener">Start a session (Managed Agents)</a> · <a href="https://platform.claude.com/cookbook/managed-agents-cma-prompt-versioning-and-rollback" target="_blank" rel="noopener">Managed Agents prompt versioning and rollback (cookbook)</a> · <a href="https://platform.claude.com/docs/en/about-claude/models/optimizing-for-cost-and-intelligence" target="_blank" rel="noopener">Optimizing for cost and intelligence</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인2 애플리케이션·통합</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

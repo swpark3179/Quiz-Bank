@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 8 · 서브도메인 8.1</span></div>
+    <h1>도구 정의와 도구 호출 처리</h1>
+    <p class="sub">도구가 실행되는 곳 · 정의와 설명 · 도구 세트 설계 · tool_choice와 strict · 에이전트 루프와 오류 · 혼합 턴과 승인</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/defining-claude-tools-schemas-descriptions-and-tool-set-design" target="_blank" rel="noopener">CertSafari 8.1 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/handling-claude-tool-calls-the-agentic-loop-errors-and-approvals" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 8 · Tools and MCPs (10.6%) · 서브도메인 8.1 Tool Implementation</p>
+    <div class="secrow">
+      <span class="s on">8.1 도구 정의·호출 처리</span><span class="s">8.2 MCP 서버·트랜스포트</span><span class="s">8.3 확장 방식 선택</span>
+    </div>
+  </header>
+
+  <p class="lede">도구 사용(tool use)은 애플리케이션과 모델 사이의 계약이다. 애플리케이션은 어떤 작업이 가능하고 입력이 어떤 모양인지 알려 주고, Claude는 언제 무엇을 부를지 정한다. <strong>Claude는 아무것도 직접 실행하지 않는다.</strong> 구조화된 요청을 낼 뿐이고, 실행은 여러분의 코드나 Anthropic 서버가 맡는다. 시험은 이 계약의 양쪽을 묻는다. 정의 쪽에서는 설명·스키마·<code>strict</code>·<code>tool_choice</code>가 각각 무엇을 바꾸는지, 처리 쪽에서는 결과를 어떤 형식으로 돌려주고 오류·서버 도구·승인을 어떻게 다루는지다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>도구를 실행 위치(사용자 정의 클라이언트 도구 · Anthropic 스키마 클라이언트 도구 · 서버 실행 도구)로 나누고, 각각에서 앱이 맡는 일을 구분한다</li>
+      <li>도구 선택 문제는 설명으로, 입력 형태 문제는 <code>strict: true</code>로 고친다는 경계를 지킨다</li>
+      <li>도구 통합·네임스페이스·고신호 응답·'산문 파싱 대신 도구 호출'로 도구 세트를 설계한다</li>
+      <li><code>tool_choice</code> 네 옵션과 모델별 강제 호출 제한(Opus 5.5 등은 400)을 알고 대안을 고른다</li>
+      <li>클라이언트 도구 루프, <code>tool_result</code> 형식 규칙, <code>is_error</code>, <code>pause_turn</code>과 혼합 턴을 정확히 처리한다</li>
+      <li>Agent SDK에서 <code>allowed_tools</code>·<code>disallowed_tools</code>가 권한 평가 순서의 어디에 끼는지 설명한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>도구가 실행되는 곳이 앱의 책임을 정한다</h3><span class="unit-en">Where a tool runs</span></div>
+    <p>도구를 가르는 첫 번째 축은 <strong>코드가 어디서 실행되느냐</strong>다. 모든 도구는 아래 세 갈래 중 하나에 들어가고, 어느 갈래인지에 따라 앱이 해야 할 일이 달라진다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">갈래</th><th style="width:30%">예</th><th>앱이 하는 일</th></tr></thead>
+      <tbody>
+        <tr><td>사용자 정의 도구 (클라이언트 실행)</td><td>사내 API 조회, DB 쿼리, 파일 쓰기 등 여러분이 만든 도구</td><td>스키마를 쓰고, <code>tool_use</code>를 받아 실행하고, <code>tool_result</code>를 돌려준다. 도구 사용 트래픽 대부분이 여기에 속한다</td></tr>
+        <tr><td>Anthropic 스키마 도구 (클라이언트 실행)</td><td><code>bash</code>, <code>text_editor</code>, <code>memory</code>, <code>computer</code>, <code>browser</code></td><td>스키마는 Anthropic이 정했지만 <strong>실행은 여전히 앱</strong>이 한다. 처리 흐름은 사용자 정의 도구와 같다</td></tr>
+        <tr><td>서버 실행 도구</td><td><code>web_search</code>, <code>web_fetch</code>, <code>code_execution</code>, <code>tool_search</code></td><td>요청에서 켜기만 하면 Anthropic이 실행한다. <code>tool_result</code>를 만들지 않고, 응답의 <code>server_tool_use</code>와 결과 블록을 읽는다</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">Anthropic 스키마 도구를 쓰는 이유</span><p>이 스키마들은 학습되어 있다(trained-in). Claude는 바로 이 도구 시그니처를 쓴 성공 궤적 수천 건으로 최적화되어 있어, 같은 일을 하는 커스텀 도구보다 <strong>더 안정적으로 호출하고 오류에서도 더 잘 회복한다.</strong> 이점은 호출 신뢰도이지 실행 대행이 아니다. 셸 명령은 여전히 여러분의 환경에서 돌고, 그 안전도 여러분이 책임진다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>도구 정의의 구조</h3><span class="unit-en">Anatomy of a tool definition</span></div>
+    <p>사용자 정의 도구는 요청의 최상위 <code>tools</code> 배열에 넣는다. API는 이 정의들로 도구 사용용 시스템 프롬프트를 만들어 모델에 전달한다. 즉 Claude가 보는 것은 <strong>이름·설명·스키마와, 나중에 돌려받는 결과</strong>뿐이다. 구현 코드는 모델에 전달되지 않는다.</p>
+    <div class="code">{
+  "name": "parcel_track_shipment",
+  "description": "Returns the latest scan events for one parcel
+    shipped with our carrier network. Use it when the user gives
+    a tracking number that starts with PX. It does not return
+    delivery-fee details or customs paperwork.",
+  "strict": true,
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "tracking_no": {"type": "string",
+        "description": "Tracking number, e.g. PX20481577"},
+      "max_events": {"type": "integer",
+        "description": "How many recent scans to return"}
+    },
+    "required": ["tracking_no"],
+    "additionalProperties": false
+  },
+  "input_examples": [
+    {"tracking_no": "PX20481577"},
+    {"tracking_no": "PX99100042", "max_events": 3}
+  ]
+}</div>
+    <table class="t">
+      <thead><tr><th style="width:22%">필드</th><th style="width:40%">역할</th><th>시험 포인트</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code></td><td>도구 식별자. 정규식 <code>^[a-zA-Z0-9_-]{1,128}$</code></td><td>서비스 접두사로 네임스페이스를 준다 (→ 04)</td></tr>
+        <tr><td><code>description</code></td><td>무엇을 하는지, 언제 쓰고 언제 쓰지 않는지, 매개변수의 뜻, 한계</td><td>도구 성능을 좌우하는 <strong>가장 중요한 요소</strong></td></tr>
+        <tr><td><code>input_schema</code></td><td>입력 매개변수를 정의하는 JSON Schema 객체</td><td>형태를 알려 줄 뿐, <code>strict</code> 없이는 준수를 보장하지 않는다</td></tr>
+        <tr><td><code>input_examples</code> (선택)</td><td>스키마에 맞는 입력 예시 배열</td><td>스키마에 어긋나는 예시는 400. 서버 도구에는 쓸 수 없다. 단순한 예시 약 20~50토큰, 복잡한 중첩 객체 약 100~200토큰이 든다</td></tr>
+        <tr><td><code>strict</code> (선택)</td><td>문법 제약 샘플링으로 입력이 스키마를 정확히 따르게 한다</td><td>타입이 맞는 인자를 <strong>보장</strong>하는 유일한 수단 (→ 05)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>도구 선택을 이끄는 설명 쓰기</h3><span class="unit-en">Descriptions drive tool selection</span></div>
+    <p>공식 문서는 "매우 자세한 설명"을 도구 성능에서 단연 가장 중요한 요소로 꼽는다. 도구 하나에 최소 3~4문장, 복잡하면 더 길게 쓰라고 권한다. 설명에 담을 것은 다음 네 가지다.</p>
+    <ul>
+      <li><strong>무엇을 하는가</strong>: 반환하는 데이터와 그 형식</li>
+      <li><strong>언제 쓰는가, 언제 쓰지 않는가</strong>: 지원 범위와 범위 밖 요청</li>
+      <li><strong>매개변수마다 무슨 뜻이고 동작에 어떤 영향을 주는가</strong></li>
+      <li><strong>주의점과 한계</strong>: 이 도구가 돌려주지 <em>않는</em> 정보까지</li>
+    </ul>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">약한 설명</div><p><code>"Gets room availability."</code> 어떤 숙소 체인인지, 날짜 형식은 무엇인지, 요금도 주는지, 단체 예약에도 쓰는지 Claude가 추측해야 한다. 그 결과 범위 밖 요청에도 도구를 부르거나, 써야 할 때 부르지 않는다.</p></div>
+      <div class="pane good"><div class="bh">좋은 설명</div><p>"Checks free rooms at Harbor Inn properties for given dates. Dates use YYYY-MM-DD. Returns room types and nightly rates in KRW. Use it for stays of up to 14 nights for 1–4 guests; group bookings go to <code>harbor_group_request</code>. It does not hold or book rooms."</p></div>
+    </div>
+    <p>설명에 넣을 필요가 <em>없는</em> 것은 구현 내부다. 핸들러가 어떤 언어로 쓰였는지, 어느 DB를 어떤 ORM으로 읽는지는 Claude가 도구를 고르고 인자를 채우는 데 아무 도움이 되지 않는다. Claude는 스키마와 결과만 본다.</p>
+    <div class="axis"><span class="lbl">시험 판단 축 · 증상별 처방</span><ul>
+      <li><strong>엉뚱한 도구를 고르거나 범위 밖 입력에도 부른다</strong> → 설명을 다시 쓴다(범위·제외 대상·대체 도구 명시). <code>strict</code>는 입력 형태를 다룰 뿐 도구 선택에는 관여하지 않는다</li>
+      <li><strong>필수 인자를 빠뜨리거나 타입이 틀린다</strong> → <code>strict: true</code>. 예시와 설명은 올바른 호출 가능성을 높일 뿐 보장하지 않는다</li>
+      <li><strong>복잡한 중첩 입력·형식에 민감한 값</strong> → 설명을 먼저 다듬고 <code>input_examples</code>를 더한다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>규모가 커져도 버티는 도구 세트</h3><span class="unit-en">Designing a tool set that scales</span></div>
+    <p>도구가 많아질수록 선택이 흔들린다. 공식 문서와 Anthropic 엔지니어링 글 "Writing tools for agents"가 권하는 원칙을 증상과 짝지어 기억한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:32%">증상</th><th style="width:30%">원칙</th><th>적용 예</th></tr></thead>
+      <tbody>
+        <tr><td>동작마다 도구가 따로 있어 서로 헷갈린다</td><td><strong>관련 동작을 한 도구로 통합</strong></td><td><code>create_pr</code>·<code>review_pr</code>·<code>merge_pr</code> 대신 <code>action</code> 매개변수를 가진 도구 하나. 여러 단계를 묶는 것도 통합이다(목록 조회 3개 대신 <code>schedule_event</code> 하나)</td></tr>
+        <tr><td>여러 서비스에 같은 이름의 도구가 있다</td><td><strong>서비스 접두사로 네임스페이스</strong></td><td><code>github_list_prs</code>, <code>slack_send_message</code>. tool search를 쓸 때 특히 중요하다</td></tr>
+        <tr><td>응답이 수십 개 열과 내부 참조로 부풀어 있다</td><td><strong>고신호 정보만 반환</strong></td><td>다음 단계 추론에 필요한 필드만, 그리고 불투명한 내부 참조 대신 slug·UUID 같은 의미 있고 안정적인 식별자. 간결/상세를 고르는 <code>response_format</code> 매개변수, 페이지네이션·잘라내기도 같은 맥락이다</td></tr>
+        <tr><td>모델의 판단을 정규식으로 산문에서 뽑아낸다</td><td><strong>그 판단을 도구 호출로</strong></td><td>"escalate: yes" 같은 문자열을 파싱하지 말고 <code>escalate_ticket</code> 도구를 정의한다. 구조화된 의도를 텍스트에서 복원하고 있다면 그 구조는 스키마에 있어야 한다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">오류 메시지도 도구 설계의 일부</span><p>불투명한 오류 코드나 스택 트레이스 대신 무엇이 잘못됐고 무엇을 고치면 되는지 말해 주는 오류가 에이전트의 회복을 돕는다. 매개변수 이름도 <code>user</code>보다 <code>user_id</code>처럼 모호하지 않게 짓는다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>tool_choice와 strict: 호출을 어디까지 강제할 수 있나</h3><span class="unit-en">Controlling calls on today's models</span></div>
+    <table class="t">
+      <thead><tr><th style="width:30%"><code>tool_choice</code></th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td><code>{"type": "auto"}</code></td><td>도구를 쓸지 말지 Claude가 정한다. <code>tools</code>가 있을 때 기본값</td></tr>
+        <tr><td><code>{"type": "any"}</code></td><td>제공된 도구 중 하나는 반드시 쓴다. 어느 도구인지는 정하지 않는다</td></tr>
+        <tr><td><code>{"type": "tool", "name": "…"}</code></td><td>지정한 도구 하나를 반드시 쓴다</td></tr>
+        <tr><td><code>{"type": "none"}</code></td><td>도구를 쓰지 않는다. <code>tools</code>가 없을 때 기본값</td></tr>
+      </tbody>
+    </table>
+    <p>강제 호출(<code>any</code>·<code>tool</code>)은 <strong>모든 모델과 설정에서 되지 않는다.</strong> 2026년 10월 기준 문서의 제한은 다음과 같다.</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">모델·설정</th><th style="width:28%">제한</th><th>대신 쓸 것</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Opus 5.5, Sonnet 5.5, Fable 5.1, Mythos 5.1</td><td><code>any</code>·<code>tool</code>이 <strong>400 오류</strong></td><td><code>auto</code> + <code>strict: true</code>(스키마에 맞는 입력 보장)와 프롬프트 지시, 고정 JSON 응답이 필요하면 structured outputs. <code>none</code>은 쓸 수 있다</td></tr>
+        <tr><td>수동 extended thinking (<code>thinking: {type: "enabled"}</code>)</td><td><code>any</code>·<code>tool</code> 미지원</td><td><code>auto</code> 또는 <code>none</code></td></tr>
+        <tr><td>강제 호출을 받는 모델 (현행 모델 중에는 Claude Haiku 5.5. 레거시 Opus 5도 해당)</td><td>허용되지만 사고(thinking)를 건너뛴다</td><td>먼저 생각하게 하려면 <code>auto</code> + 프롬프트 지시</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">강제 호출의 부수 효과</span><p><code>any</code>나 <code>tool</code>을 쓰면 API가 어시스턴트 메시지를 미리 채워 도구 호출을 강제하므로, 요청해도 <code>tool_use</code> 앞에 자연어 설명이 나오지 않는다. 강제 호출을 지원하는 모델에서는 <code>any</code>와 <code>strict</code>를 함께 써서 '도구가 반드시 호출되고, 입력도 스키마를 따른다'를 둘 다 보장할 수 있다.</p></div>
+    <p><code>strict: true</code>가 보장하는 것은 두 가지다. 도구 <code>input</code>이 <code>input_schema</code>를 정확히 따르고, 도구 <code>name</code>이 항상 유효하다. <code>"2"</code> 대신 <code>2</code>, 필수 필드 누락 없음. 반대로 '이 요청에 이 도구가 맞는가'는 보장하지 않는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>클라이언트 도구 루프와 tool_result 형식</h3><span class="unit-en">The agentic loop for client tools</span></div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① REQUEST</div><div class="ft"><code>tools</code> 배열과 사용자 메시지를 보낸다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② TOOL_USE</div><div class="ft"><code>stop_reason: "tool_use"</code>와 <code>tool_use</code> 블록을 받는다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ EXECUTE</div><div class="ft">도구마다 실행하고 출력을 <code>tool_result</code>로 만든다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ CONTINUE</div><div class="ft">기존 메시지 + 어시스턴트 응답 + 결과를 담은 사용자 메시지를 보낸다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ REPEAT</div><div class="ft"><code>stop_reason</code>이 <code>tool_use</code>인 동안 ②로</div></div>
+    </div>
+    <div class="code">messages = [{"role": "user", "content": question}]
+while True:
+    resp = client.messages.create(model=MODEL, max_tokens=2048,
+                                  tools=TOOLS, messages=messages)
+    if resp.stop_reason != "tool_use":
+        break                     <span class="c"># end_turn, max_tokens, refusal 등</span>
+    messages.append({"role": "assistant", "content": resp.content})
+    results = []
+    for block in resp.content:
+        if block.type == "tool_use":
+            out, failed = run_tool(block.name, block.input)
+            results.append({"type": "tool_result",
+                            "tool_use_id": block.id,  <span class="c"># 호출의 id와 같아야 한다</span>
+                            "content": out,
+                            "is_error": failed})
+    messages.append({"role": "user", "content": results})</div>
+    <table class="t">
+      <thead><tr><th style="width:36%">형식 규칙</th><th>어기면</th></tr></thead>
+      <tbody>
+        <tr><td>각 <code>tool_result</code>의 <code>tool_use_id</code>는 대응하는 <code>tool_use</code> 블록의 <code>id</code>와 같다</td><td>결과의 짝은 순서가 아니라 이 ID로 맞춘다. 병렬 호출 결과를 어떤 순서로 넣어도 된다</td></tr>
+        <tr><td>결과 메시지는 도구 호출 메시지 <strong>바로 다음</strong>에 온다. 사이에 다른 메시지를 끼우지 않는다</td><td>"tool_use ids were found without tool_result blocks immediately after" 오류</td></tr>
+        <tr><td>결과를 담은 사용자 메시지에서 <code>tool_result</code> 블록이 <strong>맨 앞</strong>에 온다. 텍스트는 결과 뒤에만</td><td>텍스트가 앞에 있으면 400</td></tr>
+        <tr><td><code>tool_use</code> 블록마다 결과가 하나씩 있다</td><td>일부만 답하면 같은 오류로 실패</td></tr>
+      </tbody>
+    </table>
+    <p><code>content</code>는 생략할 수도 있고, 문자열이나 <code>text</code>·<code>image</code>·<code>document</code>·<code>search_result</code> 블록 목록일 수도 있다. 웹 페이지·메일·업로드처럼 통제할 수 없는 출처의 내용은 시스템 프롬프트가 아니라 <code>tool_result</code> 안에 두고, 간접 프롬프트 인젝션에 대비한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>오류: 실행 실패와 잘못된 호출</h3><span class="unit-en">Execution failures vs invalid calls</span></div>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">실행 실패</div><p>도구 자체가 실패했다(상위 서비스 장애, 네트워크 오류). 같은 <code>tool_use_id</code>로 <code>tool_result</code>를 보내되 <code>"is_error": true</code>를 붙이고, 내용에 <strong>무엇이 잘못됐고 다음에 무엇을 하면 되는지</strong>를 쓴다. "failed" 한 단어보다 "Rate limit exceeded. Retry after 60 seconds."가 낫다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">잘못된 호출</div><p>필수 매개변수가 빠진 호출 등은 대개 정보가 부족했다는 신호다. 개발 단계에서는 <strong>설명을 더 자세히</strong> 쓰는 것이 우선이다. 대화를 이어 가려면 오류를 담은 <code>tool_result</code>(<code>is_error: true</code>)를 보내면 되고, Claude는 보통 2~3회 고쳐서 다시 시도한다. 잘못된 호출 자체를 없애려면 <code>strict: true</code>.</p></div>
+    </div>
+    <div class="code">{"role": "user", "content": [{
+  "type": "tool_result",
+  "tool_use_id": "toolu_01HqT5…",
+  "content": "Rate provider returned HTTP 503 (scheduled
+    maintenance until 02:00 UTC). No rate was fetched.
+    Retry after 02:00 UTC or tell the user the rate is
+    temporarily unavailable.",
+  "is_error": true
+}]}</div>
+    <p>서버 도구의 오류는 다르다. 웹 검색 실패 같은 오류는 Claude가 투명하게 처리해 대안을 내거나 설명하므로, 서버 도구에 대해 앱이 <code>is_error</code> 결과를 만들 필요가 없다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>서버 도구가 섞인 응답: pause_turn과 혼합 턴</h3><span class="unit-en">Server tools at runtime</span></div>
+    <p>서버 도구 호출은 <code>server_tool_use</code> 블록(<code>id</code>가 <code>srvtoolu_</code>로 시작)으로 보이고, 보통 같은 응답 안에 결과 블록이 <code>tool_use_id</code>로 짝지어 따라온다. 예외가 두 가지 있고, 둘을 헷갈리게 하는 문항이 단골이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">응답 상태</th><th style="width:34%">의미</th><th>앱이 할 일</th></tr></thead>
+      <tbody>
+        <tr><td><code>server_tool_use</code>와 결과 블록이 같은 응답에 있다</td><td>서버 도구 호출이 끝났다</td><td><strong>할 일 없음</strong></td></tr>
+        <tr><td><code>stop_reason: "pause_turn"</code></td><td>서버 측 루프가 반복 상한에 걸려 멈췄다. 클라이언트 도구를 기다리는 일은 없다</td><td>멈춘 응답을 <strong>그대로</strong> 어시스턴트 메시지로 붙여 다시 보낸다. <strong>같은 도구</strong>를 포함한다. 다시 멈출 수 있으니 횟수 상한을 둔다</td></tr>
+        <tr><td><code>stop_reason: "tool_use"</code>이고, 결과 블록이 없는 <code>server_tool_use</code>와 클라이언트 <code>tool_use</code>가 함께 있다</td><td>병렬 호출에 클라이언트 도구가 섞여 API가 서버 도구를 실행하지 않고 먼저 돌아왔다. 별도 표시는 없다</td><td>클라이언트 도구를 실행하고 <strong><code>tool_result</code> 블록만</strong> 담은 사용자 메시지를 보낸다. <strong>같은 <code>tools</code> 배열</strong>을 유지한다</td></tr>
+      </tbody>
+    </table>
+    <p>혼합 턴을 이어 보내면 API가 결과를 아직 열려 있는 어시스턴트 턴에 붙이고, 미뤄 둔 서버 도구를 실행한 뒤 Claude가 이어 간다. 다음 응답은 이전 <code>server_tool_use</code>의 결과 블록으로 시작한다. 두 블록은 서로 다른 응답에 오므로 위치가 아니라 <code>tool_use_id</code>로 짝이 맞는다.</p>
+    <div class="axis"><span class="lbl">혼합 턴에서 400이 나는 경우</span><ul>
+      <li>후속 요청의 <code>tools</code>에서 대기 중인 서버 도구를 뺐다 → "…but no `web_fetch` tool was provided"로 끝나는 400</li>
+      <li>결과 뒤에 텍스트 블록을 붙였다 → 턴이 끝났다고 해석되어, 해결되지 않은 서버 도구 호출 때문에 400</li>
+      <li>결과 앞에 내용을 두었거나, 일부 <code>tool_use</code>만 답했거나, <code>tool_result</code>가 하나도 없다 → 클라이언트 도구 오류</li>
+      <li>더 할 말이 있으면 턴이 끝난 뒤 별도의 사용자 메시지로 보낸다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">09</span><h3>승인: 어떤 호출을 실행할지 정하기</h3><span class="unit-en">Approval patterns in the Agent SDK</span></div>
+    <p>Claude Agent SDK는 도구 호출마다 아래 순서로 권한을 확인한다. 앞 단계에서 결론이 나면 뒤 단계는 보지 않는다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① HOOKS</div><div class="ft">훅이 거부하거나 넘긴다. 훅의 allow도 아래 deny·ask를 건너뛰지 못한다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② DENY</div><div class="ft"><code>disallowed_tools</code>·settings 거부 규칙. <code>bypassPermissions</code>에서도 적용</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ ASK</div><div class="ft">ask 규칙이면 콜백으로</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ MODE</div><div class="ft">권한 모드 적용 (예: bypass는 대부분 승인)</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ ALLOW</div><div class="ft"><code>allowed_tools</code>·allow 규칙</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑥ CALLBACK</div><div class="ft"><code>canUseTool</code>이 결정 (<code>dontAsk</code>면 거부)</div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:34%">설정</th><th>효과</th></tr></thead>
+      <tbody>
+        <tr><td><code>allowed_tools=["Read", "Grep"]</code></td><td>나열한 도구를 자동 승인. 목록에 없는 도구는 <strong>사라지지 않고</strong> 권한 모드와 <code>canUseTool</code>로 넘어간다</td></tr>
+        <tr><td><code>disallowed_tools=["Bash"]</code> (도구 이름만)</td><td><code>Bash</code> 정의가 요청에서 <strong>제거</strong>된다. Claude는 도구를 보지 못하고 시도할 수도 없다</td></tr>
+        <tr><td><code>disallowed_tools=["Bash(rm *)"]</code> (범위 규칙)</td><td><code>Bash</code>는 남고, 적힌 패턴과 일치하는 호출만 <code>bypassPermissions</code>를 포함한 <strong>모든 모드에서</strong> 거부. 다른 형태(<code>/bin/rm</code> 등)는 모드로 넘어간다</td></tr>
+        <tr><td><code>disallowed_tools=["*"]</code></td><td>모든 도구 정의 제거. 거부 규칙은 <code>"mcp__*"</code> 같은 이름 glob을 받는다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">세션 중 모드가 바뀌어도 남는 규칙</span><p><code>set_permission_mode()</code>로 세션 중에 모드를 바꾸면 이후 모든 요청에 바로 적용된다. 거부 규칙은 모드 확인보다 <strong>먼저</strong> 평가되므로, 모드를 <code>bypassPermissions</code>로 올려도 범위 거부 규칙은 그대로 막는다. 반대로 <code>canUseTool</code> 안에만 둔 검사는 자동 승인된 호출에서 실행되지 않는다. 모든 호출에 돌아야 하는 검사는 <code>PreToolUse</code> 훅에 둔다.</p></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>서버 도구도 클라이언트 도구처럼 앱이 <code>tool_result</code>와 <code>is_error</code>를 만들어 돌려줘야 한다.</div><div class="f"><span class="k">사실</span>서버 도구는 API가 실행하고 결과도 응답에 넣는다. 혼합 턴에서도 앱이 보내는 것은 클라이언트 도구의 결과뿐이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Claude가 엉뚱한 도구를 고르면 <code>strict: true</code>를 켜거나 매개변수를 더하면 된다.</div><div class="f"><span class="k">사실</span><code>strict</code>는 입력 형태를, 설명은 도구 선택을 다룬다. 선택이 틀리면 설명에 범위와 제외 대상을 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>tool_choice</code>의 <code>tool</code> 타입은 어떤 모델에서든 그 도구 호출을 강제한다.</div><div class="f"><span class="k">사실</span>Opus 5.5·Sonnet 5.5·Fable 5.1·Mythos 5.1은 400을 돌려주고, 수동 extended thinking도 거부한다. 대안은 <code>auto</code> + <code>strict</code>다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>결과가 없는 <code>server_tool_use</code>가 응답에 있으면 언제나 <code>pause_turn</code>이다.</div><div class="f"><span class="k">사실</span>클라이언트 도구도 함께 불렸다면 <code>stop_reason</code>은 <code>tool_use</code>이고, 클라이언트 결과만 보내야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>allowed_tools</code>에서 빠진 도구는 막힌다.</div><div class="f"><span class="k">사실</span>목록에 없는 도구는 권한 모드와 <code>canUseTool</code>로 넘어간다. 도구를 없애려면 <code>disallowed_tools</code>에 이름을 넣는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>실패한 도구 호출은 <code>tool_result</code>를 생략하고 사용자 텍스트로 알리면 된다.</div><div class="f"><span class="k">사실</span><code>tool_use</code>마다 짝이 되는 <code>tool_result</code>가 있어야 한다. 실패는 <code>is_error: true</code>와 회복에 쓸 수 있는 메시지로 알린다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works" target="_blank" rel="noopener">How tool use works</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" target="_blank" rel="noopener">Define tools</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use" target="_blank" rel="noopener">Strict tool use</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls" target="_blank" rel="noopener">Handle tool calls</a> · <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/server-tools" target="_blank" rel="noopener">Server tools</a> · <a href="https://www.anthropic.com/engineering/writing-tools-for-agents" target="_blank" rel="noopener">Writing tools for agents</a> · <a href="https://code.claude.com/docs/en/agent-sdk/permissions" target="_blank" rel="noopener">Configure permissions (Agent SDK)</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인8 도구·MCP</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

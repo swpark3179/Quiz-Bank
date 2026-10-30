@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.3</span></div>
+    <h1>모델 선택과 모델 간 사고 모드 변경점</h1>
+    <p class="sub">현재 라인업과 티어의 자리 · 효율 우선과 성능 우선 · 모델 교체보다 effort 먼저 · fast mode의 자리 · 모델별 thinking 설정 · 400으로 드러나는 변경과 조용한 변경</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/choosing-a-claude-model-capability-latency-and-cost" target="_blank" rel="noopener">CertSafari 5.3 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-thinking-modes-and-breaking-changes-between-models" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Model Selection and Optimization (16.8%) · 서브도메인 5.3 Model Selection and Tradeoffs</p>
+    <div class="secrow">
+      <span class="s">5.1 LLM 기초·사고·effort</span><span class="s">5.2 REST·스트리밍</span><span class="s on">5.3 모델 선택·사고 모드</span><span class="s">5.4 토큰 비용·캐싱</span>
+    </div>
+  </header>
+
+  <p class="lede">모델 선택은 능력, 속도, 비용 사이의 절충이다. 이 절충은 티어를 바꿔서만 움직이는 것이 아니다. 같은 모델 안에서도 effort로 토큰 지출을, fast mode로 출력 속도를 조절할 수 있다. 그리고 모델을 바꾸는 순간 사고의 기본 동작이 달라져, 어떤 설정은 400 오류를 내고 어떤 변화는 오류 없이 코드를 깨뜨린다. <strong>워크로드에 맞는 가장 작은 출발점을 고르고, 모델을 바꾸기 전에 effort부터 조정하며, 마이그레이션 때는 사고 설정과 응답 구조를 다시 확인하는 것</strong>이 이 레슨의 핵심이다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>현재 라인업 네 모델의 자리(능력, 지연, 가격, 기본 effort)를 알고 워크로드에 맞는 시작 모델을 고른다</li>
+      <li>효율 우선과 성능 우선 접근의 단계를 순서대로 설명하고, 판단 근거가 평가임을 안다</li>
+      <li>비용·속도 문제에서 effort, fast mode, 모델 교체 가운데 먼저 쓸 레버를 고른다</li>
+      <li>모델별 <code>thinking</code> 설정(필드 없음, <code>adaptive</code>, <code>enabled</code>, <code>between_tools</code>, <code>disabled</code>)의 결과를 예측한다</li>
+      <li>마이그레이션에서 400으로 드러나는 변경과 오류 없이 동작을 바꾸는 변경을 구분하고 고친다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>현재 라인업과 티어의 자리</h3><span class="unit-en">The current Claude lineup</span></div>
+    <p>현재 모델은 모두 텍스트·이미지 입력, 텍스트 출력, 다국어, 비전, <strong>도구 사용</strong>을 지원한다. 그래서 "도구를 불러야 한다", "이미지를 읽어야 한다"는 요구는 모델을 가르지 못한다. 실제로 갈리는 것은 품질, 속도, 토큰당 가격이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:17%">모델</th><th style="width:25%">자리</th><th style="width:9%">지연</th><th style="width:19%">가격 (입력/출력, MTok당)</th><th style="width:15%">사고</th><th>기본 effort</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Fable 5.1</td><td>까다로운 추론, 장기 에이전트 작업</td><td>느림</td><td>$10 / $50</td><td>적응형 (항상 켜짐)</td><td><code>high</code></td></tr>
+        <tr><td>Claude Opus 5.5</td><td>장시간 에이전트 코딩, 지식 업무</td><td>보통</td><td>$4 / $20</td><td>적응형 (항상 켜짐)</td><td><code>medium</code></td></tr>
+        <tr><td>Claude Sonnet 5.5</td><td>속도와 지능의 최적 조합</td><td>빠름</td><td>$2 / $10</td><td>적응형</td><td><code>high</code></td></tr>
+        <tr><td>Claude Haiku 5.5</td><td>분류·추출·라우팅 같은 대량·저지연 작업</td><td>가장 빠름</td><td>$0.10 / $0.50부터 (프롬프트 100k 토큰 초과 시 $0.50 / $2.50)</td><td>적응형</td><td><code>medium</code></td></tr>
+      </tbody>
+    </table>
+    <p>네 모델 모두 1M 토큰 컨텍스트와 최대 128k 출력이다. 레거시로 계속 쓸 수 있는 모델은 Fable 5, Opus 5, Opus 4.8·4.7·4.6·4.5, Sonnet 5, Sonnet 4.6, Haiku 4.5(200k 컨텍스트, 확장 사고만, effort 미지원)다. 모델 ID는 날짜 접미사가 없는 것도 모두 고정 스냅샷이다.</p>
+    <div class="note"><span class="lbl">CertSafari와 다른 점</span><p>CertSafari 레슨은 가장 작은 티어를 Claude Haiku 4.5로 소개하고, 그 표에 맞춰 체크포인트도 Haiku 4.5를 정답으로 둔다. 현재 공식 라인업의 최소 티어는 Claude Haiku 5.5이고 Haiku 4.5는 레거시다. 또한 CertSafari 체크포인트 일부는 표에 없는 모델(Opus 4.8, Sonnet 5 등)을 정답으로 쓴다. 이 가이드와 문제는 공식 라인업을 기준으로 하고, 레거시 모델은 이름을 밝혀 쓴다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>시작 모델을 고르는 두 방법</h3><span class="unit-en">Efficiency-first vs capability-first</span></div>
+    <p>공식 가이드는 출발점을 정하는 두 접근을 제시한다. 어느 쪽이든 결정은 <strong>평가</strong>로 내린다. 사용 사례에 맞는 벤치마크를 만들고, 실제 프롬프트와 데이터로 정확도·응답 품질·엣지 케이스 처리를 모델별로 비교한 뒤 성능과 비용을 저울질한다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">효율 우선 (efficiency-first)</div><p>① Claude Haiku 5.5로 구현 시작 → ② 사용 사례를 철저히 테스트 → ③ 성능이 요구사항을 충족하는지 평가 → ④ <strong>특정 능력 격차가 있을 때만</strong> 업그레이드.</p><p>맞는 경우: 프로토타입, 엄격한 지연 요구, 비용 민감, 단순한 대량 작업.</p></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">성능 우선 (capability-first)</div><p>① Claude Opus 5.5로 구현 → ② 이 모델에 맞게 프롬프트 최적화 → ③ 요구사항 충족 여부 평가 → ④ effort를 낮추거나 모델을 내려 효율 개선 → ⑤ <code>xhigh</code>·<code>max</code>에서도 모자라면 Claude Fable 5.1.</p><p>맞는 경우: 복잡한 추론, 과학·수학, 정확도가 비용보다 중요한 작업, 고급 코딩과 높은 자율성.</p></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:36%">필요한 것</th><th style="width:20%">시작 후보</th><th>예</th></tr></thead>
+      <tbody>
+        <tr><td>가장 높은 능력</td><td>Claude Fable 5.1</td><td>몇 시간씩 도는 에이전트 세션, 다단계 심층 리서치</td></tr>
+        <tr><td>복잡한 에이전트 코딩, 엔터프라이즈 업무</td><td>Claude Opus 5.5</td><td>여러 시간짜리 자율 코딩 에이전트, 대규모 리팩터링, 컴퓨터 사용</td></tr>
+        <tr><td>일상적인 코딩·에이전트 작업의 속도와 능력</td><td>Claude Sonnet 5.5</td><td>코드 생성, 데이터 분석, 콘텐츠 작성, 에이전트 도구 사용</td></tr>
+        <tr><td>가장 낮은 지연과 가격</td><td>Claude Haiku 5.5</td><td>실시간 애플리케이션, 대량 처리, 서브에이전트 작업</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">기본 출발점</span><p>공식 문서는 "확실하지 않다면 대부분의 워크로드는 Claude Opus 5.5에서 시작하라"고 적는다. 효율 우선은 지연·비용·규모가 분명한 제약일 때 고르는 선택지다. 시험에서 "실시간, 대량, 빠듯한 예산, 단순 분류" 같은 신호가 보이면 효율 우선, 즉 Haiku 5.5에서 시작한다.</p></div>
+    <p>한 모델만 고를 필요도 없다. 공식 가이드는 저비용 모델과 최상위 모델을 짝지어 <strong>대부분의 토큰이 낮은 단가로 과금되게</strong> 하는 다중 모델 전략을 소개한다. 흔한 형태는 두 가지다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">패턴</th><th>구조</th></tr></thead>
+      <tbody>
+        <tr><td>실행자 + 조언자</td><td>저비용 모델이 일을 진행하다가 어려운 결정만 상위 모델에 올려 묻는다</td></tr>
+        <tr><td>오케스트레이터 + 작업자</td><td>상위 모델이 계획과 종합을 맡고, 대량의 반복 작업은 저비용 모델 작업자에게 나눠 준다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>모델을 바꾸기 전에 effort부터</h3><span class="unit-en">Tune effort before switching tiers</span></div>
+    <p>공식 가이드는 effort를 "한 모델 안에서 지능과 지연·비용을 맞바꾸는 레버"로 소개하며, <strong>effort 조정이 모델 교체보다 나은 레버인 경우가 많다</strong>고 말한다. 모델을 바꾸면 프롬프트 재조정, 품질 회귀, 응답 구조 변화를 다시 검증해야 하지만, effort는 요청마다 값 하나만 바꾸면 된다.</p>
+    <table class="t">
+      <thead><tr><th style="width:38%">상황</th><th>먼저 쓸 레버</th></tr></thead>
+      <tbody>
+        <tr><td>품질은 충분한데 비용이 크다</td><td>같은 모델에서 effort를 낮추고 평가 재실행. 그래도 크면 더 작은 모델</td></tr>
+        <tr><td>품질이 모자란다</td><td>effort를 올린다. <code>xhigh</code>·<code>max</code>로도 모자라면 상위 모델</td></tr>
+        <tr><td>긴 출력이 너무 늦게 끝난다 (모델 유지)</td><td>fast mode (지원 Opus 모델, 비용 증가 감수)</td></tr>
+        <tr><td>응답 시작이 늦고 예산이 빠듯하다</td><td>작은 모델 + 낮은 effort (fast mode는 TTFT 개선용이 아니다)</td></tr>
+      </tbody>
+    </table>
+    <p>effort 값은 <code>output_config.effort</code>에 <code>low</code>·<code>medium</code>·<code>high</code>·<code>xhigh</code>·<code>max</code> 중 하나로 넣는다. <code>adaptive</code>는 사고 모드이지 effort 값이 아니다. 기본값이 모델마다 다르다는 점이 특히 중요하다. Opus 5.5의 기본값은 <code>medium</code>이라, effort를 생략한 요청은 Opus 5(기본 <code>high</code>)보다 한 단계 낮게 실행된다. 그래서 Opus 5.5로 옮길 때는 effort를 명시하고, 이전 설정을 옮기지 말고 자체 평가로 effort 스윕을 하라고 권한다.</p>
+    <div class="code"><span class="c"># 장시간 자율 리팩터링 에이전트 (Opus 5.5)</span>
+client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=64000,                  <span class="c"># xhigh·max에서는 64k부터 조정</span>
+    output_config={"effort": "xhigh"}, <span class="c"># 스윕으로 확인한 수준</span>
+    messages=history,                  <span class="c"># temperature·top_p·top_k는 넣지 않는다</span>
+)</div>
+    <div class="note"><span class="lbl">CertSafari와 다른 점</span><p>CertSafari는 여러 시간짜리 자율 리팩터링 에이전트의 정답을 'Claude Opus 4.8 + <code>xhigh</code>'로 둔다. Opus 4.7·4.8에 대해 "코딩·에이전트는 <code>xhigh</code>로 시작"이라는 공식 지침은 실제로 있다. 다만 현재 모델 선택 매트릭스는 이런 작업에 Claude Opus 5.5를 권하고, Opus 5.5는 정해진 시작 수준 대신 effort 스윕을 권한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>fast mode의 자리</h3><span class="unit-en">Where fast mode fits</span></div>
+    <p>fast mode(<code>speed: "fast"</code>)는 같은 모델을 더 빠른 추론 구성으로 돌려 초당 출력 토큰을 최대 약 2.5배 높인다. 능력은 그대로이고 가격은 프리미엄이다(Opus 5.5 기준 $8 / $40, 표준의 두 배). 이득은 출력 속도에 있지 첫 토큰까지의 시간에 있지 않다.</p>
+    <table class="t">
+      <thead><tr><th style="width:20%">레버</th><th style="width:28%">바뀌는 것</th><th style="width:22%">비용</th><th>맞는 문제</th></tr></thead>
+      <tbody>
+        <tr><td>effort 낮추기</td><td>쓰는 토큰 양 (사고·텍스트·도구 호출 모두)</td><td>감소</td><td>품질 여유가 있는데 비싸다</td></tr>
+        <tr><td>fast mode</td><td>출력 속도 (같은 토큰을 더 빨리)</td><td>증가</td><td>모델을 바꾸지 않고 긴 출력을 빨리 끝내야 한다</td></tr>
+        <tr><td>더 작은 모델</td><td>능력, 지연, 단가 전부</td><td>감소</td><td>단순 작업, 대량, 엄격한 지연</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">fast mode 판별 기준</span><ul>
+      <li>지원 모델: Claude Opus 5.5(정식, 베타 헤더 불필요), Claude Opus 5·Opus 4.8(연구 프리뷰, <code>fast-mode-2026-02-01</code> 헤더). Sonnet·Haiku에 요청하면 오류</li>
+      <li>Batch API와 Priority Tier에서는 쓸 수 없다. 별도의 속도 제한이 있고, 적용 여부는 <code>usage.speed</code>로 확인한다</li>
+      <li>"비용이 문제"인 문항에서 fast mode는 거의 항상 오답이다. 더 비싸기 때문이다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>모델별 thinking 설정 표</h3><span class="unit-en">Thinking behavior, model by model</span></div>
+    <p>같은 요청이라도 모델에 따라 사고가 켜지기도, 꺼지기도, 400으로 거부되기도 한다. 공식 사고 문서의 표에서 시험에 나오는 모델만 추리면 다음과 같다. "high 이하"는 effort가 <code>low</code>·<code>medium</code>·<code>high</code>일 때만 받고 <code>xhigh</code>·<code>max</code>에서는 400이라는 뜻이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:16%">모델</th><th style="width:14%">필드 없음</th><th style="width:13%"><code>adaptive</code></th><th style="width:16%"><code>enabled</code> + <code>budget_tokens</code></th><th style="width:20%"><code>between_tools</code></th><th><code>disabled</code></th></tr></thead>
+      <tbody>
+        <tr><td>Opus 5.5, Fable 5.1</td><td>적응형</td><td>적응형</td><td>400</td><td>400</td><td>400 (끌 수 없음)</td></tr>
+        <tr><td>Sonnet 5.5</td><td>적응형</td><td>적응형</td><td>400</td><td>사전 사고 꺼짐 (high 이하)</td><td>400</td></tr>
+        <tr><td>Haiku 5.5</td><td>적응형</td><td>적응형</td><td>400</td><td>400</td><td>사고 꺼짐 (high 이하)</td></tr>
+        <tr><td>Opus 5</td><td>적응형</td><td>적응형</td><td>400</td><td>400</td><td>사고 꺼짐 (high 이하)</td></tr>
+        <tr><td>Sonnet 5</td><td>적응형</td><td>적응형</td><td>400</td><td>400</td><td>사고 꺼짐</td></tr>
+        <tr><td>Opus 4.8, Opus 4.7</td><td>사고 꺼짐</td><td>적응형</td><td>400</td><td>400</td><td>사고 꺼짐</td></tr>
+        <tr><td>Opus 4.6, Sonnet 4.6</td><td>사고 꺼짐</td><td>적응형</td><td>확장 사고 (deprecated)</td><td>400</td><td>사고 꺼짐</td></tr>
+        <tr><td>Haiku 4.5 (Claude 4.5 이전)</td><td>사고 꺼짐</td><td>400</td><td>확장 사고</td><td>400</td><td>사고 꺼짐</td></tr>
+      </tbody>
+    </table>
+    <p>Sonnet 5.5의 <code>between_tools</code>는 사전(up-front) 사고만 끈다. 도구 호출 사이의 짧은 진행 상황 업데이트는 계속 사고 블록으로 돌아오고, 도구가 없으면 응답은 텍스트만 담는다. 이 설정은 다른 필드(<code>display</code>, <code>budget_tokens</code> 등)를 함께 받지 않는다.</p>
+    <div class="note tip"><span class="lbl">보내기 전에 확인하기</span><p>Models API의 <code>capabilities.thinking.types.disabled.supported</code>와 <code>capabilities.thinking.types.between_tools.supported</code>로 모델이 각 값을 받는지 미리 알 수 있다. 예를 들어 Sonnet 5.5는 <code>between_tools</code>가 <code>true</code>, <code>disabled</code>가 <code>false</code>다. 다만 <code>true</code>여도 effort 조건 같은 다른 이유로 거부될 수 있다.</p></div>
+    <div class="code"><span class="c"># GET /v1/models 응답에서 Sonnet 5.5 항목의 일부 (필드 경로 예시)</span>
+"capabilities": {
+  "thinking": {
+    "types": {
+      "between_tools": { "supported": true },
+      "disabled":      { "supported": false }
+    }
+  }
+}</div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>400으로 드러나는 변경</h3><span class="unit-en">Request settings newer models reject</span></div>
+    <p>시끄러운 변경은 오히려 고치기 쉽다. 요청이 바로 400 <code>invalid_request_error</code>로 실패하고, 메시지가 대개 대안을 알려 준다.</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">거부되는 설정</th><th style="width:28%">거부하는 모델</th><th>대신 쓸 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>thinking: {"type": "enabled", "budget_tokens": N}</code></td><td>Opus 4.7 이후, Claude 5 계열 전부</td><td><code>adaptive</code>(또는 생략) + <code>output_config.effort</code></td></tr>
+        <tr><td><code>thinking: {"type": "disabled"}</code></td><td>Opus 5.5, Fable 5.1, Sonnet 5.5</td><td>Opus 5.5·Fable 5.1은 effort를 낮춘다. Sonnet 5.5는 <code>between_tools</code></td></tr>
+        <tr><td><code>disabled</code> 또는 <code>between_tools</code> + <code>xhigh</code>·<code>max</code></td><td>Haiku 5.5·Opus 5 (<code>disabled</code>), Sonnet 5.5 (<code>between_tools</code>)</td><td>effort를 <code>high</code> 이하로 낮추거나 적응형 사고를 쓴다</td></tr>
+        <tr><td>기본값이 아닌 <code>temperature</code>·<code>top_p</code>·<code>top_k</code></td><td>Opus 4.7 이후, Claude 5 계열 (API <code>2026-10-21</code>부터는 모든 모델에서 어떤 값이든)</td><td>프롬프트로 출력 성향 조정</td></tr>
+        <tr><td>강제 도구 선택 (<code>tool_choice</code> <code>any</code>·<code>tool</code>)</td><td>Opus 5.5, Sonnet 5.5, Fable 5.1</td><td><code>auto</code> + strict tool use 또는 구조화 출력</td></tr>
+        <tr><td>마지막 assistant 턴 미리 채우기(prefill)</td><td>Claude 4.6 이후 모델</td><td>구조화 출력, 시스템 프롬프트 지시</td></tr>
+      </tbody>
+    </table>
+    <div class="code"><span class="c"># 이전: Opus 4.6에서 쓰던 수동 예산 (Opus 5.5에서 400)</span>
+thinking={"type": "enabled", "budget_tokens": 10000}
+
+<span class="c"># 이후: Opus 5.5</span>
+<span class="c"># thinking 필드는 생략하거나 {"type": "adaptive"}</span>
+output_config={"effort": "high"}       <span class="c"># 깊이는 effort로</span>
+max_tokens=32000                       <span class="c"># 사고 + 답변을 담을 여유</span></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>오류 없이 코드를 깨는 변경</h3><span class="unit-en">Silent behavior changes after a model switch</span></div>
+    <p>더 위험한 것은 200이 돌아오는데 동작이 달라지는 변경이다. 모델 ID 한 줄만 바꿨는데 화면이 비거나 비용이 뛰면 다음을 의심한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">변화</th><th>예와 대응</th></tr></thead>
+      <tbody>
+        <tr><td>사고가 조용히 켜진다</td><td>thinking 필드가 없는 요청이 Sonnet 4.6·Opus 4.8에서는 사고 없이 돌았지만, Sonnet 5.5·Opus 5.5에서는 적응형 사고로 돈다. 사고 토큰은 출력으로 과금되고 <code>max_tokens</code>에 포함되므로 상한과 비용을 다시 잡는다</td></tr>
+        <tr><td>응답이 thinking 블록으로 시작한다</td><td><code>content[0].text</code>나 "첫 <code>content_block_start</code>는 텍스트"라는 가정이 깨진다. 블록은 <code>type</code>으로 고른다</td></tr>
+        <tr><td>사고 텍스트가 비어 온다</td><td>Claude 5 계열과 Opus 4.7·4.8의 <code>display</code> 기본값은 <code>"omitted"</code>. 사고를 보여 주던 UI는 긴 멈춤처럼 보이므로 <code>"summarized"</code>를 명시한다</td></tr>
+        <tr><td>기본 effort가 바뀐다</td><td>Opus 5.5는 <code>medium</code>(Opus 5는 <code>high</code>). effort를 생략한 요청은 한 단계 낮게 돈다</td></tr>
+        <tr><td>이전 사고 블록이 빠진다</td><td>대화 중 모델을 바꾸면, 새 모델이 읽을 수 없는 사고 블록은 오류 없이, 과금 없이 제거된다. 요청은 200으로 성공한다</td></tr>
+        <tr><td>토큰 수와 캐시 최소 길이가 바뀐다</td><td>Opus 4.7 이후 토크나이저는 약 30% 더 많은 토큰을 만든다. 캐시 최소 길이도 달라진다(Opus 4.8은 1,024, Opus 5.5·Sonnet 5.5는 512)</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">위치로 읽는 핸들러</div><p><code>reply = response.content[0].text</code>. Opus 5.5에서는 첫 블록이 빈 <code>thinking</code> 블록이라 JavaScript에서는 <code>undefined</code>, 화면에는 빈 답이 뜬다. <code>stop_reason</code>은 <code>end_turn</code>이라 로그상 정상이다.</p></div>
+      <div class="pane good"><div class="bh">유형으로 읽는 핸들러</div><p><code>type == "text"</code>인 블록만 모아 텍스트를 만든다. 도구 사용 루프에서는 사고 블록을 걸러 내지 말고 assistant 메시지를 받은 그대로 돌려보낸다(빈 사고 블록 포함).</p></div>
+    </div>
+    <div class="code"><span class="c">// 비스트리밍: 텍스트 블록만 모은다</span>
+const reply = response.content
+  .filter((b) =&gt; b.type === "text")
+  .map((b) =&gt; b.text)
+  .join("");
+
+<span class="c">// 스트리밍: 블록 유형으로 분기한다</span>
+if (event.type === "content_block_start") {
+  kind[event.index] = event.content_block.type;  <span class="c">// "thinking", "text" ...</span>
+}
+if (event.type === "content_block_delta" &amp;&amp;
+    kind[event.index] === "text") {
+  render(event.delta.text);
+}</div>
+    <div class="axis"><span class="lbl">마이그레이션 점검 순서</span><ul>
+      <li>요청: 거부되는 설정(<code>budget_tokens</code>, <code>disabled</code>, 샘플링 파라미터, 강제 <code>tool_choice</code>, prefill)을 걷어 내고 effort를 명시한다</li>
+      <li>응답: 블록을 <code>type</code>으로 읽고, 스트림 핸들러도 블록 유형으로 분기하며, <code>max_tokens</code>를 사고까지 담게 늘린다</li>
+      <li>비용·지연: 선택한 effort에서 비용과 지연을 다시 측정하고, 토큰 카운트도 새 모델 ID로 다시 잰다</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>도구 호출이 필요한 작업이라 작은 모델은 쓸 수 없다.</div><div class="f"><span class="k">사실</span>현재 모델은 모두 도구 사용과 비전을 지원한다. 기능 요구가 아니라 품질·속도·가격으로 고른다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>비용이 너무 크면 먼저 더 싼 모델로 바꾼다.</div><div class="f"><span class="k">사실</span>품질에 여유가 있다면 같은 모델에서 effort부터 낮춘다. 공식 가이드는 effort 조정이 모델 교체보다 나은 레버인 경우가 많다고 말한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>fast mode는 가벼운 모델로 바꿔 빠르고 싸게 만든다.</div><div class="f"><span class="k">사실</span>같은 모델에 더 빠른 추론 구성이다. 출력 속도만 오르고 가격은 프리미엄이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>Sonnet 5.5에서 <code>between_tools</code>는 어떤 effort에서도 쓸 수 있다.</div><div class="f"><span class="k">사실</span><code>low</code>·<code>medium</code>·<code>high</code>에서만 받고 <code>xhigh</code>·<code>max</code>에서는 400이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>대화 중 모델을 바꾸면 이전 사고 블록 때문에 오류가 난다.</div><div class="f"><span class="k">사실</span>새 모델이 읽을 수 없는 블록은 오류 없이 제거되고 과금되지 않는다. 요청은 200으로 성공한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>모델 ID만 바꾸면 응답 구조는 그대로다.</div><div class="f"><span class="k">사실</span>기본 사고 동작이 바뀌면 응답이 thinking 블록으로 시작한다. 위치로 읽는 코드는 오류 없이 빈 답을 낸다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/models/overview" target="_blank" rel="noopener">Models overview</a> · <a href="https://platform.claude.com/docs/en/about-claude/models/choosing-a-model" target="_blank" rel="noopener">Choosing the right model</a> · <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Pricing</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/effort" target="_blank" rel="noopener">Effort</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/fast-mode" target="_blank" rel="noopener">Fast mode</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/thinking" target="_blank" rel="noopener">Thinking</a> · <a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">Claude API errors</a> · <a href="https://platform.claude.com/docs/en/models/opus-5-5/migration-guide" target="_blank" rel="noopener">Claude Opus 5.5 migration guide</a> · <a href="https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide" target="_blank" rel="noopener">Claude Sonnet 5.5 migration guide</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인5 모델 선택·최적화</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

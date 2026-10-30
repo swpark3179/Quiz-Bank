@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 1 · 서브도메인 1.1</span></div>
+    <h1>워크플로·에이전트·오케스트레이터 계층 고르기</h1>
+    <p class="sub">제어 흐름의 주인 · 자율성 사다리 · 워크플로 패턴 · 오케스트레이터-서브에이전트 · 서브에이전트의 이득과 비용</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/workflows-vs-agents-choosing-an-agentic-architecture" target="_blank" rel="noopener">CertSafari 1.1</a> &nbsp;|&nbsp; 출제 도메인: 도메인 1 · Agents and Workflows (14.7%) · 서브도메인 1.1 Agent Architecture</p>
+    <div class="secrow">
+      <span class="s on">1.1 에이전트 아키텍처</span><span class="s">1.2 Agent SDK·Managed Agents</span><span class="s">1.3 에이전트 패턴·메모리</span>
+    </div>
+  </header>
+
+  <p class="lede">'에이전트로 만들까, 워크플로로 만들까'는 기술 취향 문제가 아니라 <strong>다음 단계를 누가 정하느냐</strong>의 문제다. 코드가 경로를 정해 두면 워크플로, 모델이 실행 중에 스스로 다음 행동과 도구를 고르면 에이전트다. 시험은 이 구분을 바탕으로, 요구사항을 만족하는 <strong>가장 단순한 구조</strong>를 고를 수 있는지 묻는다. 자율성은 공짜가 아니다. 지연·비용·예측 불가능성이라는 값을 치르므로, 그 값을 치를 이유가 있을 때만 한 칸씩 올라간다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>워크플로(미리 정한 코드 경로)와 에이전트(모델이 과정을 스스로 지휘)를 제어 흐름 기준으로 구분한다</li>
+      <li>단일 호출 → 워크플로 → 단일 에이전트 → 멀티에이전트 순서로, 요구사항을 채우는 가장 낮은 단계를 고른다</li>
+      <li>라우팅·프롬프트 체이닝·병렬화(섹셔닝·투표)·오케스트레이터-워커를 시나리오에서 알아본다</li>
+      <li>오케스트레이터-서브에이전트 계층에서 일이 어떤 순서로 흐르고, 부모가 무엇을 돌려받는지 설명한다</li>
+      <li>서브에이전트가 결과를 개선하는 세 가지 경우와 토큰·시간 비용을 따져 도입 여부를 판단한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>제어 흐름을 누가 쥐는가</h3><span class="unit-en">Workflows vs agents</span></div>
+    <p>Anthropic은 둘을 이렇게 나눈다. <strong>워크플로</strong>는 LLM과 도구가 <em>미리 정의된 코드 경로</em>를 따라 움직이는 시스템이고, <strong>에이전트</strong>는 LLM이 <em>자신의 과정과 도구 사용을 동적으로 지휘</em>하며 작업 방식을 스스로 통제하는 시스템이다. 둘 다 LLM을 쓰고 둘 다 도구를 부를 수 있으니, 'LLM이 들어 있느냐', '도구를 쓰느냐'는 구분 기준이 아니다.</p>
+    <table class="t">
+      <thead><tr><th style="width:46%">상황</th><th style="width:15%">분류</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>LLM이 문의를 '결제/배송/기타'로 분류하고, 코드의 <code>if</code>문이 분류값에 따라 담당 프롬프트를 고른다</td><td>워크플로</td><td>모델은 값 하나를 낼 뿐이고, 갈 수 있는 길은 코드가 모두 정해 두었다</td></tr>
+        <tr><td>LLM이 초안 → 검토 → 요약을 차례로 수행하는데, 순서는 코드에 고정되어 있다</td><td>워크플로</td><td>단계 수와 순서를 실행 전에 알 수 있다</td></tr>
+        <tr><td>목표와 도구만 받은 Claude가 결과를 보며 다음에 무엇을 조회할지 매 바퀴 정한다</td><td>에이전트</td><td>다음 단계가 실행 중의 발견에 따라 달라지고, 그 결정을 모델이 내린다</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="lbl">판별 질문 하나</span><p>"실행 전에 이 시스템이 거칠 수 있는 경로를 코드만 보고 전부 나열할 수 있는가?" 할 수 있으면 워크플로다. 모델 출력이 분기를 고르는 데 쓰이더라도, 분기 자체가 코드에 있으면 마찬가지다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>자율성 사다리: 가장 낮은 칸에서 시작한다</h3><span class="unit-en">Climb only when the evidence says so</span></div>
+    <p>공식 가이드의 출발점은 "가능한 가장 단순한 해법을 찾고, 필요할 때만 복잡성을 더하라"이다. 검색과 예시를 곁들인 단일 LLM 호출로 충분한 경우가 많고, 그러면 에이전트형 시스템을 아예 만들지 않는 것이 정답이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:20%">단계</th><th style="width:28%">단계를 정하는 주체</th><th>이 단계로 충분한 때</th></tr></thead>
+      <tbody>
+        <tr><td>① 단일 호출</td><td>없음 (한 번 묻고 답)</td><td>검색 결과·예시를 넣은 프롬프트 하나로 품질 목표를 채울 때</td></tr>
+        <tr><td>② 워크플로</td><td>코드</td><td>하위 작업이 고정되어 있고 미리 알 수 있을 때. 예측 가능성과 일관성이 중요할 때</td></tr>
+        <tr><td>③ 단일 에이전트</td><td>모델</td><td>필요한 단계 수를 미리 알 수 없는 개방형 문제이고, 모델의 판단을 어느 정도 믿을 수 있을 때</td></tr>
+        <tr><td>④ 멀티에이전트</td><td>오케스트레이터 모델</td><td>단일 에이전트로는 컨텍스트·병렬성·전문화의 한계가 실제로 확인될 때 (→ 05)</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>현재 파이프라인이 품질 목표를 이미 채운다면 에이전트로 바꾸는 보기는 오답이다. 지연·비용이 늘고 예측 가능성만 잃는다</li>
+      <li>'더 복잡한 문제 = 에이전트'가 아니다. 단계가 고정되어 있으면 아무리 길어도 워크플로가 맞다</li>
+      <li>에이전트를 고를 때는 샌드박스 테스트와 가드레일, 반복 상한 같은 정지 조건을 함께 고려한다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>워크플로 패턴 한눈에</h3><span class="unit-en">Routing, chaining, parallelization, orchestrator-workers</span></div>
+    <p>시나리오를 읽고 어떤 패턴인지 이름을 붙이는 문항이 자주 나온다. 핵심은 <strong>하위 작업이 언제 정해지는가</strong>와 <strong>같은 입력을 몇 번 처리하는가</strong>다. 패턴별 세부 설계는 1.3에서 다룬다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">패턴</th><th style="width:38%">구조</th><th>시나리오 신호</th></tr></thead>
+      <tbody>
+        <tr><td>프롬프트 체이닝</td><td>고정된 단계를 순서대로. 단계 사이에 코드 검사(게이트)를 둘 수 있다</td><td>"초안 작성 → 규정 검사 → 번역"처럼 순서가 늘 같다</td></tr>
+        <tr><td>라우팅</td><td>입력을 분류한 뒤 범주별 전용 경로로 보낸다</td><td>범주가 미리 정해진 몇 개이고, 범주마다 처리 방식이 다르다</td></tr>
+        <tr><td>병렬화 · 섹셔닝</td><td>서로 독립인 하위 작업을 동시에 돌려 결과를 합친다</td><td>같은 입력을 서로 <em>다른 관점</em>(보안·성능·스타일)으로 동시에 검토</td></tr>
+        <tr><td>병렬화 · 투표</td><td><em>같은 작업</em>을 여러 번 돌려 결과를 비교·집계한다</td><td>"세 번 판정해 두 번 이상 위반이면 차단"</td></tr>
+        <tr><td>오케스트레이터-워커</td><td>중앙 LLM이 <strong>실행 중에</strong> 하위 작업을 정해 워커에 맡기고 결과를 종합한다</td><td>어떤 파일·자료를 봐야 할지 입력을 보기 전에는 알 수 없다</td></tr>
+        <tr><td>평가자-최적화자</td><td>한 LLM이 만들고 다른 LLM이 평가해 피드백하는 루프</td><td>평가 기준이 분명하고, 피드백으로 측정 가능하게 나아진다</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">헷갈리기 쉬운 쌍 ①</div><p><strong>섹셔닝 vs 오케스트레이터-워커.</strong> 둘 다 여러 갈래를 동시에 돌리지만, 섹셔닝은 갈래가 <em>미리 고정</em>되어 있고 오케스트레이터-워커는 오케스트레이터가 입력을 보고 갈래를 <em>그때 정한다</em>. 오케스트레이터-워커를 '모델이 하나 더 붙은 병렬화'로 보면 틀린다.</p></div>
+      <div class="pane good"><div class="bh">헷갈리기 쉬운 쌍 ②</div><p><strong>섹셔닝 vs 투표.</strong> 섹셔닝은 서로 다른 일을 나눠 맡고, 투표는 같은 일을 반복해 신뢰도를 높인다. 관점이 서로 다른 검토 세 개를 동시에 돌리면 섹셔닝이다.</p></div>
+    </div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>오케스트레이터와 서브에이전트</h3><span class="unit-en">Manager / supervisor hierarchies</span></div>
+    <p>오케스트레이터-워커를 에이전트 수준으로 올린 것이 관리자(감독자) 계층이다. 리드 에이전트가 계획을 세우고, 하위 작업을 서브에이전트에 나눠 주고, 돌아온 결과를 종합한다. Anthropic의 리서치 기능이 이 구조다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① PLAN</div><div class="ft">리드가 전략을 세우고 계획을 메모리에 저장</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② DELEGATE</div><div class="ft">하위 질문별 서브에이전트 생성</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ EXPLORE</div><div class="ft">서브에이전트가 각자 검색·평가 후 보고</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ SYNTHESIZE</div><div class="ft">리드가 종합하고 추가 조사 여부 결정 (필요하면 ②로)</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ CITE</div><div class="ft">인용 담당 에이전트가 출처를 붙임</div></div>
+    </div>
+    <p>계획을 메모리에 저장하는 이유는 컨텍스트가 길어지면 앞부분이 잘릴 수 있어서다. 인용은 종합이 끝난 뒤 별도 단계로 처리된다.</p>
+    <p>Claude Agent SDK에서는 <code>agents</code> 옵션으로 서브에이전트를 선언하고, Claude가 <code>Agent</code> 도구로 호출한다. 서브에이전트마다 쓸 수 있는 도구를 <code>tools</code>로 좁힐 수 있다.</p>
+    <div class="code">from claude_agent_sdk import query, ClaudeAgentOptions, AgentDefinition
+
+options = ClaudeAgentOptions(
+    allowed_tools=["Read", "Grep", "Glob", "WebSearch", "Agent"],  <span class="c"># 자동 승인 목록일 뿐, 제한이 아니다</span>
+    agents={
+        "market-researcher": AgentDefinition(
+            description="Use for one market-sizing question. Returns figures with sources.",
+            prompt="You research a single market question and cite every figure.",
+            tools=["WebSearch", "WebFetch"],   <span class="c"># 이 서브에이전트의 도구는 이것뿐</span>
+            model="sonnet",
+        ),
+        "report-reader": AgentDefinition(
+            description="Use to summarize internal reports under ./reports. Read-only.",
+            prompt="Summarize the requested report. Never modify files.",
+            tools=["Read", "Grep", "Glob"],     <span class="c"># 읽기 전용</span>
+        ),
+    },
+)</div>
+    <table class="t">
+      <thead><tr><th style="width:24%">필드·옵션</th><th style="width:36%">역할</th><th>헷갈리는 점</th></tr></thead>
+      <tbody>
+        <tr><td><code>description</code></td><td>Claude가 <strong>언제</strong> 이 서브에이전트에 맡길지 판단하는 근거</td><td>모호하게 쓰면 위임이 일어나지 않는다</td></tr>
+        <tr><td><code>prompt</code></td><td>서브에이전트의 시스템 프롬프트(역할·행동)</td><td>위임 여부가 아니라 실행 중 행동을 정한다</td></tr>
+        <tr><td><code>tools</code></td><td>서브에이전트가 쓸 수 있는 도구 목록. 빠진 도구는 세션에 아예 없다</td><td>생략하면 서브에이전트용 도구를 모두 물려받는다</td></tr>
+        <tr><td><code>allowedTools</code> (query 옵션)</td><td>권한 확인 없이 실행할 도구 목록</td><td>목록에 없는 도구를 <strong>막지 않는다</strong>. 제거는 <code>disallowedTools</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">부모가 돌려받는 것</span><p>서브에이전트는 새 컨텍스트에서 시작하고, 중간의 도구 호출과 결과는 서브에이전트 안에 남는다. 부모에게 돌아오는 것은 <strong>최종 메시지 하나</strong>다. 그래서 오케스트레이터는 서브에이전트가 어떤 파일을 몇 번 읽었는지 볼 수 없다. 서브에이전트에게 필요한 경로·오류 메시지·결정 사항은 <code>Agent</code> 도구의 프롬프트에 직접 담아 넘겨야 한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>서브에이전트가 이득인 경우와 그 비용</h3><span class="unit-en">When subagents help, and what they cost</span></div>
+    <p>멀티에이전트가 결과를 개선하는 경우는 크게 셋이다. 이 셋에 해당하지 않으면 조정 비용이 이득보다 큰 경우가 많다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">상황</th><th style="width:38%">에이전트 하나로 하면 생기는 문제</th><th>서브에이전트가 주는 것</th></tr></thead>
+      <tbody>
+        <tr><td>대량의 중간 자료</td><td>검색 결과·파일 내용이 메인 컨텍스트를 채워 추론이 흐려진다</td><td><strong>컨텍스트 격리</strong>: 많이 읽고 짧은 요약만 돌려준다</td></tr>
+        <tr><td>서로 독립인 조사 갈래</td><td>갈래를 하나씩 차례로 조사해 범위가 좁아진다</td><td><strong>병렬 탐색</strong>: 더 넓은 탐색 공간을 동시에 훑는다</td></tr>
+        <tr><td>도구가 너무 많음</td><td>도메인이 섞인 도구 수십 개 사이에서 도구 선택이 흔들린다</td><td><strong>전문화</strong>: 역할별로 좁힌 도구와 맞춤 프롬프트</td></tr>
+      </tbody>
+    </table>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">토큰 비용</div><p>Anthropic 리서치 시스템 기준으로 에이전트는 일반 채팅의 약 4배, 멀티에이전트는 약 15배 토큰을 쓴다. 같은 작업을 단일 에이전트와 비교하면 보통 3~10배다. 그래서 결과의 가치가 그 비용을 정당화하는 작업에만 쓴다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">걸리는 시간</div><p>서브에이전트가 동시에 돈다고 전체가 빨라지는 것은 아니다. 총 연산량이 크게 늘어 병렬 시스템이 단일 에이전트보다 <strong>오래 걸리는</strong> 경우가 많다. 병렬화의 주된 이득은 속도가 아니라 탐색의 폭과 철저함이다.</p></div>
+    </div>
+    <div class="axis"><span class="lbl">나누는 기준</span><ul>
+      <li>일을 <strong>필요한 컨텍스트</strong> 기준으로 나눈다. 서로 독립인 조사 갈래, 인터페이스가 깔끔한 구성 요소, 결과만 보면 되는 검증이 좋은 경계다</li>
+      <li>'기획 → 구현 → 테스트 → 리뷰'처럼 같은 일의 순차 단계를 역할별 에이전트로 쪼개면, 넘길 때마다 맥락이 빠져 품질이 떨어진다</li>
+      <li>모든 에이전트가 같은 맥락을 공유해야 하거나 서로 의존이 많은 작업(대부분의 코딩 작업)은 멀티에이전트에 맞지 않는다</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>LLM이 분류 결과를 내서 분기를 고르면 에이전트다.</div><div class="f"><span class="k">사실</span>갈 수 있는 경로를 코드가 모두 정해 두었다면 워크플로(라우팅)다. 에이전트는 모델이 과정 자체를 지휘한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>에이전트는 워크플로의 상위 호환이니 바꾸면 나아진다.</div><div class="f"><span class="k">사실</span>잘 정의된 작업에는 워크플로나 단일 호출이 더 예측 가능하고 싸다. 기존 구조가 목표를 채우면 바꿀 이유가 없다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>오케스트레이터는 서브에이전트가 한 일을 모두 본다.</div><div class="f"><span class="k">사실</span>부모는 최종 메시지만 받는다. 중간 도구 호출과 결과는 서브에이전트 컨텍스트에 남는다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>서브에이전트를 병렬로 돌리면 전체 작업이 빨리 끝난다.</div><div class="f"><span class="k">사실</span>총 연산량이 늘어 오히려 오래 걸리는 경우가 많다. 얻는 것은 속도보다 탐색 범위다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>allowedTools</code>에 넣지 않은 도구는 서브에이전트가 쓸 수 없다.</div><div class="f"><span class="k">사실</span><code>allowedTools</code>는 자동 승인 목록이다. 서브에이전트의 도구를 좁히는 것은 <code>tools</code>, 도구를 빼는 것은 <code>disallowedTools</code>다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a> · <a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">How we built our multi-agent research system</a> · <a href="https://claude.com/blog/building-multi-agent-systems-when-and-how-to-use-them" target="_blank" rel="noopener">Building multi-agent systems: when and how to use them</a> · <a href="https://code.claude.com/docs/en/agent-sdk/subagents" target="_blank" rel="noopener">Subagents in the SDK</a> · <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop" target="_blank" rel="noopener">How the agent loop works (Agent SDK)</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인1 에이전트·워크플로</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

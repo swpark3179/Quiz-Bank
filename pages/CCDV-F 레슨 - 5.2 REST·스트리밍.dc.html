@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 5 · 서브도메인 5.2</span></div>
+    <h1>REST 기초와 SSE 스트리밍</h1>
+    <p class="sub">엔드포인트와 기본 URL · 원시 호출의 필수 헤더 · SDK가 대신 해 주는 것 · 오류 형태와 request ID · SSE 이벤트 순서 · 델타 조립과 스트림 중간 오류</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-api-rest-fundamentals-endpoints-headers-sdks-and-errors" target="_blank" rel="noopener">CertSafari 5.2 (1부)</a> · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/streaming-claude-responses-over-server-sent-events" target="_blank" rel="noopener">(2부)</a> &nbsp;|&nbsp; 출제 도메인: 도메인 5 · Model Selection and Optimization (16.8%) · 서브도메인 5.2 Technical Fundamentals</p>
+    <div class="secrow">
+      <span class="s">5.1 LLM 기초·사고·effort</span><span class="s on">5.2 REST·스트리밍</span><span class="s">5.3 모델 선택·사고 모드</span><span class="s">5.4 토큰 비용·캐싱</span>
+    </div>
+  </header>
+
+  <p class="lede">Claude API의 모든 기능은 결국 <code>https://api.anthropic.com</code> 아래 경로로 보내는 REST 호출이고, SDK는 그 요청을 만들고 응답을 해석해 주는 계층이다. 그래서 SDK가 무엇을 대신해 주고 무엇은 여전히 개발자 몫인지 알아야 장애를 빨리 잡는다. 스트리밍도 새로운 프로토콜이 아니라 <strong>같은 POST 요청에 <code>stream: true</code>를 넣고, 응답을 서버 전송 이벤트(SSE)로 받는 것</strong>이다. 시험은 필수 헤더, 재시도 중첩, request ID, 이벤트 순서와 델타 조립, 200 뒤에 오는 오류처럼 '돌아가긴 하는데 틀린' 코드를 고치는 판단을 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>주요 엔드포인트의 경로와 용도(생성, 토큰 카운팅, 배치, 모델 조회)를 구분한다</li>
+      <li>원시 HTTP 호출의 필수 헤더와 조건부 헤더(워크스페이스, 베타)를 정확히 고른다</li>
+      <li>SDK의 기본 동작(환경 변수, 자동 재시도, 타임아웃, 스트리밍 헬퍼)을 알고 재시도 중첩 같은 실수를 피한다</li>
+      <li>오류 응답의 공통 형태와 <code>request_id</code>로 실패한 요청을 추적한다</li>
+      <li>SSE 이벤트 순서와 델타 유형을 알고, 도구 입력 조각·누적 usage·스트림 중간 오류·모르는 이벤트를 올바르게 처리한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>하나의 기본 URL, 작업마다 다른 경로</h3><span class="unit-en">Endpoints under api.anthropic.com</span></div>
+    <p>작업마다 자기 경로와 HTTP 메서드가 있다. 시험에 자주 나오는 것은 생성과 토큰 카운팅, 배치의 구분이다.</p>
+    <table class="t">
+      <thead><tr><th style="width:36%">엔드포인트</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td><code>POST /v1/messages</code></td><td>메시지 생성. 스트리밍도 같은 경로에 <code>stream: true</code></td></tr>
+        <tr><td><code>POST /v1/messages/count_tokens</code></td><td>생성 없이 입력 토큰 수만 센다. 무료, 별도 속도 제한</td></tr>
+        <tr><td><code>POST /v1/messages/batches</code></td><td>대량 요청을 비동기로 처리, 50% 할인</td></tr>
+        <tr><td><code>GET /v1/models</code></td><td>사용 가능한 모델과 <code>max_input_tokens</code>, <code>max_tokens</code>, <code>capabilities</code> 조회</td></tr>
+        <tr><td><code>POST /v1/files</code>, <code>GET /v1/files</code></td><td>여러 호출에서 재사용할 파일 업로드·관리</td></tr>
+      </tbody>
+    </table>
+    <p>목록 엔드포인트는 페이지로 나뉜다. 새 엔드포인트 대부분은 <code>page</code>·<code>next_page</code> 커서를 쓰고, Message Batches API와 Models API는 <code>after_id</code>·<code>before_id</code>와 <code>has_more</code>를 쓴다. SDK의 자동 페이지 반복자는 이 차이를 숨겨 준다.</p>
+    <div class="note"><span class="lbl">요청 크기 한도 (1st-party)</span><p>Messages·Token Counting 128MB, Message Batches 256MB, Files 500MB다. 넘으면 413 <code>request_too_large</code>가 온다. Bedrock(20MB)이나 Google Cloud(Google 관리, 30MB) 같은 파트너 플랫폼은 한도가 따로 있다. 이미지나 PDF가 많으면 토큰 한도보다 크기 한도에 먼저 닿을 수 있다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>원시 HTTP 호출에 필요한 헤더</h3><span class="unit-en">The headers a raw call must carry</span></div>
+    <p>SDK 없이 직접 호출하면 헤더를 모두 직접 챙겨야 한다. 필수는 세 가지이고, 나머지는 조건부다.</p>
+    <table class="t">
+      <thead><tr><th style="width:28%">헤더</th><th style="width:18%">필수 여부</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>Authorization: Bearer &lt;token&gt;</code> 또는 <code>x-api-key</code></td><td>필수 (둘 중 하나)</td><td>API 키나 워크로드 ID 페더레이션으로 받은 단기 토큰. <code>x-api-key</code>는 계속 지원되는 레거시 방식</td></tr>
+        <tr><td><code>anthropic-version</code></td><td>필수</td><td>날짜 형식의 API 버전. 빠뜨리기 가장 쉬운 헤더</td></tr>
+        <tr><td><code>content-type: application/json</code></td><td>필수</td><td>요청 본문은 JSON</td></tr>
+        <tr><td><code>anthropic-workspace-id</code></td><td>조건부</td><td>워크스페이스에 한정되지 않은 키(개인 키, 서비스 계정 키)에서 필수. 단일 워크스페이스 키는 생략하면 그 워크스페이스에서 실행</td></tr>
+        <tr><td><code>anthropic-beta</code></td><td>조건부</td><td>베타 기능을 쓸 때만 (예: 연구 프리뷰 모델의 fast mode)</td></tr>
+      </tbody>
+    </table>
+    <div class="code">curl https://api.anthropic.com/v1/messages \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "content-type: application/json" \
+  -d '{
+    "model": "claude-sonnet-5-5",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'</div>
+    <div class="note tip"><span class="lbl">API 버전</span><p>버전 정책은 같은 버전 안에서 기존 입력·출력 파라미터를 보존하되, 선택 입력 추가, 출력 값 추가, 스트리밍 이벤트 유형 같은 열거형 값 추가는 허용한다. 최신 버전 <code>2026-10-21</code>은 <code>temperature</code>·<code>top_p</code>·<code>top_k</code>를 제거해, 이 파라미터를 보내면 모든 모델에서 400이 난다. 공식 예제는 아직 <code>2023-06-01</code>을 쓰는 곳도 많으니, 버전을 올릴 때는 마이그레이션 문서를 확인한다.</p></div>
+    <div class="note"><span class="lbl">CertSafari와 다른 점</span><p>CertSafari는 인증 헤더로 <code>x-api-key</code>를, 워크스페이스 헤더의 조건으로 "키가 여러 워크스페이스에 걸쳐 있을 때"를 제시한다. 현재 API 개요는 <code>Authorization: Bearer</code>를 기본 인증 헤더로 두고 <code>x-api-key</code>를 레거시 대안으로 적으며, 워크스페이스 헤더는 "워크스페이스에 한정되지 않은 키"에서 필수라고 설명한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>SDK가 REST 위에 얹어 주는 것</h3><span class="unit-en">What the client SDKs add</span></div>
+    <p>공식 SDK는 인증·<code>anthropic-version</code>·<code>content-type</code> 헤더를 자동으로 붙이고, 응답을 타입이 있는 객체로 돌려주며, 일시적 실패를 재시도하고, 목록을 자동으로 넘겨 준다. Python SDK 기준 기본 동작은 다음과 같다.</p>
+    <table class="t">
+      <thead><tr><th style="width:26%">항목</th><th>기본 동작</th></tr></thead>
+      <tbody>
+        <tr><td>API 키</td><td>인자 없이 <code>Anthropic()</code>을 만들면 환경 변수 <code>ANTHROPIC_API_KEY</code>를 읽는다</td></tr>
+        <tr><td>워크스페이스</td><td>자동으로 정하지 못한다. 범위가 정해지지 않은 키면 <code>anthropic-workspace-id</code>를 직접 보낸다</td></tr>
+        <tr><td>재시도</td><td>연결 오류, 408, 409, 429, 5xx를 짧은 지수 백오프로 <strong>기본 2회</strong>. <code>retry-after</code>가 있으면 따른다</td></tr>
+        <tr><td>타임아웃</td><td>기본 10분. 10분을 넘을 것으로 보이는 비스트리밍 요청(큰 <code>max_tokens</code>)은 SDK가 거부하므로 스트리밍을 쓴다</td></tr>
+        <tr><td>request ID</td><td>응답 객체의 <code>_request_id</code> 속성 (Python·TypeScript)</td></tr>
+        <tr><td>오류</td><td>상태별 예외 클래스(<code>RateLimitError</code>, <code>InternalServerError</code> 등). 메시지 문자열을 비교하지 말고 예외 타입을 잡는다</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">재시도를 두 겹으로</div><p>SDK 호출을 다시 "5xx면 5번 재시도" 루프로 감싼다. SDK의 2회와 곱해져 작업 하나가 최대 18번까지 시도되고, 과부하 상황에서 백오프 대기가 겹쳐 오래 멈춘다.</p></div>
+      <div class="pane good"><div class="bh">재시도는 한 계층에서</div><p>SDK의 <code>max_retries</code>로 횟수를 정한다. 전역은 <code>Anthropic(max_retries=4)</code>, 요청별은 <code>client.with_options(max_retries=0)</code>. 직접 제어하고 싶다면 SDK 재시도를 0으로 끄고 한 곳에서만 처리한다.</p></div>
+    </div>
+    <div class="code">import anthropic
+
+client = anthropic.Anthropic(max_retries=4)   <span class="c"># ANTHROPIC_API_KEY 자동 사용</span>
+try:
+    msg = client.messages.create(
+        model="claude-sonnet-5-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": "Summarize ..."}],
+    )
+    print(msg._request_id)
+except anthropic.RateLimitError:
+    ...                                        <span class="c"># 재시도를 다 쓴 429</span>
+except anthropic.APIStatusError as e:
+    log(e.status_code, e.response)</div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>응답 쪽 계약: 오류 형태와 request ID</h3><span class="unit-en">Error shapes and request IDs</span></div>
+    <p>오류는 언제나 JSON이고, 최상위 <code>error</code> 객체에 <code>type</code>과 <code>message</code>가, 본문에 <code>request_id</code>가 있다. 엔드포인트마다 모양이 다르지 않으므로 상태 코드와 <code>error.type</code>으로 분기한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:12%">코드</th><th style="width:30%"><code>error.type</code></th><th>의미와 대응</th></tr></thead>
+      <tbody>
+        <tr><td>400</td><td><code>invalid_request_error</code></td><td>요청 형식·내용 문제. 재시도해도 같다. 직접 설정한 지출 한도 도달도 400</td></tr>
+        <tr><td>401 / 403</td><td><code>authentication_error</code> / <code>permission_error</code></td><td>키 문제 / 권한·워크스페이스 설정 문제</td></tr>
+        <tr><td>413</td><td><code>request_too_large</code></td><td>요청 크기 한도 초과</td></tr>
+        <tr><td>429</td><td><code>rate_limit_error</code></td><td>속도 제한(<code>retry-after</code> 있음) 또는 티어 지출 상한(<code>retry-after</code> 없음, 재시도해도 실패)</td></tr>
+        <tr><td>500 / 504</td><td><code>api_error</code> / <code>timeout_error</code></td><td>내부 오류는 백오프 재시도. 긴 요청은 스트리밍이나 배치로</td></tr>
+        <tr><td>529</td><td><code>overloaded_error</code></td><td>전체 트래픽 과부하. 백오프 재시도</td></tr>
+      </tbody>
+    </table>
+    <div class="code">{
+  "type": "error",
+  "error": {
+    "type": "not_found_error",
+    "message": "The requested resource could not be found."
+  },
+  "request_id": "req_011CSHoEeqs5C35K2UUqR7Fy"   <span class="c"># = request-id 헤더</span>
+}</div>
+    <div class="note best"><span class="lbl">지원 문의에는 request_id</span><p>모든 응답에는 <code>request-id</code> 헤더가 붙고, 같은 값이 오류 본문의 <code>request_id</code>에 들어간다. 특정 요청을 문의할 때는 이 값을 넣는다. <code>error.type</code>은 범주일 뿐 요청을 가리키지 못하고, <code>anthropic-organization-id</code>는 조직을 가리킬 뿐이다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>스트리밍은 같은 POST, 응답만 SSE</h3><span class="unit-en">One request, streamed back over server-sent events</span></div>
+    <p>스트리밍은 <code>POST /v1/messages</code>에 <code>"stream": true</code>를 넣은 요청이다. 응답은 그 HTTP 연결 위로 <strong>서버 전송 이벤트(SSE)</strong>가 차례로 흘러나온다. 서버에서 클라이언트로 가는 단방향 스트림이라 웹소켓처럼 세션을 유지하거나 클라이언트가 중간에 메시지를 밀어 넣을 수 없다.</p>
+    <p>Messages API는 <strong>상태가 없다(stateless)</strong>. 서버는 대화를 기억하지 않으므로 멀티턴 대화는 턴마다 이전 user·assistant 메시지를 모두 담은 새 요청을 보내고, 그 답이 다시 SSE로 돌아온다. 프롬프트 캐시는 같은 접두사를 다시 보낼 때 비용을 줄일 뿐, 보내지 않은 기록을 채워 주지 않는다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① POST</div><div class="ft">전체 기록 + <code>stream: true</code></div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② 200 + SSE</div><div class="ft">상태는 시작할 때 확정, 이벤트가 이어진다</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ 조립</div><div class="ft">델타를 블록별로 모아 최종 Message 구성</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ 다음 턴</div><div class="ft">assistant 응답을 기록에 붙여 새 POST</div></div>
+    </div>
+    <p>스트리밍은 UX만을 위한 것이 아니다. 오래 걸리는 요청을 비스트리밍으로 보내면 일부 네트워크가 유휴 연결을 끊어 응답 없이 실패할 수 있다. 공식 문서는 긴 요청, 특히 10분을 넘는 요청에 스트리밍이나 Message Batches API를 권한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>이벤트 순서</h3><span class="unit-en">The order of events in a stream</span></div>
+    <p>모든 스트림은 같은 흐름을 따른다. 콘텐츠 블록마다 시작·델타·종료가 있고, 각 이벤트의 <code>index</code>는 최종 <code>content</code> 배열의 위치와 같다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">message_start</div><div class="ft"><code>content</code>가 빈 Message</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">content_block_start</div><div class="ft">블록 시작 (index)</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">content_block_delta</div><div class="ft">1회 이상</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">content_block_stop</div><div class="ft">이 블록엔 더 이상 델타 없음</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">message_delta</div><div class="ft"><code>stop_reason</code>, 누적 usage</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">message_stop</div><div class="ft">스트림 끝</div></div>
+    </div>
+    <div class="code">event: message_start
+data: {"type":"message_start","message":{"content":[],...}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,
+       "content_block":{"type":"text","text":""}}
+
+event: ping
+data: {"type": "ping"}                      <span class="c"># 어디든, 몇 번이든</span>
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,
+       "delta":{"type":"text_delta","text":"Your order"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},
+       "usage":{"output_tokens":42}}         <span class="c"># 누적값</span>
+
+event: message_stop
+data: {"type":"message_stop"}</div>
+    <div class="axis"><span class="lbl">파서가 지켜야 할 규칙</span><ul>
+      <li><code>ping</code>은 내용도 usage도 없다. 스트림 어디에든 몇 번이든 올 수 있으니 건너뛴다</li>
+      <li><code>message_delta</code>의 usage는 <strong>누적값</strong>이다. 55, 140, 362가 오면 출력 토큰은 362이지 합계 557이 아니다</li>
+      <li>버전 정책상 새 이벤트 유형이 추가될 수 있다. 모르는 유형은 예외를 던지지 말고 건너뛴다</li>
+      <li>블록별 완료는 <code>content_block_stop</code>, 메시지 수준 변경은 <code>message_delta</code>, 스트림 종료는 <code>message_stop</code>이다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>델타 유형별 조립</h3><span class="unit-en">Text, tool-input, and thinking deltas</span></div>
+    <p><code>content_block_delta</code>의 <code>delta.type</code>이 어느 필드를 갱신할지 정한다.</p>
+    <table class="t">
+      <thead><tr><th style="width:24%">델타 유형</th><th style="width:30%">갱신 대상</th><th>처리 방법</th></tr></thead>
+      <tbody>
+        <tr><td><code>text_delta</code></td><td><code>text</code> 블록</td><td>조각을 순서대로 이어 붙인다</td></tr>
+        <tr><td><code>input_json_delta</code></td><td><code>tool_use</code> 블록의 <code>input</code></td><td><code>partial_json</code>은 <strong>부분 문자열</strong>. index별로 모아 <code>content_block_stop</code>에서 한 번 파싱</td></tr>
+        <tr><td><code>thinking_delta</code></td><td><code>thinking</code> 블록의 <code>thinking</code></td><td><code>display: "omitted"</code>면 빈 문자열 하나만 온다</td></tr>
+        <tr><td><code>signature_delta</code></td><td><code>thinking</code> 블록의 <code>signature</code></td><td>블록 종료 직전에 한 번 오는 무결성 서명. 사고 블록을 돌려보낼 때 그대로 둔다</td></tr>
+      </tbody>
+    </table>
+    <div class="bg">
+      <div class="pane bad"><div class="bh">조각마다 파싱</div><p><code>input_json_delta</code>가 올 때마다 <code>json.loads()</code>를 부른다. <code>{"city": "Bus</code> 같은 조각은 유효한 JSON이 아니라 대부분의 도구 호출에서 <code>JSONDecodeError</code>로 죽는다.</p></div>
+      <div class="pane good"><div class="bh">모아서, 블록이 끝날 때</div><p>index별 버퍼에 문자열을 이어 붙이고 그 블록의 <code>content_block_stop</code>에서 파싱한다. 입력을 점진적으로 봐야 하면 부분 JSON 파서나 SDK 스트리밍 헬퍼를 쓴다.</p></div>
+    </div>
+    <p>사고를 쓰는 모델에서는 응답이 <code>thinking</code> 블록으로 시작할 수 있다. 첫 <code>content_block_start</code>를 무조건 텍스트로 가정하는 핸들러는 깨지므로, 블록 유형으로 분기한다(5.3 참고).</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>스트림 중간 오류와 SDK 헬퍼</h3><span class="unit-en">Mid-stream errors and SDK streaming helpers</span></div>
+    <p>스트리밍에서는 HTTP 상태가 스트림이 시작될 때 <strong>이미 200으로 정해진다</strong>. 그 뒤에 문제가 생기면 API는 SSE <code>error</code> 이벤트로 알린다. 예를 들어 사용량이 많을 때 비스트리밍이었다면 529였을 <code>overloaded_error</code>가 스트림 안으로 온다. 상태 코드만 보고 성공을 판정하는 서비스는 중간에 끊긴 답을 정상으로 저장한다.</p>
+    <div class="code">event: error
+data: {"type": "error",
+       "error": {"type": "overloaded_error", "message": "Overloaded"}}</div>
+    <table class="t">
+      <thead><tr><th style="width:36%">SDK 호출 (Python)</th><th>돌려주는 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>client.messages.create(..., stream=True)</code></td><td>원시 이벤트 반복자만. 최종 Message를 만들어 주지 않지만 메모리를 적게 쓴다. 이벤트를 그대로 중계할 때</td></tr>
+        <tr><td><code>with client.messages.stream(...) as stream:</code></td><td>누적 헬퍼가 있는 스트림. <code>stream.text_stream</code>으로 텍스트 조각을 받는다</td></tr>
+        <tr><td><code>stream.get_final_message()</code></td><td>모든 이벤트를 모아 <code>create()</code>와 같은 완전한 <code>Message</code>(content, stop_reason, 최종 usage) 반환. TypeScript는 <code>finalMessage()</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">끊긴 스트림 이어 가기</span><p>네트워크 문제로 스트림이 끊기면 받은 부분을 저장하고 이어 받는 요청을 만든다. Claude 4.6 이후 모델은 응답 미리 채우기(prefill)를 받지 않으므로, 받은 부분을 user 메시지에 담고 "이어서 써 달라"고 요청한다. 도구 사용 블록과 사고 블록은 부분 복구가 안 되며, 마지막 텍스트 블록부터 이어 갈 수 있다.</p></div>
+    <div class="axis"><span class="lbl">스트리밍 성공 판정</span><ul>
+      <li>200을 받았다고 성공이 아니다. <code>message_stop</code>까지 받았고 <code>error</code> 이벤트가 없었는지 확인한다</li>
+      <li>정상 종료 이유는 마지막 <code>message_delta</code>의 <code>stop_reason</code>(<code>end_turn</code>, <code>max_tokens</code>, <code>tool_use</code> 등)으로 본다</li>
+      <li>이벤트를 직접 다룰 필요가 없으면 <code>messages.stream()</code> + <code>get_final_message()</code>로 SDK가 조립하게 한다</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>원시 호출에는 API 키와 JSON content-type만 있으면 된다.</div><div class="f"><span class="k">사실</span><code>anthropic-version</code>은 항상 필수다. SDK가 자동으로 붙여 주기 때문에 원시 호출에서 빠뜨리기 쉽다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>SDK로 바꾸면 헤더는 전혀 신경 쓸 필요가 없다.</div><div class="f"><span class="k">사실</span>워크스페이스에 한정되지 않은 키를 쓰면 <code>anthropic-workspace-id</code>는 여전히 직접 보내야 한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>엔드포인트마다 오류 형식이 달라서 메시지 문자열로 구분해야 한다.</div><div class="f"><span class="k">사실</span>오류는 모두 같은 JSON 형태다. 상태 코드와 <code>error.type</code>, SDK의 예외 타입으로 분기한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>스트리밍의 <code>message_delta</code> usage를 모두 더하면 출력 토큰 합계다.</div><div class="f"><span class="k">사실</span>usage는 누적값이라 마지막 값이 합계다. 더하면 과대 계상된다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>input_json_delta</code> 하나하나가 완전한 JSON 객체다.</div><div class="f"><span class="k">사실</span>부분 JSON 문자열이다. 블록별로 모아 <code>content_block_stop</code>에서 파싱한다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>create(stream=True)</code>도 마지막에 완성된 Message를 돌려준다.</div><div class="f"><span class="k">사실</span>원시 이벤트만 돌려준다. 조립된 결과가 필요하면 스트림 헬퍼와 <code>get_final_message()</code>를 쓴다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://platform.claude.com/docs/en/api/overview" target="_blank" rel="noopener">API overview</a> · <a href="https://platform.claude.com/docs/en/api/versioning" target="_blank" rel="noopener">Versions</a> · <a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">Claude API errors</a> · <a href="https://platform.claude.com/docs/en/cli-sdks-libraries/sdks/python" target="_blank" rel="noopener">Python SDK</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/streaming" target="_blank" rel="noopener">Streaming messages</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/working-with-messages" target="_blank" rel="noopener">Using the Messages API</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/token-counting" target="_blank" rel="noopener">Token counting</a> · <a href="https://platform.claude.com/docs/en/build-with-claude/thinking" target="_blank" rel="noopener">Thinking</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인5 모델 선택·최적화</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>

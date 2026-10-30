@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="ccar-f.css">
+</helmet>
+
+<main class="doc">
+<table class="doc-frame" role="presentation">
+<thead><tr><td class="hdr-space"></td></tr></thead>
+<tbody><tr><td>
+
+  <header class="mast">
+    <div class="eyebrow">CCDV-F 레슨 <span class="cat">· 도메인 2 · 서브도메인 2.6</span></div>
+    <h1>구성 관리: CLAUDE.md·settings·모델·프롬프트 고정</h1>
+    <p class="sub">핀과 포인터 · CLAUDE.md·AGENTS.md·경로 규칙 · settings 우선순위·관리형 설정 · 모델 ID·별칭·availableModels · 프롬프트 버전 고정·롤백 · 플러그인 의존성 범위</p>
+    <p class="meta">참고 레슨 · <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn/claude-md-and-settings-json-scopes-and-precedence" target="_blank" rel="noopener">CertSafari 2.6</a> &nbsp;|&nbsp; 출제 도메인: 도메인 2 · Applications and Integration (33.1%) · 서브도메인 2.6 Configuration Management</p>
+    <div class="secrow">
+      <span class="s">2.1 요구사항·모델·인프라</span><span class="s">2.2 모델 수명주기·변경 관리</span><span class="s">2.3 Messages API·배치</span><span class="s">2.4 API 호출 패턴·Git·CI</span><span class="s">2.5 앱 설계·세션·플러그인</span><span class="s on">2.6 구성 관리</span>
+    </div>
+  </header>
+
+  <p class="lede">어제와 똑같이 돌던 시스템이 오늘 다르게 행동한다면, 코드보다 먼저 구성을 의심해야 한다. 지시 파일이 하나 더 로드됐거나, 상위 범위의 설정이 내 값을 덮었거나, 별칭이 새 모델을 가리키게 됐거나, 의존 플러그인이 새 버전으로 올라갔을 수 있다. 이 레슨의 축은 하나다. <strong>값을 고정(pin)할 것인가, 최신을 따라가는 포인터(pointer)로 둘 것인가.</strong> 시험은 CLAUDE.md와 settings가 어떤 순서로 쌓이는지, 관리형 설정이 무엇을 강제하고 무엇은 못 하는지, 어떤 모델 ID와 에이전트 참조가 정말 고정인지를 묻는다.</p>
+
+  <div class="obj"><span class="lbl">습득 포인트</span>
+    <ul>
+      <li>모델·프롬프트·플러그인 의존성 각각에서 무엇이 핀이고 무엇이 포인터인지 구분한다</li>
+      <li>CLAUDE.md 네 범위의 위치, 시작 시 로드와 지연 로드, AGENTS.md가 읽히는 조건을 설명한다</li>
+      <li>settings의 우선순위(관리형 → 명령줄 → local → project → user)와 목록 병합, 관리형 설정의 예외를 적용한다</li>
+      <li>실행 중 세션에 바로 반영되는 설정과 세션 시작 때만 읽는 설정을 구분한다</li>
+      <li>날짜 없는 ID·날짜 ID·API 별칭·Claude Code 별칭의 차이와 <code>model</code>·<code>availableModels</code>·<code>enforceAvailableModels</code>의 역할을 안다</li>
+      <li>Managed Agents 프롬프트 버전을 고정·승격·롤백하고, 플러그인 의존성 범위가 어떻게 해석되는지 예측한다</li>
+    </ul>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">01</span><h3>핀과 포인터</h3><span class="unit-en">Pin versus pointer</span></div>
+    <p>핀은 누군가 직접 고치기 전까지 같은 대상을 가리킨다. 포인터는 해석하는 시점의 '현재 최신'을 가리킨다. 재현성과 회귀 방지가 중요하면 핀을, 자동 개선을 받는 것이 중요하면 포인터를 고른다. 프로덕션에서는 보통 핀을 두고, 새 버전은 평가를 거친 뒤 핀을 옮겨 받아들인다.</p>
+    <table class="t">
+      <thead><tr><th style="width:22%">영역</th><th style="width:39%">핀 (고정)</th><th>포인터 (움직임)</th></tr></thead>
+      <tbody>
+        <tr><td>모델 (API)</td><td>4.6 세대 이후 ID(<code>claude-sonnet-4-6</code>, <code>claude-opus-5-5</code>), 그 이전의 날짜 ID(<code>claude-haiku-4-5-20251001</code>)</td><td>4.6 이전 모델의 API 별칭(<code>claude-sonnet-4-5</code>): 그 마이너 버전의 최신 날짜 스냅샷</td></tr>
+        <tr><td>모델 (Claude Code)</td><td>전체 모델 이름, <code>ANTHROPIC_DEFAULT_OPUS_MODEL</code> 같은 별칭 고정 변수</td><td><code>opus</code>·<code>sonnet</code>·<code>haiku</code>·<code>best</code> 별칭</td></tr>
+        <tr><td>프롬프트 (Managed Agents)</td><td><code>{"type": "agent", "id": …, "version": 3}</code></td><td>에이전트 ID 문자열만 넘김: 최신 버전</td></tr>
+        <tr><td>플러그인 의존성</td><td><code>=2.1.0</code> 정확한 핀</td><td>범위 없음(마켓플레이스 최신), <code>~2.1.0</code>·<code>^2.0</code>(범위 안의 최신 태그)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">02</span><h3>CLAUDE.md 범위와 로드 시점</h3><span class="unit-en">Scopes, stacking and lazy loading</span></div>
+    <table class="t">
+      <thead><tr><th style="width:18%">범위</th><th style="width:44%">위치</th><th>공유 대상</th></tr></thead>
+      <tbody>
+        <tr><td>관리형 정책</td><td>macOS <code>/Library/Application Support/ClaudeCode/CLAUDE.md</code>, Linux·WSL <code>/etc/claude-code/CLAUDE.md</code>, Windows <code>C:\Program Files\ClaudeCode\CLAUDE.md</code></td><td>조직의 모든 사용자</td></tr>
+        <tr><td>사용자</td><td><code>~/.claude/CLAUDE.md</code></td><td>나 (모든 프로젝트)</td></tr>
+        <tr><td>프로젝트</td><td><code>./CLAUDE.md</code> 또는 <code>./.claude/CLAUDE.md</code></td><td>버전 관리로 팀 전체</td></tr>
+        <tr><td>로컬</td><td><code>./CLAUDE.local.md</code> (<code>.gitignore</code>에 추가)</td><td>나 (이 프로젝트)</td></tr>
+      </tbody>
+    </table>
+    <p>범위들은 서로 덮어쓰지 않고 <strong>이어 붙는다</strong>. 넓은 범위부터 로드되므로 프로젝트 지시가 사용자 지시보다 컨텍스트에서 뒤에 온다. 두 지시가 충돌하면 Claude가 어느 쪽을 따를지 정해져 있지 않으니, 충돌 자체를 없애야 한다. 디렉터리 트리에서는 작업 디렉터리와 그 위의 모든 디렉터리에서 CLAUDE.md와 CLAUDE.local.md를 찾는다. 모노레포 <code>/repo/apps/checkout/</code>에서 시작했다면 이렇게 로드된다.</p>
+    <table class="t">
+      <thead><tr><th style="width:46%">파일</th><th>로드 시점</th></tr></thead>
+      <tbody>
+        <tr><td><code>/repo/CLAUDE.md</code> → <code>/repo/apps/CLAUDE.md</code> → <code>/repo/apps/checkout/CLAUDE.md</code></td><td>시작할 때. 루트에서 작업 디렉터리 쪽으로 쌓이므로 가까운 파일이 마지막에 읽힌다. 각 디렉터리에서 CLAUDE.local.md는 CLAUDE.md 뒤에 붙는다</td></tr>
+        <tr><td><code>/repo/apps/checkout/legacy/CLAUDE.md</code></td><td>Claude가 <code>legacy/</code> 안의 다른 파일을 읽거나 쓰거나 고칠 때. 시작 시점의 <code>/context</code> Memory files 목록에는 없다</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">운영 요령</span><p>파일당 200줄 이하를 목표로 하고, 일부 영역에만 필요한 지시는 <code>paths</code> 규칙으로 옮긴다. 블록 단위 HTML 주석(<code>&lt;!-- … --&gt;</code>)은 컨텍스트에 넣기 전에 제거되므로 관리자용 메모로 쓸 수 있다. 다른 팀의 상위 CLAUDE.md는 <code>claudeMdExcludes</code>로 건너뛸 수 있지만 관리형 CLAUDE.md는 제외할 수 없다. 관리형 CLAUDE.md는 안내용이며, 반드시 막아야 하는 행동은 관리형 settings의 <code>permissions.deny</code>로 강제한다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">03</span><h3>AGENTS.md가 읽히는 조건과 경로 규칙</h3><span class="unit-en">AGENTS.md fallback and .claude/rules</span></div>
+    <p>Claude Code(v2.1.277 이상)는 다른 코딩 에이전트용으로 만든 <code>AGENTS.md</code>를 프로젝트 지시로 읽을 수 있다. 다만 기본값에서 AGENTS.md는 CLAUDE.md의 <strong>대체물</strong>이지 추가물이 아니다.</p>
+    <table class="t">
+      <thead><tr><th style="width:52%">저장소 상태 (기본값 <code>claude-md-or-agents-md</code>)</th><th>Claude가 읽는 것</th></tr></thead>
+      <tbody>
+        <tr><td>AGENTS.md만 있다</td><td>AGENTS.md</td></tr>
+        <tr><td>작업 디렉터리나 그 위에 <code>CLAUDE.md</code>·<code>.claude/CLAUDE.md</code>·<code>CLAUDE.local.md</code> 중 하나가 있다</td><td>CLAUDE.md 쪽만. AGENTS.md는 읽지 않는다</td></tr>
+        <tr><td>CLAUDE.md 안에 <code>@AGENTS.md</code> 가져오기가 있다</td><td>CLAUDE.md와, 가져오기로 포함된 AGENTS.md</td></tr>
+      </tbody>
+    </table>
+    <p>판정에서 <code>~/.claude/CLAUDE.md</code>, 조직의 관리형 CLAUDE.md, <code>.claude/rules/</code> 파일은 세지 않는다. 이들은 AGENTS.md와 함께 로드된다. 반대로 개인 메모용 <code>CLAUDE.local.md</code>를 하나 만들면 그것이 판정에 걸려 AGENTS.md가 더는 읽히지 않는다. 둘 다 읽게 하려면 CLAUDE.md에 <code>@AGENTS.md</code>를 넣거나, <code>/config</code>의 <strong>Project instructions</strong>를 다음 값 중 하나로 바꾼다.</p>
+    <table class="t">
+      <thead><tr><th style="width:30%">값</th><th>읽는 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>claude-md-or-agents-md</code></td><td>기본값. CLAUDE.md, 없을 때만 AGENTS.md</td></tr>
+        <tr><td><code>claude-md-and-agents-md</code></td><td>둘 다. 디렉터리마다 CLAUDE.md 다음에 AGENTS.md. 이미 가져온 AGENTS.md는 두 번 읽지 않는다</td></tr>
+        <tr><td><code>claude-md</code></td><td>CLAUDE.md만</td></tr>
+        <tr><td><code>managed-only</code></td><td>시작 시 관리형 CLAUDE.md와 자동 메모리만</td></tr>
+      </tbody>
+    </table>
+    <p>이 값은 settings 파일의 <code>pluginConfigs</code> 아래 <code>cc-plugin-agents-md@builtin</code> 항목으로도 줄 수 있는데, 사용자 settings·<code>--settings</code>·관리형 settings에서만 읽고 project·local 파일에서는 무시한다. 경로 규칙(<code>.claude/rules/*.md</code>)은 frontmatter에서 <code>paths</code> 필드만 읽고, YAML이 깨지면 <code>paths</code>가 없는 규칙처럼 늘 로드된다. 사용자 규칙(<code>~/.claude/rules/</code>)은 프로젝트 규칙보다 먼저 로드되지만 어느 쪽도 다른 쪽을 덮지 않는다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">04</span><h3>settings.json 범위와 우선순위</h3><span class="unit-en">Precedence and managed settings</span></div>
+    <p>settings는 CLAUDE.md와 달리 <strong>키 단위로 이긴 값 하나</strong>가 적용된다. 같은 키가 여러 곳에 있으면 가장 높은 단계의 값을 쓴다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① MANAGED</div><div class="ft">서버 관리형·MDM/OS 정책·<code>managed-settings.json</code></div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">② COMMAND LINE</div><div class="ft"><code>--settings</code>로 준 JSON (그 세션만)</div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">③ LOCAL</div><div class="ft"><code>.claude/settings.local.json</code></div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">④ PROJECT</div><div class="ft">커밋한 <code>.claude/settings.json</code></div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">⑤ USER</div><div class="ft"><code>~/.claude/settings.json</code></div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:30%">규칙</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>목록은 합쳐진다</td><td><code>permissions.allow</code> 같은 목록 키는 파일마다 항목을 더한다. 예외로 관리형 설정이 정한 <code>availableModels</code>는 그대로 쓰고 하위 범위의 항목을 무시하며, <code>fallbackModel</code>은 순서가 의미이므로 가장 높은 파일의 값을 통째로 쓴다</td></tr>
+        <tr><td>환경 변수는 단계가 아니다</td><td>키마다 따로 정한다. 셸에서 export한 <code>ANTHROPIC_MODEL</code>은 어느 파일의 <code>model</code>보다 우선하고, <code>ANTHROPIC_DEFAULT_MODEL</code>은 어떤 파일도 <code>model</code>을 정하지 않을 때만 쓰인다</td></tr>
+        <tr><td>보안 키의 예외</td><td>몇몇 제한 키는 낮은 범위의 더 엄격한 값을 관리형보다 존중한다. 예: <code>disableClaudeAiConnectors: true</code>, <code>permissions.blockReadsOutsideWorkingDirectories: true</code>는 어느 범위에서든 켜진다</td></tr>
+        <tr><td>저장소 파일이 못 하는 것</td><td><code>permissions.defaultMode</code>의 <code>auto</code>·<code>bypassPermissions</code>는 project·local 파일에서 효과가 없다. 커밋한 파일의 <code>allow</code> 규칙은 각 팀원이 폴더를 신뢰한 뒤에 적용되고, <code>deny</code>·<code>ask</code>는 바로 적용된다</td></tr>
+      </tbody>
+    </table>
+    <p>개인 예외는 커밋 없이 <code>.claude/settings.local.json</code>에 둔다. 팀 파일이 <code>"model": "claude-sonnet-5"</code>여도 내 local 파일에 다른 모델을 적으면 내 세션만 바뀐다. 관리형 설정은 내 파일이나 <code>--settings</code>로 덮을 수 없고, <code>/status</code>의 Setting sources 줄에서 어떤 관리형 소스가 적용됐는지 확인한다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">05</span><h3>고친 설정은 언제 반영되나</h3><span class="unit-en">Hot reload vs read-once keys</span></div>
+    <p>Claude Code는 settings 파일을 지켜보다가 바뀌면 다시 읽는다. 그래서 대부분의 수정은 재시작 없이 실행 중 세션에 반영된다. 몇몇 키는 세션 시작 때 한 번만 읽는다.</p>
+    <div class="duo">
+      <div class="pane" style="border-top:3px solid var(--teal)"><div class="pt2">저장하면 바로 반영</div><p><code>permissions</code>, <code>hooks</code>, <code>apiKeyHelper</code> 같은 자격 증명 도우미. 세션 중에 새로 만든 settings 파일도 폴더가 있었다면 로드된다. user·project·local·관리형 파일이 대상이고, 파일 변경을 감지할 때마다 <code>ConfigChange</code> 훅이 돈다.</p></div>
+      <div class="pane" style="border-top:3px solid var(--accent)"><div class="pt2">시작할 때만 읽음</div><p><code>model</code>, <code>effortLevel</code>, <code>modelSettings</code>. 파일을 고쳐도 지금 세션은 그대로이고 다음 세션부터 적용된다. 지금 바꾸려면 <code>/model</code>, <code>/effort</code>를 쓴다. MDM이나 claude.ai 콘솔로 오는 관리형 설정은 저장 즉시가 아니라 정해진 주기로 도착한다.</p></div>
+    </div>
+    <p><code>/model</code>은 즉시 전환하고 그 선택을 사용자 settings에 새 세션의 기본값으로 저장한다. 선택기에서 <code>s</code>를 누르면 저장하지 않고 이번 세션만 바꾼다. 모델마다 프롬프트 캐시가 따로라서 전환 직후 첫 요청은 대화 전체를 캐시 없이 다시 읽는다.</p>
+    <div class="note"><span class="lbl">참고 레슨과 다른 점</span><p>CertSafari 본문은 "모델을 바꾸는 데 재시작은 필요 없다"고 하지만, 체크포인트는 settings 파일의 <code>model</code>을 고치면 재시작이 필요하다고 설명해 서로 어긋난다. 공식 Settings 문서 기준으로는 둘 다 일부만 맞다. <code>/model</code>은 실행 중에 바로 바꾸고, 파일의 <code>model</code> 키는 세션 시작 때만 읽으므로 새 세션에서 적용된다. 권한·훅 수정은 재시작 없이 반영된다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">06</span><h3>모델 ID, 별칭, 세션의 시작 모델</h3><span class="unit-en">Model IDs, aliases and resolution order</span></div>
+    <table class="t">
+      <thead><tr><th style="width:24%">참조</th><th style="width:30%">예</th><th>동작</th></tr></thead>
+      <tbody>
+        <tr><td>4.6 세대 이후 ID</td><td><code>claude-sonnet-4-6</code>, <code>claude-opus-5</code></td><td>날짜가 없어도 별칭이 아니라 <strong>스냅샷 자체</strong>다. 가중치·구성을 바꾸지 않고, 새 버전은 새 ID로 나온다</td></tr>
+        <tr><td>4.6 이전 날짜 ID</td><td><code>claude-sonnet-4-5-20250929</code></td><td>고정 스냅샷</td></tr>
+        <tr><td>4.6 이전 API 별칭</td><td><code>claude-sonnet-4-5</code></td><td>그 마이너 버전의 최신 날짜 스냅샷을 가리키는 편의 포인터</td></tr>
+        <tr><td>Claude Code 별칭</td><td><code>opus</code>, <code>sonnet</code>, <code>haiku</code>, <code>best</code>, <code>opusplan</code></td><td>제공자별 권장 버전을 가리키며 시간이 지나면 바뀐다. 고정하려면 전체 이름이나 <code>ANTHROPIC_DEFAULT_*_MODEL</code></td></tr>
+        <tr><td>Amazon Bedrock</td><td><code>anthropic.claude-sonnet-4-6</code>, <code>anthropic.claude-sonnet-4-5-20250929-v1:0</code></td><td>같은 규칙에 <code>anthropic.</code> 접두사. <code>-v1</code> 접미사는 Opus 4.6이 마지막이다</td></tr>
+      </tbody>
+    </table>
+    <p>ID가 같으면 가중치는 같지만, 요청 라우터·안전 분류기·샘플링 같은 서빙 인프라는 바뀔 수 있어 관찰되는 동작이 조금 달라질 수 있다. 날짜가 있든 없든 ID마다 폐기·은퇴 일정이 따로 있다. 같은 별칭도 제공자마다 다른 모델로 풀린다. 현재 문서 기준 <code>sonnet</code>은 Anthropic API에서 Sonnet 5.5, Amazon Bedrock과 Google Cloud의 Agent Platform에서는 Sonnet 4.5다.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① /model</div><div class="ft">세션 중 즉시 전환</div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">② --model</div><div class="ft">시작 플래그</div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">③ ANTHROPIC_MODEL</div><div class="ft">환경 변수</div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">④ model</div><div class="ft">settings 파일의 키</div></div><div class="flow-arrow">&gt;</div>
+      <div class="flow-step"><div class="fn">⑤ ANTHROPIC_DEFAULT_MODEL</div><div class="ft">새 세션 기본값</div></div>
+    </div>
+    <p>세션이 어떤 모델로 시작할지는 위 순서로 정해진다. 재개한 세션은 원래 쓰던 모델로 이어 가는 것이 기본이다.</p>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">07</span><h3>시작 모델과 모델 제한은 다르다</h3><span class="unit-en">model vs availableModels vs enforcement</span></div>
+    <p>조직이 "이 팀은 Sonnet과 Haiku만 쓴다"를 강제하고 싶을 때 관리형 <code>model</code>만 정하는 것은 답이 아니다. <code>model</code>은 처음 선택일 뿐 잠금이 아니어서, 사용자는 <code>/model</code>을 열어 Default를 고를 수 있다. 아래는 조직이 배포하는 관리형 설정의 예다. settings 파일은 엄격한 JSON이라 <code>//</code> 주석을 넣으면 구문 오류가 된다.</p>
+    <div class="code">{
+  "model": "sonnet",
+  "availableModels": ["sonnet", "haiku"],
+  "enforceAvailableModels": true
+}</div>
+    <table class="t">
+      <thead><tr><th style="width:26%">키</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><code>model</code></td><td>세션이 시작할 때 활성인 모델. project·관리형 값은 다음 실행 때 다시 적용되고, <code>/model</code>은 이번 세션만 바꾼다</td></tr>
+        <tr><td><code>availableModels</code></td><td>허용 목록. 계열(<code>sonnet</code>), 버전 접두사(<code>claude-sonnet-4-5</code>), 전체 ID를 쓸 수 있다. <code>/model</code>·<code>--model</code>·<code>ANTHROPIC_MODEL</code>·<code>model</code> 키·<code>ANTHROPIC_DEFAULT_MODEL</code>·재개 세션에 모두 적용된다. 막힌 선택은 <code>/model</code>에서 거부되고, 플래그·환경 변수·<code>model</code> 키는 시작 시 경고와 함께 교체된다</td></tr>
+        <tr><td><code>enforceAvailableModels</code></td><td>v2.1.175 이상. 이것 없이 <code>availableModels</code>만 두면 <strong>Default 옵션</strong>은 계정의 기본 모델 그대로다. 켜면 계정 기본값이 목록 밖일 때 Default가 목록에서 허용되고 쓸 수 있는 첫 항목으로 풀린다</td></tr>
+        <tr><td><code>deniedModels</code></td><td>v2.1.283 이상, 관리형에서만 읽는다. 허용 목록이 허락해도 차단한다. <code>availableModelsMatch: "exact"</code>와 짝지으면 항목이 정확히 그 버전만 허용한다</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>"사용자가 다른 모델을 고르지 못하게"는 <code>availableModels</code>(필요하면 <code>deniedModels</code>), "Default도 목록 안에서"는 <code>enforceAvailableModels</code>까지 필요하다</li>
+      <li>관리형 설정이 <code>availableModels</code>를 정하면 그 목록만 적용된다. 사용자·프로젝트 파일에 항목을 더해도 늘어나지 않는다</li>
+      <li><code>availableModels: []</code>는 이름으로 고르는 선택을 모두 막고, 이때 <code>enforceAvailableModels</code>는 효과가 없다</li>
+    </ul></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">08</span><h3>프롬프트 버전: 고정·승격·롤백</h3><span class="unit-en">Managed Agents versioning</span></div>
+    <p>Claude Managed Agents의 에이전트는 모델·시스템 프롬프트·도구를 묶은 <strong>버전이 있는 구성</strong>이다. <code>agents.create</code>는 version 1을 만들고, 구성을 바꾸는 <code>agents.update</code>마다 새 버전이 생긴다. 바뀐 것이 없는 업데이트는 새 버전을 만들지 않고 기존 버전을 돌려준다. 옛 버전은 서버에 남고 <code>agents.versions.list</code>로 전체 이력을 본다.</p>
+    <div class="code">agent = client.beta.agents.create(
+    name="Refund triage",
+    model="claude-sonnet-5-5",
+    system=PROMPT_V1,
+)                                     <span class="c"># agent.version == 1</span>
+
+agent = client.beta.agents.update(
+    agent.id,
+    version=agent.version,   <span class="c"># 그사이 누가 고쳤으면 409</span>
+    system=PROMPT_V2,
+)                                     <span class="c"># agent.version == 2</span>
+
+session = client.beta.sessions.create(
+    agent={"type": "agent", "id": agent.id,
+           "version": cfg.refund_agent_version},  <span class="c"># 설정에서 읽은 핀</span>
+    environment_id=ENV_ID,
+)</div>
+    <div class="flow">
+      <div class="flow-step"><div class="fn">① CREATE</div><div class="ft">v1 생성</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">② EVAL</div><div class="ft">v1로 고정한 세션으로 라벨 데이터 채점</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">③ UPDATE</div><div class="ft">v2 생성. 아직 트래픽은 v1</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">④ PROMOTE</div><div class="ft">v2 평가 통과 후 설정의 핀을 2로 변경</div></div><div class="flow-arrow">→</div>
+      <div class="flow-step"><div class="fn">⑤ ROLLBACK</div><div class="ft">회귀가 보이면 핀을 1로 되돌림. 재배포·업데이트 없음</div></div>
+    </div>
+    <table class="t">
+      <thead><tr><th style="width:36%"><code>sessions.create</code>의 <code>agent</code></th><th>실행되는 버전</th></tr></thead>
+      <tbody>
+        <tr><td>ID 문자열</td><td>생성 시점의 <strong>최신 버전</strong>. 누가 update를 부르면 다음 세션부터 새 버전</td></tr>
+        <tr><td><code>{"type": "agent", "id", "version"}</code></td><td>지정한 버전으로 고정</td></tr>
+        <tr><td><code>{"type": "agent_with_overrides", …}</code></td><td>지정 버전(생략하면 최신)에 이 세션만 모델·프롬프트·도구를 덮어씀. 새 버전을 만들지 않는다</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip"><span class="lbl">승인 절차는 직접 만든다</span><p><code>agents.update</code>에는 승인 단계가 없어 워크스페이스의 어떤 키로도 부를 수 있다. 그래서 프로덕션 호출부는 명시적 버전을 고정하고, 승격은 그 버전 번호를 바꾸는 설정 변경으로 만들어 일반 코드 리뷰를 거치게 한다. 새 버전 생성은 승격 전까지 트래픽을 받지 않으므로 위험이 낮다. <code>version</code> 인자를 주면 낙관적 동시성 검사가 되어 불일치 시 409를 받고, 생략하면 마지막 쓰기가 조용히 이긴다.</p></div>
+  </div>
+
+  <div class="unit">
+    <div class="unit-h"><span class="unit-n">09</span><h3>플러그인 의존성 범위와 정확한 핀</h3><span class="unit-en">Dependency ranges, tags and conflicts</span></div>
+    <p>플러그인은 <code>.claude-plugin/plugin.json</code>의 <code>dependencies</code> 배열로 다른 플러그인에 기댈 수 있다. 항목은 이름 문자열이거나 <code>name</code>·<code>version</code>·<code>marketplace</code>를 가진 객체다. 범위를 두지 않으면 의존 플러그인은 마켓플레이스가 새 릴리스를 낼 때마다 따라 올라가고, 그 릴리스가 내가 부르는 MCP 도구 이름을 바꾸면 내 플러그인이 깨진다.</p>
+    <div class="code">{
+  "name": "incident-kit",
+  "version": "1.4.0",
+  "dependencies": [
+    "pager-bridge",
+    { "name": "log-search", "version": "~3.2.0" },
+    { "name": "status-page", "version": "=1.0.2" }
+  ]
+}</div>
+    <table class="t">
+      <thead><tr><th style="width:24%">선언</th><th>받는 버전</th></tr></thead>
+      <tbody>
+        <tr><td><code>"pager-bridge"</code></td><td>마켓플레이스가 제공하는 버전을 계속 따라간다</td></tr>
+        <tr><td><code>~3.2.0</code></td><td><code>3.2.x</code> 패치는 받고 <code>3.3</code>으로는 가지 않는다</td></tr>
+        <tr><td><code>^3.0</code></td><td>같은 주 버전 <code>3.x</code> 안에서 최신</td></tr>
+        <tr><td><code>=1.0.2</code></td><td>정확히 그 버전. 이 플러그인이 설치되어 있는 동안 자동 업데이트도 더 새 버전을 건너뛴다</td></tr>
+      </tbody>
+    </table>
+    <p>범위는 <code>plugin.json</code>의 <code>version</code>이 아니라 의존 플러그인 저장소의 <strong>git 태그</strong> <code>&lt;plugin-name&gt;--v&lt;version&gt;</code> 중 범위를 만족하는 가장 높은 것으로 풀린다. 그 커밋의 <code>plugin.json</code>이 뒤처져 있어도 태그의 버전으로 검사한다. 맞는 태그가 없을 때 자체 저장소를 가진 플러그인은 설치가 실패하고, 마켓플레이스 안에 상대 경로로 들어 있는 플러그인은 현재 사본을 설치한 뒤 로드할 때 범위를 검사해 벗어나면 의존하는 쪽을 비활성화한다. 릴리스 태그는 <code>claude plugin tag --push</code>로 만든다.</p>
+    <table class="t">
+      <thead><tr><th style="width:20%">A의 요구</th><th style="width:20%">B의 요구</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td><code>^2.0</code></td><td><code>&gt;=2.1</code></td><td>둘을 모두 만족하는 가장 높은 <code>2.x</code> 태그 하나를 설치. 두 플러그인 모두 로드</td></tr>
+        <tr><td><code>~2.1</code></td><td><code>~3.0</code></td><td>B 설치가 <code>has conflicting version requirements</code>로 실패. A와 의존성은 그대로</td></tr>
+        <tr><td><code>=2.1.0</code></td><td>없음</td><td>2.1.0에 머문다. A가 있는 동안 자동 업데이트가 새 버전을 건너뛴다</td></tr>
+      </tbody>
+    </table>
+    <div class="axis"><span class="lbl">시험 판단 축</span><ul>
+      <li>범위는 <code>2.0.0-beta.1</code> 같은 프리릴리스를 고르지 않는다. 받으려면 <code>^2.0.0-0</code>처럼 명시한다</li>
+      <li>npm·archive·command 소스처럼 git이 아닌 의존성은 범위가 내려받을 버전을 고르지 못하고, 로드할 때 그 <code>plugin.json</code>의 <code>version</code>으로 검사만 한다</li>
+      <li>다른 마켓플레이스의 플러그인에 의존하려면 설치하는 플러그인이 있는 마켓플레이스의 <code>marketplace.json</code>에 <code>allowCrossMarketplaceDependenciesOn</code>을 둔다</li>
+    </ul></div>
+  </div>
+
+  <h2 class="sec">시험 함정 · 흔한 오해</h2>
+  <div class="myth"><div class="m"><span class="k">오해</span>저장소에 AGENTS.md와 CLAUDE.md가 함께 있으면 Claude Code는 둘 다 읽는다.</div><div class="f"><span class="k">사실</span>기본값에서 AGENTS.md는 작업 디렉터리와 그 위에 CLAUDE.md·<code>.claude/CLAUDE.md</code>·CLAUDE.local.md가 없을 때만 읽힌다. 둘 다 읽히게 하려면 <code>@AGENTS.md</code>를 가져오거나 <code>claude-md-and-agents-md</code>를 쓴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>관리형 settings에 <code>model</code>을 넣으면 모든 사용자가 그 모델에 묶인다.</div><div class="f"><span class="k">사실</span>관리형 <code>model</code>은 시작 기본값이다. 제한은 <code>availableModels</code>·<code>deniedModels</code>가 하고, Default 옵션까지 묶으려면 <code>enforceAvailableModels</code>가 필요하다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>claude-sonnet-4-6</code>처럼 날짜가 없는 ID는 새 버전이 나오면 자동으로 올라간다.</div><div class="f"><span class="k">사실</span>4.6 세대부터는 날짜 없는 ID가 곧 고정 스냅샷이다. 업데이트는 새 ID로 나온다. 움직이는 것은 4.6 이전 모델의 API 별칭과 Claude Code의 <code>opus</code>·<code>sonnet</code> 같은 별칭이다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span><code>sessions.create</code>에 평가를 마친 에이전트의 ID만 넘기면 그 버전으로 계속 돈다.</div><div class="f"><span class="k">사실</span>ID 문자열은 최신 버전으로 풀린다. 누가 <code>update</code>를 부르면 다음 세션부터 바뀐다. 고정하려면 <code>{"type": "agent", "id", "version"}</code> 객체를 넘긴다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>settings 파일의 <code>model</code>을 고치면 권한 규칙처럼 실행 중인 세션에 바로 반영된다.</div><div class="f"><span class="k">사실</span><code>model</code>은 세션 시작 때만 읽는다. 지금 바꾸려면 <code>/model</code>을 쓴다. 권한·훅 수정은 재시작 없이 반영된다.</div></div>
+  <div class="myth"><div class="m"><span class="k">오해</span>플러그인 의존성의 버전 범위는 의존 플러그인의 <code>plugin.json</code> <code>version</code> 필드와 비교된다.</div><div class="f"><span class="k">사실</span>git 기반 소스는 <code>&lt;plugin-name&gt;--v&lt;version&gt;</code> 태그와 비교해 가장 높은 일치 태그를 설치한다. 태그를 달지 않으면 범위가 풀리지 않는다.</div></div>
+
+  <div class="src"><span class="si">근거 문서</span><p><a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener">How Claude remembers your project</a> · <a href="https://code.claude.com/docs/en/settings" target="_blank" rel="noopener">Settings files and precedence</a> · <a href="https://code.claude.com/docs/en/model-config" target="_blank" rel="noopener">Model configuration</a> · <a href="https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions" target="_blank" rel="noopener">Model IDs and versioning</a> · <a href="https://platform.claude.com/docs/en/managed-agents/agent-setup" target="_blank" rel="noopener">Define your agent (Managed Agents)</a> · <a href="https://platform.claude.com/docs/en/managed-agents/sessions" target="_blank" rel="noopener">Start a session (Managed Agents)</a> · <a href="https://platform.claude.com/cookbook/managed-agents-cma-prompt-versioning-and-rollback" target="_blank" rel="noopener">Managed Agents tutorial: prompt versioning and rollback</a> · <a href="https://code.claude.com/docs/en/plugins/dependencies" target="_blank" rel="noopener">Plugin dependencies</a></p></div>
+
+  <p class="cap" style="margin-top:40px">이 페이지는 <a href="https://certsafari.com/anthropic/claude-developer-foundations/learn" target="_blank" rel="noopener">CertSafari CCDV-F 레슨</a>의 서브도메인 구성을 참고해, Anthropic 공식 문서를 근거로 한국어로 새로 작성한 학습 노트입니다. 본문과 예시는 이 가이드에서 새로 작성했습니다. 이 레슨의 연습문제는 문제은행 앱 <strong>CCDV-F › 도메인2 애플리케이션·통합</strong> 세트에 있습니다. 기능 이름과 옵션은 바뀔 수 있으니 공식 문서로 최종 확인하세요. (문서 기준 2026년 10월)</p>
+
+</td></tr></tbody>
+<tfoot><tr><td class="ftr-space"></td></tr></tfoot>
+</table>
+</main>
+</x-dc>
+</body>
+</html>
