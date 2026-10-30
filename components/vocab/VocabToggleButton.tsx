@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -64,7 +64,8 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: -Spacing.xs,
+    // iOS 26 은 버튼을 원형 유리 배경 가운데에 두므로 당기면 아이콘이 치우친다
+    marginRight: Platform.OS === 'ios' ? 0 : -Spacing.xs,
   },
   circle: {
     width: 36,

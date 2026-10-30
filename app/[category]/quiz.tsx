@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   AccessibilityInfo,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { usePreventRemove } from '@react-navigation/native';
@@ -542,7 +543,8 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: -Spacing.sm,
+    // iOS 26 은 버튼을 원형 유리 배경 가운데에 두므로 당기면 X 가 왼쪽으로 치우친다
+    marginLeft: Platform.OS === 'ios' ? 0 : -Spacing.sm,
   },
   barButton: {
     flex: 1,
