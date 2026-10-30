@@ -92,75 +92,180 @@
       },
       {
         "id": "mock04",
-        "name": "실전모의고사4",
+        "name": "샘플문제2",
         "questionCount": 60,
         "order": 3
       },
       {
         "id": "mock04-kor",
-        "name": "실전모의고사4-한글",
+        "name": "샘플문제2-한글",
         "questionCount": 60,
         "order": 4
       },
       {
         "id": "lesson-d1",
-        "name": "레슨문제 D1 에이전트 아키텍처",
+        "name": "D1-에이전트 아키텍처",
         "questionCount": 42,
         "order": 5
       },
-      {
-        "id": "lesson-d2",
-        "name": "레슨문제 D2 도구 설계·MCP",
-        "questionCount": 31,
+	  {
+        "id": "selfcheck-d1-kor",
+        "name": "D1-에이전트 아키텍처-한글",
+        "questionCount": 42,
         "order": 6
       },
       {
-        "id": "lesson-d3",
-        "name": "레슨문제 D3 Claude Code 설정",
-        "questionCount": 33,
+        "id": "lesson-d2",
+        "name": "D2-도구 설계·MCP",
+        "questionCount": 31,
         "order": 7
       },
-      {
-        "id": "lesson-d4",
-        "name": "레슨문제 D4 프롬프트·구조화 출력",
-        "questionCount": 38,
+	  {
+        "id": "selfcheck-d2-kor",
+        "name": "D2-도구 설계·MCP-한글",
+        "questionCount": 30,
         "order": 8
       },
       {
-        "id": "lesson-d5",
-        "name": "레슨문제 D5 컨텍스트·신뢰성",
-        "questionCount": 41,
+        "id": "lesson-d3",
+        "name": "D3-Claude Code 설정",
+        "questionCount": 33,
         "order": 9
       },
-      {
-        "id": "selfcheck-d1-kor",
-        "name": "자가점검 D1 에이전트 아키텍처-한글",
-        "questionCount": 42,
+	  {
+        "id": "selfcheck-d3-kor",
+        "name": "D3-Claude Code 설정-한글",
+        "questionCount": 36,
         "order": 10
       },
       {
-        "id": "selfcheck-d2-kor",
-        "name": "자가점검 D2 도구 설계·MCP-한글",
-        "questionCount": 30,
+        "id": "lesson-d4",
+        "name": "D4-프롬프트·구조화 출력",
+        "questionCount": 38,
         "order": 11
       },
-      {
-        "id": "selfcheck-d3-kor",
-        "name": "자가점검 D3 Claude Code 설정-한글",
+	  {
+        "id": "selfcheck-d4-kor",
+        "name": "D4-프롬프트·구조화 출력-한글",
         "questionCount": 36,
         "order": 12
       },
       {
-        "id": "selfcheck-d4-kor",
-        "name": "자가점검 D4 프롬프트·구조화 출력-한글",
-        "questionCount": 36,
+        "id": "lesson-d5",
+        "name": "D5-컨텍스트·신뢰성",
+        "questionCount": 41,
         "order": 13
       },
       {
         "id": "selfcheck-d5-kor",
-        "name": "자가점검 D5 컨텍스트·신뢰성-한글",
+        "name": "D5-컨텍스트·신뢰성-한글",
         "questionCount": 36,
         "order": 14
+      }
+    ]
+  },
+  {
+    "id": "ccdv-f",
+    "name": "CCDV-F",
+    "description": "Claude Certified Developer – Foundations 대비 도메인별 문제",
+    "icon": "code-slash-outline",
+    "order": 4,
+    "files": [
+      {
+        "id": "domain1",
+        "name": "D1-에이전트·워크플로",
+        "questionCount": 29,
+        "order": 1
+      },
+      {
+        "id": "domain1-kor",
+        "name": "D1-에이전트·워크플로-한글",
+        "questionCount": 29,
+        "order": 2
+      },
+      {
+        "id": "domain2",
+        "name": "D2-애플리케이션·통합",
+        "questionCount": 75,
+        "order": 3
+      },
+      {
+        "id": "domain2-kor",
+        "name": "D2-애플리케이션·통합-한글",
+        "questionCount": 75,
+        "order": 4
+      },
+      {
+        "id": "domain3",
+        "name": "D3-Claude Code",
+        "questionCount": 14,
+        "order": 5
+      },
+      {
+        "id": "domain3-kor",
+        "name": "D3-Claude Code-한글",
+        "questionCount": 14,
+        "order": 6
+      },
+      {
+        "id": "domain4",
+        "name": "D4-평가·테스트·디버깅",
+        "questionCount": 15,
+        "order": 7
+      },
+      {
+        "id": "domain4-kor",
+        "name": "D4-평가·테스트·디버깅-한글",
+        "questionCount": 15,
+        "order": 8
+      },
+      {
+        "id": "domain5",
+        "name": "D5-모델 선택·최적화",
+        "questionCount": 57,
+        "order": 9
+      },
+      {
+        "id": "domain5-kor",
+        "name": "D5-모델 선택·최적화-한글",
+        "questionCount": 57,
+        "order": 10
+      },
+      {
+        "id": "domain6",
+        "name": "D6-프롬프트·컨텍스트 엔지니어링",
+        "questionCount": 37,
+        "order": 11
+      },
+      {
+        "id": "domain6-kor",
+        "name": "D6-프롬프트·컨텍스트 엔지니어링-한글",
+        "questionCount": 37,
+        "order": 12
+      },
+      {
+        "id": "domain7",
+        "name": "D7-보안·안전",
+        "questionCount": 55,
+        "order": 13
+      },
+      {
+        "id": "domain7-kor",
+        "name": "D7-보안·안전-한글",
+        "questionCount": 55,
+        "order": 14
+      },
+      {
+        "id": "domain8",
+        "name": "D8-도구·MCP",
+        "questionCount": 39,
+        "order": 15
+      },
+      {
+        "id": "domain8-kor",
+        "name": "D8-도구·MCP-한글",
+        "questionCount": 39,
+        "order": 16
       }
     ]
   }
