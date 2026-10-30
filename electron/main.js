@@ -8,7 +8,7 @@
 //   2. A scheme registered as `secure` is treated as a secure context, which
 //      is what expo-sqlite's web (OPFS) implementation needs to persist data.
 
-const { app, protocol, BrowserWindow, Menu, net } = require('electron');
+const { app, protocol, BrowserWindow, Menu, net, shell } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const url = require('node:url');
@@ -192,6 +192,15 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // External links (e.g. the study guide on GitHub Pages) open in the user's
+  // default browser instead of spawning a bare Electron window.
+  win.webContents.setWindowOpenHandler(({ url: target }) => {
+    if (/^https?:\/\//.test(target)) {
+      shell.openExternal(target);
+    }
+    return { action: 'deny' };
   });
 
   win.webContents.once('did-finish-load', () => {

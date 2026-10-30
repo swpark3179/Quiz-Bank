@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,6 +22,9 @@ import { ScreenEnter } from '@/components/ui/ScreenEnter';
 import { PressableScale } from '@/components/ui/PressableScale';
 import Animated from 'react-native-reanimated';
 import { listEntering } from '@/lib/theme/motion';
+
+// GitHub Pages로 배포된 레슨·자습 가이드 모음
+const STUDY_GUIDE_URL = 'https://swpark3179.github.io/Quiz-Bank';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -65,6 +69,13 @@ export default function HomeScreen() {
 
   const handleSelect = (category: Category) => {
     router.push(`/${category.id}`);
+  };
+
+  // 앱 내부가 아닌 기기의 기본 브라우저로 연다
+  const handleOpenStudyGuide = () => {
+    Linking.openURL(STUDY_GUIDE_URL).catch((e) => {
+      console.error('학습 가이드 열기 오류:', e);
+    });
   };
 
   if (loading) {
@@ -126,6 +137,21 @@ export default function HomeScreen() {
               <Ionicons name="folder-open-outline" size={56} color={Colors.text.tertiary} />
               <Text style={styles.emptyText}>등록된 카테고리가 없습니다.</Text>
             </View>
+          }
+          ListFooterComponent={
+            <PressableScale
+              style={styles.guideCard}
+              onPress={handleOpenStudyGuide}
+              accessibilityRole="link"
+              accessibilityLabel="학습 가이드, 레슨과 자습 가이드를 브라우저에서 열기"
+            >
+              <Ionicons name="library-outline" size={22} color={Colors.accent.primary} />
+              <View style={styles.textBox}>
+                <Text style={styles.guideTitle}>학습 가이드</Text>
+                <Text style={styles.guideDesc}>레슨·자습 가이드를 브라우저에서 열어요</Text>
+              </View>
+              <Ionicons name="open-outline" size={18} color={Colors.text.tertiary} />
+            </PressableScale>
           }
           renderItem={({ item: cat, index }) => {
             const stat = summaries[cat.id];
@@ -231,6 +257,28 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     gap: Spacing.md,
     ...Shadow.sm,
+  },
+  guideCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.border,
+    backgroundColor: Colors.bg.secondary,
+  },
+  guideTitle: {
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.link,
+  },
+  guideDesc: {
+    fontSize: Typography.size.xs,
+    color: Colors.text.tertiary,
   },
   iconBox: {
     width: 52,
