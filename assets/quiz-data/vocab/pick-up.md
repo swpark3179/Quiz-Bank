@@ -1,5 +1,5 @@
-1. **(중단한 곳부터) 이어받다, 다시 시작하다** — 멈췄던 작업·대화를 그 지점부터 계속한다 (*pick up where you left off*)
-2. **(변경·설정을) 알아채 반영하다** — 새로 생긴 내용이나 지시를 받아들여 동작에 반영한다 (*pick up the new config*)
+1. **(변경·설정을) 알아채 반영하다** — 새로 생긴 내용이나 지시를 받아들여 동작에 반영한다 (*pick up the new config*)
+2. **(중단한 곳부터) 이어받다, 다시 시작하다** — 멈췄던 작업·대화를 그 지점부터 계속한다 (*pick up where you left off*)
 
 ## 문제 속 쓰임
 > The subagent inherited a stale cached copy of the conversation and needs its session resumed to **pick up** the recent turns
@@ -11,4 +11,4 @@
 - **pick up an instruction** : 지시를 알아채 따르다
 
 ## 시험 포인트
-이 보기는 오답입니다. 서브에이전트는 부모 대화를 **아예 물려받지 않으므로** 재개해서 따라잡을 사본이 없습니다. 필요한 결정은 Agent 도구의 프롬프트에 직접 넣어야 합니다. temperature 를 올려 빠진 지시를 *pick up* 하게 한다는 보기도 같은 이유로 오답입니다(없는 지시는 샘플링으로 생기지 않음).
+이 보기는 오답입니다. 서브에이전트는 부모 대화를 **아예 물려받지 않으므로** 재개해서 따라잡을 사본이 없습니다. 필요한 결정은 Agent 도구의 프롬프트에 직접 넣어야 합니다. temperature 를 올려 빠진 지시를 *pick up* 하게 한다는 보기도 오답입니다. 지시가 프롬프트에 없으면 샘플링 설정은 아무것도 바꾸지 못합니다.
