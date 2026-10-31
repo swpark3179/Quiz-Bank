@@ -74,7 +74,7 @@
     "word": "according to",
     "pos": "전치사구",
     "ipa": "əˈkɔːrdɪŋ tə",
-    "meaning": "~에 따르면, ~에 따라"
+    "meaning": "① ~에 따르면 ② ~에 따라, ~대로"
   },
   {
     "id": "account",
@@ -250,7 +250,7 @@
     "word": "ahead of",
     "pos": "전치사구",
     "ipa": "əˈhed əv",
-    "meaning": "~보다 앞에, ~에 앞서"
+    "meaning": "① (순서·위치가) ~보다 앞에 ② (시간상) ~에 앞서, 미리"
   },
   {
     "id": "alias",
@@ -656,7 +656,7 @@
     "word": "attribute",
     "pos": "명사·동사",
     "ipa": "ˈætrɪbjuːt",
-    "meaning": "① (객체의) 속성 ② (원인을) ~의 탓으로 보다",
+    "meaning": "① (객체의) 속성 ② (원인·출처를) ~에 돌리다, ~의 것으로 보다",
     "forms": ["attributed"]
   },
   {
@@ -1088,7 +1088,7 @@
     "word": "bucket",
     "pos": "명사",
     "ipa": "ˈbʌkɪt",
-    "meaning": "버킷 — token bucket: 허용량이 일정한 속도로 다시 차오르는 한도 방식 / 양동이, 묶음"
+    "meaning": "① (토큰) 버킷 — token bucket: 허용량이 일정한 속도로 다시 차오르는 한도 방식 ② 양동이, 묶음 — S3 bucket: 클라우드 파일 저장 단위"
   },
   {
     "id": "budget",
@@ -1217,7 +1217,7 @@
     "word": "carrier",
     "pos": "명사",
     "ipa": "ˈkæriər",
-    "meaning": "운송업체, 배송사 (shipping carrier)"
+    "meaning": "① 운송업체, 배송사 (shipping carrier) ② (insurance carrier) 보험사"
   },
   {
     "id": "carry",
@@ -8158,7 +8158,7 @@
     "word": "shift",
     "pos": "동사·명사",
     "ipa": "ʃɪft",
-    "meaning": "(서서히) 옮기다, 바꾸다 / 전환",
+    "meaning": "① (서서히) 옮기다, 바꾸다 ② 전환, 변화 ③ 교대 근무 (시간)",
     "forms": ["shifted", "shifting"]
   },
   {
@@ -9280,7 +9280,7 @@
     "word": "trial",
     "pos": "명사",
     "ipa": "ˈtraɪəl",
-    "meaning": "시험(판), 시범 — trial run: 시험 실행"
+    "meaning": "① 시험(판), 시범 — trial run: 시험 실행 ② (clinical trial) 임상 시험"
   },
   {
     "id": "trigger",
