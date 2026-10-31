@@ -296,7 +296,16 @@ jobs:
             exit 1
           fi
           APK_CERTS=$("$APKSIGNER" verify --print-certs app-release.apk)
-          APK_SHA256=$(echo "$APK_CERTS" | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}' | normalize)
+          # apksigner 버전에 따라 출력 형식이 다르다.
+          #   옛 형식: "Signer #1 certificate SHA-256 digest: <hex>"
+          #   새 형식: "V2 Signer: certificate SHA-256 digest: <hex>"  (서명 scheme 마다 한 줄)
+          # ': ' 로 필드를 나누면 새 형식에서는 라벨("certificate SHA-256 digest")이 잡히므로
+          # "digest:" 뒤의 값만 꺼낸다. 모든 signer 줄의 지문이 하나로 같아야 한다.
+          APK_SHA256_ALL=$(echo "$APK_CERTS" \
+            | sed -n 's/.*certificate SHA-256 digest:[[:space:]]*//p' \
+            | tr -d ':[:blank:]\r' | tr '[:upper:]' '[:lower:]' | sort -u)
+          APK_SHA256=$(echo "$APK_SHA256_ALL" | head -n1)
+          APK_SIGNER_COUNT=$(echo "$APK_SHA256_ALL" | grep -c . || true)
 
           # 서명 무결성만 확인한다. (-strict 는 self-signed 인증서를 오류로 보므로 쓰지 않는다)
           if ! jarsigner -verify app-release.aab > /dev/null; then
@@ -313,6 +322,16 @@ jobs:
 
           if [ -z "$EXPECTED" ]; then
             echo "::error::Could not read the certificate from release.keystore (check ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS)"
+            exit 1
+          fi
+          if [ -z "$APK_SHA256" ]; then
+            echo "$APK_CERTS"
+            echo "::error::Could not read the APK signer SHA-256 from apksigner output"
+            exit 1
+          fi
+          if [ "$APK_SIGNER_COUNT" -ne 1 ]; then
+            echo "$APK_SHA256_ALL"
+            echo "::error::APK has $APK_SIGNER_COUNT different signer certificates (expected exactly 1)"
             exit 1
           fi
           if echo "$APK_CERTS$AAB_CERTS" | grep -q "CN=Android Debug"; then
