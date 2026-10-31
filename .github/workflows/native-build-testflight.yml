@@ -2,10 +2,15 @@ name: App Build & Release — Android APK · iOS TestFlight (Main)
 
 # Expo Cloud(EAS Build/Submit)를 전혀 사용하지 않고 GitHub Actions runner 에서
 # 직접 native build 를 수행한다.
-#   - Android : Gradle 로 release APK 빌드
+#   - Android : Gradle 로 release APK(직접 설치용) + AAB(Google Play 업로드용) 빌드
+#               두 산출물 모두 ANDROID_KEYSTORE_* 의 release keystore 로 서명하고 검증한다.
 #   - iOS     : xcodebuild 로 archive/export 하여 IPA 빌드
-# Android / iOS 빌드가 모두 성공하면 새 GitHub Release 를 생성하고(APK + IPA 첨부),
+# Android / iOS 빌드가 모두 성공하면 새 GitHub Release 를 생성하고(APK + AAB + IPA 첨부),
 # iOS 는 App Store Connect API(altool)로 TestFlight 에 업로드한다.
+# Android 배포 절차: docs/android-deployment.md
+#
+# 주의: 워크플로 name 을 바꾸면 windows-desktop-release.yml 의 workflow_run 트리거도
+#       함께 바꿔야 한다.
 #
 # 참고: `expo prebuild` 는 runner 에서 로컬로 실행되는 CLI 명령으로 native 프로젝트
 #       (android/, ios/) 를 생성할 뿐이며 Expo Cloud(EAS) 와는 무관하다.
@@ -107,7 +112,7 @@ jobs:
           git push origin "v$NEW_VERSION"
 
   build-android:
-    name: Build Android APK (local)
+    name: Build Android APK & AAB (local)
     needs: bump-version
     runs-on: ubuntu-latest
     steps:
@@ -213,22 +218,47 @@ jobs:
               }
           }
 
-          g = g.replace(/buildTypes\s*\{[\s\S]*?release\s*\{([\s\S]*?)\}/, (m, inner) => {
-              if (inner.includes('signingConfig')) return m;
-              return m.replace(inner, `${inner}\n            signingConfig signingConfigs.release\n`);
+          // buildTypes.release 의 서명 설정을 signingConfigs.release 로 맞춘다.
+          // Expo 템플릿의 release 에는 처음부터 'signingConfig signingConfigs.debug' 가
+          // 들어 있으므로, 있으면 교체하고 없으면 추가한다. (v1.5.1 까지는 이 줄이 있으면
+          // 그대로 두는 바람에 APK 가 공개된 debug.keystore 로 서명되었다.)
+          const SIGNING_LINE = /signingConfig\s+signingConfigs\.\w+/;
+          const RELEASE_BUILD_TYPE = /(buildTypes\s*\{[\s\S]*?release\s*\{)([\s\S]*?)(\})/;
+          g = g.replace(RELEASE_BUILD_TYPE, (m, head, inner, tail) => {
+              const next = SIGNING_LINE.test(inner)
+                  ? inner.replace(SIGNING_LINE, 'signingConfig signingConfigs.release')
+                  : `${inner}    signingConfig signingConfigs.release\n        `;
+              return head + next + tail;
           });
+
+          // 주입이 하나라도 빠지면 debug 키로 서명된 빌드가 조용히 만들어지므로,
+          // Gradle 빌드(약 20분)를 돌리기 전에 여기서 바로 실패시킨다.
+          const releaseType = g.match(RELEASE_BUILD_TYPE);
+          if (!g.includes('MYAPP_RELEASE_STORE_FILE')) {
+              console.error('::error::Failed to inject signingConfigs.release into android/app/build.gradle');
+              process.exit(1);
+          }
+          if (!releaseType || !/signingConfig\s+signingConfigs\.release\b/.test(releaseType[2])) {
+              console.error('::error::Failed to set "signingConfig signingConfigs.release" in buildTypes.release');
+              process.exit(1);
+          }
           fs.writeFileSync(path, g);
           NODE
           fi
 
-      - name: Build release APK
+          echo "signingConfig lines in $BUILD_GRADLE:"
+          grep -n "signingConfig " "$BUILD_GRADLE"
+
+      # 한 번의 Gradle 실행으로 APK(GitHub Release 직접 설치용)와
+      # AAB(Google Play 업로드용)를 함께 만든다. 컴파일 결과를 공유하므로
+      # bundleRelease 를 추가해도 빌드 시간이 크게 늘지 않는다.
+      - name: Build release APK & AAB
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease --no-daemon
 
-      - name: Locate APK
-        id: locate-apk
+      - name: Locate APK & AAB
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n1)
           if [ -z "$APK" ]; then
@@ -236,13 +266,76 @@ jobs:
             exit 1
           fi
           cp "$APK" app-release.apk
-          echo "apk_path=app-release.apk" >> $GITHUB_OUTPUT
+
+          AAB=$(find android/app/build/outputs/bundle/release -name "*.aab" | head -n1)
+          if [ -z "$AAB" ]; then
+            echo "::error::No AAB produced"
+            exit 1
+          fi
+          cp "$AAB" app-release.aab
+
+      # APK·AAB 가 debug.keystore 가 아니라 ANDROID_KEYSTORE_BASE64 의 release keystore 로
+      # 서명되었는지 인증서 SHA-256 지문을 비교해 확인한다. 서명 주입이 다시 깨져도
+      # 릴리스가 만들어지기 전에 여기서 멈춘다.
+      #   - APK: minSdk 24 라 v2/v3 서명만 있으므로 apksigner 로 확인
+      #   - AAB: jar(v1) 서명이므로 keytool -printcert -jarfile 로 확인
+      - name: Verify release signing
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          normalize() { tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]'; }
+
+          EXPECTED=$(keytool -list -v -keystore android/app/release.keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" \
+            | awk '$1 == "SHA256:" {print $2; exit}' | normalize)
+
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner not found under $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+          APK_CERTS=$("$APKSIGNER" verify --print-certs app-release.apk)
+          APK_SHA256=$(echo "$APK_CERTS" | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}' | normalize)
+
+          # 서명 무결성만 확인한다. (-strict 는 self-signed 인증서를 오류로 보므로 쓰지 않는다)
+          if ! jarsigner -verify app-release.aab > /dev/null; then
+            echo "::error::AAB signature verification failed (jarsigner -verify)"
+            exit 1
+          fi
+          AAB_CERTS=$(keytool -printcert -jarfile app-release.aab)
+          AAB_SHA256=$(echo "$AAB_CERTS" | awk '$1 == "SHA256:" {print $2; exit}' | normalize)
+
+          echo "$APK_CERTS" | grep "certificate DN" || true
+          echo "release keystore SHA-256 : $EXPECTED"
+          echo "APK signer SHA-256       : $APK_SHA256"
+          echo "AAB signer SHA-256       : $AAB_SHA256"
+
+          if [ -z "$EXPECTED" ]; then
+            echo "::error::Could not read the certificate from release.keystore (check ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS)"
+            exit 1
+          fi
+          if echo "$APK_CERTS$AAB_CERTS" | grep -q "CN=Android Debug"; then
+            echo "::error::Build is signed with the public debug keystore"
+            exit 1
+          fi
+          if [ "$APK_SHA256" != "$EXPECTED" ] || [ "$AAB_SHA256" != "$EXPECTED" ]; then
+            echo "::error::APK/AAB signing certificate does not match the release keystore"
+            exit 1
+          fi
+          echo "APK and AAB are signed with the release keystore."
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: app-release.apk
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: app-release.aab
 
   build-ios:
     name: Build iOS IPA (local)
@@ -499,10 +592,15 @@ jobs:
         with:
           ref: v${{ needs.bump-version.outputs.new_version }}
 
-      - name: Download Android artifact
+      - name: Download Android APK artifact
         uses: actions/download-artifact@v4
         with:
           name: app-release-apk
+
+      - name: Download Android AAB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-aab
 
       - name: Download iOS artifact
         uses: actions/download-artifact@v4
@@ -515,12 +613,19 @@ jobs:
         run: |
           # 설치 안내 본문을 작성한 뒤 --notes-file 로 전달한다.
           # --generate-notes 를 함께 쓰면 gh 가 이 본문 뒤에 자동 변경 이력을 덧붙인다.
+          # v1.5.1 이하는 debug 키로 서명되어 있어 release 서명 빌드로 덮어쓰기 설치가 안 되므로
+          # 재설치 안내를 넣는다. 기존 사용자가 충분히 옮겨 간 뒤에는 이 안내를 빼도 된다.
           cat > release-notes.md <<'EOF'
           ## 📲 설치 방법
 
           ### Android
           아래 **Assets** 의 `app-release.apk` 파일을 안드로이드 기기에서 직접 다운로드한 뒤 실행하여 설치하세요.
           (출처를 알 수 없는 앱 설치 허용이 필요할 수 있습니다.)
+
+          > ⚠️ **v1.5.1 이하 버전에서 업데이트하는 경우** — 앱 서명 키가 바뀌어 덮어쓰기 설치가 되지 않습니다.
+          > 기존 앱을 삭제한 뒤 새로 설치하세요. 기기에 저장된 풀이 기록·통계도 함께 삭제됩니다.
+
+          `app-release.aab` 는 Google Play 업로드용 파일입니다. 기기에 직접 설치할 수 없으니 `app-release.apk` 를 받으세요.
 
           ### iOS
           App Store 에서 **"문제은행 sds"** 로 검색한 뒤, 이 아이콘을 가진 앱을 설치하세요.
@@ -534,4 +639,5 @@ jobs:
             --notes-file release-notes.md \
             --generate-notes \
             app-release.apk \
+            app-release.aab \
             app-release.ipa
