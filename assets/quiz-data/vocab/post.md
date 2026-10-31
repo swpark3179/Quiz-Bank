@@ -1,11 +1,16 @@
-**(글·댓글을) 올리다, 게시하다**라는 뜻입니다. 리뷰 봇이 PR 에 코멘트를 남기는 것을 *post comments* 라고 합니다.
+1. **(글·댓글을) 올리다, 게시하다** — 리뷰 봇이 PR 에 코멘트를 남기는 것을 *post comments* 라고 합니다.
+2. **(HTTP) POST 요청을 보내다** — 서버에 본문(body)을 실어 보내는 HTTP 메서드입니다. 대문자 *POST* 로 쓰면 대부분 이 뜻입니다.
 
 ## 문제 속 쓰임
-> The CI reviewer **posts** naming-convention and style comments, but developers report that roughly 60% of these particular comments are wrong or trivial.
-> CI 리뷰어가 이름 규칙과 스타일에 관한 코멘트를 **다는데**, 개발자들은 바로 이 범주의 코멘트 중 약 60%가 틀렸거나 사소하다고 보고한다.
+> She wants the findings **posted** as inline comments on her open GitHub pull request...
+> 그녀는 발견 사항을 열려 있는 GitHub 풀 리퀘스트에 인라인 댓글로 **게시하고** 싶어 한다.
+
+> Over the Streamable HTTP transport, a client **POSTs** a body containing a single JSON-RPC notification to the MCP endpoint...
+> Streamable HTTP 트랜스포트에서 클라이언트가 JSON-RPC 알림 하나를 담은 본문을 MCP 엔드포인트로 **POST했다**.
 
 ## 함께 쓰는 표현
 - **post a comment / message** : 댓글·메시지를 올리다
+- **a POST request** : POST 요청 (*a new POST to /v1/messages*)
 - **post-** (접두) ~ 뒤의, 사후의 (*post-hoc*, *post-process*)
 
 ## 시험 포인트
