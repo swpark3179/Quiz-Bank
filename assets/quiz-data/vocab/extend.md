@@ -1,13 +1,13 @@
-길이·범위·기능을 **늘리다, 확장하다** 라는 뜻입니다. *extended thinking* 은 답하기 전에 **더 길게 추론하게 하는 기능**(확장 사고)입니다.
+길이·범위·기능을 **늘리다, 확장하다** 라는 뜻입니다. 이미 있는 것에 **덧붙여 키우는** 느낌입니다. (*extended thinking* 은 별도 단어로 등록되어 있습니다.)
 
 ## 문제 속 쓰임
-> Enable **extended** thinking on the escalation turn so the model reasons longer about the case before handing it off.
-> 에스컬레이션 턴에 **확장** 사고(extended thinking)를 켜서, 모델이 건을 넘기기 전에 더 오래 추론하게 한다
+> **Extend** old_string with the neighbouring lines from the target function, then retry Edit, which finds a single match in the file
+> 대상 함수의 이웃 줄을 `old_string`에 **덧붙여 늘린** 뒤 다시 Edit하면, 파일에서 한 곳만 일치한다.
 
 ## 함께 쓰는 표현
-- **extended thinking** : 확장 사고 — 응답 전에 별도의 추론 단계를 거치게 하는 기능
 - **extend A with B** : A에 B를 더해 확장하다
-- **extension** (명) 확장, 확장 기능
+- **extension** (명) 확장, 확장 기능 / (파일) 확장자
+- **extended** (형) 늘어난, 확장된
 
 ## 시험 포인트
-extended thinking 을 켜는 보기는 그럴듯하지만, 문제의 원인이 **정보 부족·구조 부재**(넘길 요약이 없음, 정책 수치를 모름)라면 해결되지 않아 오답입니다.
+Edit 의 `old_string` 이 여러 곳과 일치하면, 주변 줄을 더해 **유일하게 일치하도록 늘리는** 것이 정답입니다. 파일 전체를 다시 쓰는 보기는 과한 대응입니다.
