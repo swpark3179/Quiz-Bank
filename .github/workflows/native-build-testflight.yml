@@ -182,12 +182,31 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          cat >> android/gradle.properties <<EOF
+          # expo prebuild 가 만든 gradle.properties 는 마지막 줄에 개행이 없을 수 있다.
+          # (expo-build-properties 가 enableMinify/ShrinkResources 를 끝에 추가하면서 그렇게 됨)
+          # 그대로 이어 붙이면 첫 줄이 앞 줄에 합쳐져
+          #   android.enableShrinkResourcesInReleaseBuilds=trueMYAPP_RELEASE_STORE_FILE=release.keystore
+          # 가 되고, MYAPP_RELEASE_STORE_FILE 이 정의되지 않아 packageRelease 가
+          # 'SigningConfig "release" is missing required property "storeFile"' 로 실패한다.
+          # 그래서 파일이 개행으로 끝나지 않으면 먼저 개행을 넣는다.
+          PROPS=android/gradle.properties
+          if [ -s "$PROPS" ] && [ -n "$(tail -c1 "$PROPS")" ]; then
+            echo >> "$PROPS"
+          fi
+          cat >> "$PROPS" <<EOF
           MYAPP_RELEASE_STORE_FILE=release.keystore
           MYAPP_RELEASE_KEY_ALIAS=${ANDROID_KEY_ALIAS}
           MYAPP_RELEASE_STORE_PASSWORD=${ANDROID_KEYSTORE_PASSWORD}
           MYAPP_RELEASE_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}
           EOF
+
+          # 이어 붙인 결과가 줄 단위로 온전한지 Gradle 빌드(약 20분) 전에 확인한다.
+          for line in 'MYAPP_RELEASE_STORE_FILE=release.keystore' \
+                      'android.enableMinifyInReleaseBuilds=true' \
+                      'android.enableShrinkResourcesInReleaseBuilds=true'; do
+            grep -qxF "$line" "$PROPS" \
+              || { echo "::error::'$line' is not a standalone line in $PROPS"; exit 1; }
+          done
 
           # build.gradle 에 release signingConfig 가 없으면 주입
           BUILD_GRADLE=android/app/build.gradle
