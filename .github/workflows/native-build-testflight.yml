@@ -151,6 +151,20 @@ jobs:
       - name: Expo prebuild (android)
         run: pnpm exec expo prebuild --platform android --no-install --clean
 
+      # Play Console 의 "DEX 코드 최적화" 경고(Optimization/Obfuscation/Shrinking 중
+      # 25% 미만 카테고리) 대응으로 R8 을 켰다. 설정이 조용히 빠져서 최적화되지 않은 AAB 가
+      # 다시 올라가지 않도록 Gradle 빌드 전에 확인한다.
+      - name: Verify R8 minify settings
+        run: |
+          set -e
+          grep -qx 'android.enableMinifyInReleaseBuilds=true' android/gradle.properties \
+            || { echo "::error::android.enableMinifyInReleaseBuilds=true missing in android/gradle.properties"; exit 1; }
+          grep -qx 'android.enableShrinkResourcesInReleaseBuilds=true' android/gradle.properties \
+            || { echo "::error::android.enableShrinkResourcesInReleaseBuilds=true missing in android/gradle.properties"; exit 1; }
+          grep -q 'proguard-android-optimize.txt' android/app/build.gradle \
+            || { echo "::error::release build does not use proguard-android-optimize.txt (withAndroidR8Optimize plugin not applied)"; exit 1; }
+          grep -n "minifyEnabled\|shrinkResources\|proguardFiles" android/app/build.gradle
+
       - name: Decode keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -274,6 +288,15 @@ jobs:
           fi
           cp "$AAB" app-release.aab
 
+          # R8 이 실제로 돌았다면 mapping.txt 가 생긴다. (AAB 에는 매핑이 자동으로 포함되어
+          # Play Console 이 역난독화에 사용하므로 별도 업로드는 필요 없다.)
+          MAPPING=android/app/build/outputs/mapping/release/mapping.txt
+          if [ ! -s "$MAPPING" ]; then
+            echo "::error::R8 mapping file not found ($MAPPING) — minify did not run"
+            exit 1
+          fi
+          cp "$MAPPING" mapping.txt
+
       # APK·AAB 가 debug.keystore 가 아니라 ANDROID_KEYSTORE_BASE64 의 release keystore 로
       # 서명되었는지 인증서 SHA-256 지문을 비교해 확인한다. 서명 주입이 다시 깨져도
       # 릴리스가 만들어지기 전에 여기서 멈춘다.
@@ -355,6 +378,14 @@ jobs:
         with:
           name: app-release-aab
           path: app-release.aab
+
+      # 난독화된 크래시 스택을 직접 풀어볼 때 쓰는 R8 매핑 파일.
+      # 공개 Release 자산에는 올리지 않고 Actions artifact 로만 보관한다.
+      - name: Upload R8 mapping artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-mapping
+          path: mapping.txt
 
   build-ios:
     name: Build iOS IPA (local)
