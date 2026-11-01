@@ -7,7 +7,7 @@
 | 경로 | 산출물 | 상태 | 설명 |
 |------|--------|------|------|
 | **A. GitHub Release** | `app-release.apk` | ✅ 자동화됨 | Actions 워크플로 실행 → 릴리스에 APK 첨부 → 사용자가 직접 설치 |
-| **B. Google Play** | `app-release.aab` | ✅ 빌드 자동화 · 업로드는 수동 | 같은 워크플로가 release keystore(**업로드 키**)로 서명한 AAB 를 릴리스에 함께 첨부 → Play Console 에 업로드 |
+| **B. Google Play** | `app-release.aab` | ✅ 빌드 자동화 · 업로드 자동화(선택) | 같은 워크플로가 release keystore(**업로드 키**)로 서명한 AAB 를 릴리스에 함께 첨부 → `upload_google_play` 를 켜면 **내부 테스트 트랙에 자동 업로드** (첫 업로드만 Play Console 에서 수동) |
 
 > [!IMPORTANT]
 > **v1.5.1 까지의 APK 는 공개된 debug 키로 서명되어 있었습니다.** 워크플로를 고쳐 **다음 릴리스부터는 APK·AAB 모두 `ANDROID_KEYSTORE_BASE64` 의 release keystore 로 서명**하고, 빌드 중에 서명을 검증합니다. 서명 키가 바뀌므로 v1.5.1 이하 사용자는 한 번 삭제 후 재설치해야 합니다. ([3. release 서명 전환](#3-release-서명-전환))
@@ -40,7 +40,7 @@
 | versionCode | `expo.android.versionCode` (정수) | `app.json` |
 | minSdk / compileSdk / targetSdk | 24 / 36 / 36 | react-native `0.81.5` 버전 카탈로그 기본값 |
 | 빌드 방식 | `expo prebuild` → Gradle (`assembleRelease` + `bundleRelease`) | EAS Build(Expo Cloud) 미사용 |
-| 워크플로 | `.github/workflows/native-build-testflight.yml` 의 `build-android` 잡 | |
+| 워크플로 | `.github/workflows/native-build-testflight.yml` 의 `build-android` 잡 (Play 업로드는 `submit-google-play` 잡) | |
 
 - `android/` 폴더는 CI 에서 `expo prebuild --clean` 으로 매번 새로 만들어지며 `.gitignore` 대상입니다. **네이티브 설정은 `android/` 가 아니라 `app.json` 에서 바꿉니다.**
 - Gradle 메모리 옵션(`org.gradle.jvmargs`)은 `app.json` 의 `expo-build-properties` 플러그인 설정으로 넣고 있습니다.
@@ -60,6 +60,7 @@
 | `RELEASE_APP_ID` | 릴리스용 GitHub App ID | `bump-version` — 버전 커밋·태그 push |
 | `RELEASE_APP_PRIVATE_KEY` | 위 GitHub App 의 private key | `bump-version` — 버전 커밋·태그 push |
 | `GITHUB_TOKEN` | (자동 제공) | `create-release` — Release 생성 |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Play Console 에 초대한 서비스 계정의 JSON 키 (파일 내용 전체) | `submit-google-play` — `upload_google_play` 를 켰을 때만 사용 ([6.7](#67-선택-play-업로드-자동화)) |
 
 `RELEASE_APP_*` 는 `master` 브랜치 보호 룰셋(PR 필수)을 우회해 버전 bump 커밋을 직접 push 하기 위한 값입니다. 해당 GitHub App 이 저장소에 설치되어 있고 룰셋의 **Bypass list** 에 들어 있어야 합니다.
 
@@ -193,24 +194,35 @@ APK·AAB 를 만든 뒤, 아래 세 SHA-256 인증서 지문이 모두 같은지
 3. 입력값 선택
    - `version_bump`: `patch` / `minor` / `major` ([버전 관리](#5-버전-관리) 참고)
    - `upload_testflight`: iOS TestFlight 업로드 여부 (Android 와는 무관)
+   - `upload_google_play`: Google Play 내부 테스트 트랙 업로드 여부 (기본 꺼짐, [6.7](#67-선택-play-업로드-자동화))
 4. **Run workflow** 클릭
 
 CLI 로도 실행할 수 있습니다.
 
 ```bash
-gh workflow run native-build-testflight.yml -f version_bump=patch -f upload_testflight=true
+gh workflow run native-build-testflight.yml -f version_bump=patch -f upload_testflight=true -f upload_google_play=false
+```
+
+Google Play 내부 테스트 트랙까지 올리려면 `upload_google_play=true` 로 실행합니다.
+
+```bash
+gh workflow run native-build-testflight.yml -f version_bump=patch -f upload_testflight=true -f upload_google_play=true
 ```
 
 ### 4.2 워크플로 흐름
 
 ```
-bump-version ──┬─▶ build-android ─────────────────────┐
-               │                                      ├─▶ create-release (APK + AAB + IPA 첨부)
-               └─▶ build-ios ──┬──────────────────────┘
-                               └─▶ submit-testflight (선택)
+bump-version ──┬─▶ build-android ──┬─▶ submit-google-play (선택)
+               │                   └──────────────────────┐
+               │                                          ├─▶ create-release (APK + AAB + IPA 첨부)
+               └─▶ build-ios ──────┬──────────────────────┘
+                                   └─▶ submit-testflight (선택)
 
 워크플로 전체 성공 후 ─▶ Windows Desktop Release (workflow_run 으로 자동 실행)
 ```
+
+- `submit-google-play` 는 `build-android` 만 성공하면 iOS 빌드·`create-release` 와 상관없이 실행됩니다. ([6.7](#67-선택-play-업로드-자동화))
+- 선택 잡(`submit-google-play` · `submit-testflight`)이 실패해도 Release 는 만들어지지만, 워크플로 전체가 실패로 끝나므로 Windows Desktop Release 는 자동 실행되지 않습니다. 이때는 실패한 잡을 **Re-run** 하거나 Windows 워크플로를 수동으로 실행합니다.
 
 `build-android` 잡의 단계는 다음과 같습니다. (지난 실행 기준 약 20분, 대부분 Gradle 빌드 시간)
 
@@ -253,6 +265,7 @@ keytool -printcert -jarfile app-release.aab
 - **`bump-version` 은 맨 먼저 버전 커밋과 태그를 `master` 에 push 합니다.** 이후 빌드가 실패해도 버전은 이미 올라가 있습니다.
 - 그래서 실패한 경우 워크플로를 새로 실행하지 말고, 해당 실행 화면에서 **Re-run failed jobs** 를 누르세요. 새로 실행하면 버전이 한 번 더 올라갑니다.
 - `create-release` 는 Android 와 iOS 빌드가 **모두** 성공해야 실행됩니다. iOS 만 실패한 경우에도 APK·AAB 는 실행 화면의 **Artifacts → `app-release-apk` / `app-release-aab`** 에서 받을 수 있습니다. (아티팩트 기본 보관 기간 90일)
+- `submit-google-play` 만 실패했다면 그 잡만 **Re-run** 하면 됩니다. 업로드 단계에서 실패하면 Play 에는 아무것도 반영되지 않으므로 같은 AAB 로 다시 시도해도 됩니다. 반대로 이미 업로드가 끝난 실행을 다시 돌리면 "버전 코드가 이미 사용됨" 오류가 납니다.
 - 워크플로가 끝나면 로컬에서 `git pull` 로 버전 bump 커밋을 받아 두세요.
 
 ### 4.5 사용자 설치 · 업데이트
@@ -383,9 +396,11 @@ Google Play Developer API 는 앱이 Play Console 에 먼저 만들어지고 첫
 
 - 테스트 도중 참여자가 12명 아래로 줄면 14일 기간이 다시 시작될 수 있으니 여유 있게 모집하세요.
 - 프로덕션 출시 때는 **단계적 출시** 비율(예: 20% → 50% → 100%)을 정해 문제를 일찍 발견할 수 있습니다.
-- 이후 업데이트는 새 versionCode 로 빌드한 AAB 를 같은 방법으로 업로드합니다. 버전 증가는 워크플로가 처리합니다.
+- 이후 업데이트는 새 versionCode 로 빌드한 AAB 를 같은 방법으로 업로드하거나, 워크플로 실행 때 `upload_google_play` 를 켜서 내부 테스트 트랙에 자동으로 올립니다. ([6.7](#67-선택-play-업로드-자동화)) 버전 증가는 워크플로가 처리합니다.
 
 ### 6.7 (선택) Play 업로드 자동화
+
+> ✅ **적용 완료** — 아래 1~4 단계를 모두 반영했습니다. 워크플로를 실행할 때 `upload_google_play` 를 켜면 AAB 가 내부 테스트 트랙에 올라갑니다. ([실행 방법](#실행-방법))
 
 첫 업로드가 끝난 뒤에는 서비스 계정으로 업로드를 자동화할 수 있습니다. **새로 등록할 시크릿은 서비스 계정 키 하나뿐**이고, 서명은 기존 시크릿을 그대로 씁니다.
 
@@ -401,7 +416,7 @@ Google Play Developer API 는 앱이 Play Console 에 먼저 만들어지고 첫
    gh secret set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON < service-account.json
    ```
    JSON 파일은 등록 후 저장소 밖에 보관하거나 삭제합니다. (`google-service-account.json` 이름은 `.gitignore` 대상입니다.)
-4. **워크플로에 입력값과 잡 추가** (`build-android` 잡이 이미 올리는 `app-release-aab` 아티팩트를 사용합니다 — [6.4](#64-aab-빌드-같은-시크릿으로-서명))
+4. **워크플로에 입력값과 잡 추가** — `native-build-testflight.yml` 에 반영했습니다. `build-android` 잡이 이미 올리는 `app-release-aab` 아티팩트를 사용하므로 AAB 를 다시 빌드하거나 서명하지 않습니다. ([6.4](#64-aab-빌드-같은-시크릿으로-서명))
 
 ```yaml
 on:
@@ -422,6 +437,9 @@ on:
     if: ${{ github.event.inputs.upload_google_play == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Verify Google Play secret      # 시크릿 누락·잘못된 JSON 이면 바로 실패
+        ...
+
       - name: Download AAB artifact
         uses: actions/download-artifact@v4
         with:
@@ -437,9 +455,27 @@ on:
           status: completed
 ```
 
-- 앱이 아직 한 번도 검토·출시되지 않은 **초안** 상태라면 `status: draft` 로 올려야 합니다. (아니면 `Only releases with status draft may be created on draft app` 오류)
-- `track` 은 `internal` / `alpha`(비공개 테스트) / `beta`(공개 테스트) / `production` 중에서 고릅니다. 처음에는 `internal` 로 두고 Play Console 에서 상위 트랙으로 승격하는 방식을 권장합니다.
+| 단계 | 내용 |
+|------|------|
+| Verify Google Play secret | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` 이 비어 있거나, `"type": "service_account"` · `client_email` · `private_key` 가 있는 서비스 계정 JSON 키가 아니면 실패합니다. Firebase 의 `google-services.json` 같은 다른 JSON 을 넣었거나 일부만 붙여넣은 경우를 업로드 전에 걸러냅니다. 키 내용은 로그에 출력하지 않습니다. |
+| Download AAB artifact | `build-android` 가 올린 `app-release-aab` 아티팩트(= `Verify release signing` 을 통과한 AAB)를 받습니다. |
+| Upload to Google Play | `r0adkll/upload-google-play` 로 내부 테스트(`internal`) 트랙에 `completed` 상태로 올립니다. |
+
+- `submit-google-play` 는 `build-android` 만 성공하면 실행되므로 iOS 빌드가 실패해도 Play 업로드는 진행됩니다. Release 생성(`create-release`)과도 서로 기다리지 않습니다.
+- 앱이 아직 한 번도 검토·출시되지 않은 **초안** 상태라면 `status: draft` 로 올려야 합니다. (아니면 `Only releases with status draft may be created on draft app` 오류) [6.5](#65-첫-업로드-수동) 에서 내부 테스트 버전을 출시까지 마쳤다면 `completed` 그대로 둡니다.
+- `track` 은 `internal` / `alpha`(비공개 테스트) / `beta`(공개 테스트) / `production` 중에서 고를 수 있지만, 워크플로는 `internal` 로 고정했습니다. 내부 테스트에서 확인한 뒤 Play Console 에서 상위 트랙으로 승격합니다.
+- R8 매핑(`mapping.txt`)은 AAB 안에 포함되어 Play Console 이 자동으로 쓰므로 따로 올리지 않습니다.
 - `eas.json` 의 `submit` 설정(`serviceAccountKeyPath`)은 EAS Submit 용이며, 이 저장소의 CI 는 EAS 를 쓰지 않으므로 사용되지 않습니다.
+
+#### 실행 방법
+
+1. [4.1](#41-실행) 과 같이 워크플로를 실행하면서 `upload_google_play` 를 **체크**합니다. (기본값은 꺼짐)
+2. 실행 화면에서 `Upload Android to Google Play` 잡이 성공했는지 확인합니다. 체크하지 않았다면 이 잡은 **Skipped** 로 표시됩니다.
+3. Play Console → **테스트 및 출시 → 테스트 → 내부 테스트** 에서 새 버전(versionCode · versionName)이 올라왔는지 확인합니다. 출시 노트는 비어 있으므로 필요하면 Play Console 에서 입력합니다.
+4. 문제가 없으면 Play Console 에서 **버전 승격** 으로 비공개 테스트·프로덕션 트랙에 올립니다. ([6.6](#66-테스트-트랙--프로덕션))
+
+- `upload_google_play` 를 켜지 않고 실행했다면 Re-run 으로는 입력값을 바꿀 수 없습니다. 그 버전은 Release Assets 의 `app-release.aab` 를 Play Console 에 수동으로 올립니다. ([6.5](#65-첫-업로드-수동))
+- 업로드가 실패하면 [4.4](#44-실패했을-때-주의할-점) 와 [8. 문제 해결](#8-문제-해결) 의 Play 업로드 항목을 봅니다.
 
 ---
 
@@ -453,6 +489,7 @@ on:
 - [ ] 실기기에서 설치·업데이트를 확인했다 (release 서명 첫 버전은 v1.5.1 이하 삭제 후 설치 — [3.4](#34-기존-사용자에게-미치는-영향))
 - [ ] (Play) 앱 서명 키 방식을 정했다 — [6.3](#63-앱-서명-키-결정-첫-업로드-전에)
 - [ ] (Play) 앱 콘텐츠 설문과 스토어 등록정보를 끝냈다
+- [ ] (Play 자동 업로드) `upload_google_play` 를 켰다면 `Upload Android to Google Play` 잡이 성공했고, Play Console 내부 테스트 트랙에 새 버전이 보인다
 - [ ] 로컬 저장소에서 `git pull` 로 버전 bump 커밋을 받았다
 
 ---
@@ -476,7 +513,12 @@ on:
 | 기기에서 "앱이 설치되지 않았습니다" (업데이트 시) | 서명이 다른 APK 이거나 versionCode 가 더 낮음 | 서명·versionCode 확인. 서명 전환 버전이라면 기존 앱 삭제 후 설치 (기록 삭제됨) |
 | Play: 디버그 모드로 서명된 APK 또는 App Bundle | v1.5.1 이하 산출물을 올렸거나 서명 주입이 적용되지 않음 | 최신 릴리스의 `app-release.aab` 사용, `Verify release signing` 통과 여부 확인 ([3.2](#32-워크플로-수정)) |
 | Play: 잘못된 키로 서명된 App Bundle | 업로드 키 불일치 | 업로드 키 인증서 SHA-1 비교. 키를 잃어버렸다면 Play Console 에서 업로드 키 재설정 요청 |
-| Play: 버전 코드가 이미 사용됨 | 같은 versionCode 로 재업로드 | 워크플로를 다시 실행해 새 versionCode 로 빌드 |
+| Play: 버전 코드가 이미 사용됨 | 같은 versionCode 로 재업로드 (업로드가 끝난 `submit-google-play` 를 다시 실행한 경우 포함) | 이미 올라간 버전이면 그대로 사용. 새 빌드가 필요하면 워크플로를 새로 실행해 새 versionCode 로 빌드 |
+| `Missing required secret for Google Play upload: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | `upload_google_play` 를 켰지만 시크릿 미등록 또는 이름 오타 | [6.7](#67-선택-play-업로드-자동화) 3단계로 시크릿 등록 후 `submit-google-play` 잡만 Re-run |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not a service account JSON key` | `google-services.json` 등 다른 JSON 을 넣었거나 내용 일부만 붙여넣음 | 서비스 계정의 JSON 키 파일 전체를 `gh secret set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON < 파일` 로 다시 등록 |
+| Play 업로드: `The caller does not have permission` (403) | 서비스 계정이 Play Console 에 초대되지 않았거나, 앱 권한·출시 권한이 없거나, Google Play Android Developer API 가 사용 설정되지 않음 | [6.7](#67-선택-play-업로드-자동화) 1·2단계 확인. 초대 직후에는 권한이 반영될 때까지 시간이 걸릴 수 있음 |
+| Play 업로드: `Package not found: com.swpark3179.quizbank` | Play Console 에 앱이 없거나 첫 버전을 아직 올리지 않음, 또는 서비스 계정이 다른 개발자 계정에 초대됨 | [6.5](#65-첫-업로드-수동) 의 첫 업로드를 먼저 수동으로 진행 |
+| Play 업로드: `Only releases with status draft may be created on draft app` | 앱이 아직 한 번도 출시되지 않은 초안 상태 | Play Console 에서 첫 내부 테스트 버전을 출시하거나, 워크플로의 `status` 를 `draft` 로 바꿔 업로드 후 Play Console 에서 출시 |
 | Play: 난독화 파일·네이티브 디버그 기호 경고 | R8 난독화를 쓰지 않아 mapping 파일이 없고, 네이티브 기호를 함께 올리지 않음 | 경고일 뿐 출시에는 문제없음 |
 
 ---
