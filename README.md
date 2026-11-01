@@ -213,7 +213,7 @@ LLM 은 Large Language Model 의 약자입니다. 해설과 링크를 자유롭�
 
 #### `App Build & Release` 워크플로 (`native-build-testflight.yml`)
 
-`Actions` 탭에서 수동 실행(`workflow_dispatch`)하며, 버전 증가 방식(`patch`/`minor`/`major`)과 TestFlight 업로드 여부를 선택합니다.
+`Actions` 탭에서 수동 실행(`workflow_dispatch`)하며, 버전 증가 방식(`patch`/`minor`/`major`)과 TestFlight · Google Play 업로드 여부를 선택합니다.
 
 | 단계 | 내용 |
 |------|------|
@@ -221,6 +221,7 @@ LLM 은 Large Language Model 의 약자입니다. 해설과 링크를 자유롭�
 | **build-android** | `expo prebuild` → Gradle 로 **release APK + AAB** 빌드 (release keystore 서명 · 서명 검증) |
 | **build-ios** | macOS 러너 + Xcode 26 → `xcodebuild` 로 archive/export → **IPA** |
 | **submit-testflight** | `altool` 로 App Store Connect(TestFlight) 업로드 |
+| **submit-google-play** | (선택, `upload_google_play`) AAB 를 Google Play **내부 테스트 트랙**에 업로드 — [Android 배포 가이드 6.7](docs/android-deployment.md#67-선택-play-업로드-자동화) |
 | **create-release** | APK + AAB + IPA 를 첨부한 **GitHub Release** 생성 (AAB 는 Google Play 업로드용) |
 
 #### `Windows Desktop Release` 워크플로 (`windows-desktop-release.yml`)

@@ -7,6 +7,8 @@ name: App Build & Release — Android APK · iOS TestFlight (Main)
 #   - iOS     : xcodebuild 로 archive/export 하여 IPA 빌드
 # Android / iOS 빌드가 모두 성공하면 새 GitHub Release 를 생성하고(APK + AAB + IPA 첨부),
 # iOS 는 App Store Connect API(altool)로 TestFlight 에 업로드한다.
+# upload_google_play 를 켜면 AAB 를 Google Play Developer API(서비스 계정)로
+# 내부 테스트 트랙에 업로드한다. (iOS 빌드와 무관하게 build-android 만 성공하면 실행)
 # Android 배포 절차: docs/android-deployment.md
 #
 # 주의: 워크플로 name 을 바꾸면 windows-desktop-release.yml 의 workflow_run 트리거도
@@ -38,6 +40,10 @@ name: App Build & Release — Android APK · iOS TestFlight (Main)
 #     ASC_KEY_ID                      - App Store Connect API Key ID
 #     ASC_ISSUER_ID                   - App Store Connect API Issuer ID
 #     ASC_PRIVATE_KEY                 - AuthKey_XXXX.p8 파일 내용 (전체 텍스트)
+#
+#   [Google Play 업로드 - upload_google_play 를 켰을 때만 필요]
+#     GOOGLE_PLAY_SERVICE_ACCOUNT_JSON - Play Console 에 초대한 서비스 계정의 JSON 키 (파일 내용 전체)
+#                                        서명은 위 ANDROID_* 시크릿(= Play 업로드 키)을 그대로 쓴다.
 
 on:
   workflow_dispatch:
@@ -55,6 +61,11 @@ on:
         description: 'Upload iOS build to TestFlight'
         required: true
         default: true
+        type: boolean
+      upload_google_play:
+        description: 'Upload Android build to Google Play (internal track)'
+        required: true
+        default: false
         type: boolean
 
 permissions:
@@ -650,6 +661,54 @@ jobs:
             -t ios \
             --apiKey "$ASC_KEY_ID" \
             --apiIssuer "$ASC_ISSUER_ID"
+
+  # build-android 가 올린 app-release-aab 아티팩트(release keystore = Play 업로드 키로 서명,
+  # Verify release signing 통과)를 Google Play 내부 테스트 트랙에 올린다.
+  #   - iOS 빌드·create-release 와 독립적으로 build-android 만 성공하면 실행된다.
+  #   - Play Developer API 는 Play Console 에 앱과 첫 버전이 있어야 쓸 수 있으므로
+  #     첫 업로드는 Play Console 에서 수동으로 한다. (docs/android-deployment.md 6.5)
+  #   - 상위 트랙(비공개 테스트·프로덕션)으로는 Play Console 에서 승격한다.
+  submit-google-play:
+    name: Upload Android to Google Play
+    needs: build-android
+    if: ${{ github.event.inputs.upload_google_play == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Google Play secret
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::Missing required secret for Google Play upload: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+            exit 1
+          fi
+          # Firebase 의 google-services.json 같은 다른 JSON 이나 일부만 붙여넣은 값을
+          # 업로드 액션의 알기 어려운 인증 오류 대신 여기서 바로 걸러낸다.
+          # (키 내용이 로그에 찍히지 않도록 jq 출력·오류는 모두 버린다)
+          if ! printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" \
+            | jq -e '.type == "service_account"
+                     and (.client_email | type == "string")
+                     and (.private_key | type == "string")' > /dev/null 2>&1; then
+            echo "::error::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not a service account JSON key (expected \"type\": \"service_account\" with client_email and private_key)"
+            exit 1
+          fi
+          echo "Service account JSON key looks valid."
+
+      - name: Download AAB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-aab
+
+      # 앱이 아직 한 번도 검토·출시되지 않은 초안(draft) 상태라면 status: draft 로 바꿔야 한다.
+      # (아니면 "Only releases with status draft may be created on draft app" 오류)
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.swpark3179.quizbank
+          releaseFiles: app-release.aab
+          track: internal
+          status: completed
 
   create-release:
     name: Create GitHub Release
