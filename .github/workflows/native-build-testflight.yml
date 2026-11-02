@@ -176,6 +176,22 @@ jobs:
             || { echo "::error::release build does not use proguard-android-optimize.txt (withAndroidR8Optimize plugin not applied)"; exit 1; }
           grep -n "minifyEnabled\|shrinkResources\|proguardFiles" android/app/build.gradle
 
+      # 백업·기기 간 이전으로 어긋난 SQLite DB 가 복원되지 않도록 files/SQLite/ 를 제외한다.
+      # (plugins/withAndroidBackupRules.js) 설정이 빠진 채 배포되지 않게 확인한다.
+      - name: Verify backup rules
+        run: |
+          set -e
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          XML_DIR=android/app/src/main/res/xml
+          grep -q 'android:fullBackupContent="@xml/quiz_bank_backup_rules"' "$MANIFEST" \
+            || { echo "::error::android:fullBackupContent missing (withAndroidBackupRules plugin not applied)"; exit 1; }
+          grep -q 'android:dataExtractionRules="@xml/quiz_bank_data_extraction_rules"' "$MANIFEST" \
+            || { echo "::error::android:dataExtractionRules missing (withAndroidBackupRules plugin not applied)"; exit 1; }
+          for f in quiz_bank_backup_rules.xml quiz_bank_data_extraction_rules.xml; do
+            grep -q 'path="SQLite/"' "$XML_DIR/$f" \
+              || { echo "::error::$XML_DIR/$f does not exclude SQLite/"; exit 1; }
+          done
+
       - name: Decode keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
