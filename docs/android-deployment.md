@@ -464,7 +464,7 @@ on:
 - `submit-google-play` 는 `build-android` 만 성공하면 실행되므로 iOS 빌드가 실패해도 Play 업로드는 진행됩니다. Release 생성(`create-release`)과도 서로 기다리지 않습니다.
 - 앱이 아직 한 번도 검토·출시되지 않은 **초안** 상태라면 `status: draft` 로 올려야 합니다. (아니면 `Only releases with status draft may be created on draft app` 오류) [6.5](#65-첫-업로드-수동) 에서 내부 테스트 버전을 출시까지 마쳤다면 `completed` 그대로 둡니다.
 - `track` 은 `internal` / `alpha`(비공개 테스트) / `beta`(공개 테스트) / `production` 중에서 고를 수 있지만, 워크플로는 `internal` 로 고정했습니다. 내부 테스트에서 확인한 뒤 Play Console 에서 상위 트랙으로 승격합니다.
-- R8 매핑(`mapping.txt`)은 AAB 안에 포함되어 Play Console 이 자동으로 쓰므로 따로 올리지 않습니다.
+- 릴리스 빌드는 R8(minify)을 쓰지 않습니다. v1.6.2~v1.6.5 에서 켰다가 expo 모듈의 Kotlin 리플렉션 기반 인자 변환이 깨져 DB 를 열지 못했기 때문입니다. 다시 켜려면 릴리스 빌드를 실기기에서 확인한 뒤 CI 의 `Verify R8 is disabled` 단계를 함께 고칩니다.
 - `eas.json` 의 `submit` 설정(`serviceAccountKeyPath`)은 EAS Submit 용이며, 이 저장소의 CI 는 EAS 를 쓰지 않으므로 사용되지 않습니다.
 
 #### 실행 방법
