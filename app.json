@@ -56,7 +56,8 @@
           }
         }
       ],
-      "./plugins/withAndroidR8Optimize"
+      "./plugins/withAndroidR8Optimize",
+      "./plugins/withAndroidBackupRules"
     ],
     "experiments": {
       "typedRoutes": true,

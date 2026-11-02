@@ -8,13 +8,16 @@ import {
   RefreshControl,
   ActivityIndicator,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { fetchCategories, Category } from '@/lib/local/categories';
 import { getDatabase } from '@/lib/db/schema';
 import { fetchAllCategorySummaries } from '@/lib/db/stats';
+import { describeLoadError, LoadErrorInfo, LoadStage } from '@/lib/utils/loadError';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordBadge } from '@/components/ui/NordBadge';
 import { NordButton } from '@/components/ui/NordButton';
@@ -26,15 +29,29 @@ import { listEntering } from '@/lib/theme/motion';
 // GitHub Pages로 배포된 레슨·자습 가이드 모음
 const STUDY_GUIDE_URL = 'https://swpark3179.github.io/Quiz-Bank';
 
+/** 오류 화면에 함께 보여줄 기기·앱 정보 (기기별 문제 진단용) */
+function diagnosticEnvironment(): string {
+  const os =
+    Platform.OS === 'android'
+      ? `Android API ${Platform.Version}`
+      : Platform.OS === 'ios'
+        ? `iOS ${Platform.Version}`
+        : Platform.OS;
+  const version = Constants.expoConfig?.version;
+  return version ? `${os} · 앱 v${version}` : os;
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, { accuracy: number; sessions: number }>>({});
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoadErrorInfo | null>(null);
 
   const load = useCallback(async (isRefresh = false) => {
+    // 실패 시 어느 단계였는지 보여주기 위해 진행 단계를 기록한다
+    let stage: LoadStage = 'database';
     try {
       if (!isRefresh) setLoading(true);
       setError(null);
@@ -43,15 +60,17 @@ export default function HomeScreen() {
       await getDatabase();
 
       // 카테고리 목록 로드
+      stage = 'categories';
       const cats = await fetchCategories();
       setCategories(cats);
 
       // 각 카테고리의 통계 일괄 로드 (N+1 최적화)
+      stage = 'stats';
       const stats = await fetchAllCategorySummaries(cats.map(c => c.id));
       setSummaries(stats);
     } catch (e) {
-      console.error('카테고리 로드 오류:', e);
-      setError('카테고리를 불러오지 못했습니다.\n앱을 다시 시작해주세요.');
+      console.error(`카테고리 로드 오류 [${stage}]:`, e);
+      setError(describeLoadError(stage, e, diagnosticEnvironment()));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -93,9 +112,22 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centered}>
-          <Ionicons name="cloud-offline-outline" size={56} color={Colors.text.tertiary} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Ionicons
+            name={error.stage === 'categories' ? 'cloud-offline-outline' : 'alert-circle-outline'}
+            size={56}
+            color={Colors.text.tertiary}
+          />
+          <Text style={styles.errorText}>{error.title}</Text>
           <NordButton label="다시 시도" onPress={() => load()} style={styles.retryButton} />
+          <View style={styles.errorDetailBox}>
+            <Text style={styles.errorDetailLabel}>오류 정보 · 길게 눌러 복사</Text>
+            <Text style={styles.errorDetail} selectable>
+              {error.detail}
+            </Text>
+          </View>
+          <Text style={styles.errorHint}>
+            문제가 계속되면 위 오류 정보를 개발자에게 알려주세요.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -333,6 +365,32 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: Spacing.sm,
     paddingHorizontal: Spacing.xl,
+  },
+  errorDetailBox: {
+    alignSelf: 'stretch',
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
+    gap: Spacing.xs,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bg.secondary,
+  },
+  errorDetailLabel: {
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.tertiary,
+  },
+  errorDetail: {
+    fontSize: Typography.size.xs,
+    lineHeight: Typography.size.xs * 1.5,
+    color: Colors.text.secondary,
+    fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }),
+  },
+  errorHint: {
+    fontSize: Typography.size.xs,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
   },
   empty: {
     alignItems: 'center',
