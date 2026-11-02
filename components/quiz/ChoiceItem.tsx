@@ -63,7 +63,7 @@ const stateStyles: Record<
     },
     symbol: { color: '#FFFFFF' },
     symbolBg: Colors.status.correct,
-    text: { color: Colors.status.correct, fontWeight: Typography.weight.bold },
+    text: { color: Colors.choice.correctText, fontWeight: Typography.weight.bold },
   },
   wrong: {
     container: {
@@ -73,7 +73,7 @@ const stateStyles: Record<
     },
     symbol: { color: '#FFFFFF' },
     symbolBg: Colors.status.wrong,
-    text: { color: Colors.status.wrong, fontWeight: Typography.weight.semibold },
+    text: { color: Colors.choice.wrongText, fontWeight: Typography.weight.semibold },
   },
   'reveal-correct': {
     container: {
@@ -83,7 +83,7 @@ const stateStyles: Record<
     },
     symbol: { color: '#FFFFFF' },
     symbolBg: Colors.status.correct,
-    text: { color: Colors.status.correct, fontWeight: Typography.weight.bold },
+    text: { color: Colors.choice.correctText, fontWeight: Typography.weight.bold },
   },
 };
 
