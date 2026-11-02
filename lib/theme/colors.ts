@@ -96,6 +96,19 @@ export const Colors = {
     correctBorder: '#6E8B4E',
     wrong: '#FBEAEB',
     wrongBorder: '#C2606A',
+    // 채점된 보기 글자 — 단어장 모드의 단어 배경(vocab.highlight)이 깔려도 4.5:1 이상
+    // (status.correct 는 그 위에서 4.4:1, status.wrong 은 4.1:1 로 떨어진다)
+    correctText: '#4B6631',  // 단어 배경 위 4.7:1 · correct 배경 위 5.6:1
+    wrongText: '#A33C45',    // 단어 배경 위 4.6:1 · wrong 배경 위 5.5:1
+  },
+
+  // 단어장 모드 — 문제·보기 속 등록 단어 표시
+  vocab: {
+    // 반투명이라 흰 카드와 선택·정답·오답 보기 배경 위에서 모두 한 단계 진하게 보인다.
+    // 인라인 코드(code.bg, 따뜻한 클레이)와는 차가운 파랑·원래 글자색·글꼴로 구분된다.
+    highlight: 'rgba(76,111,156,0.14)', // accent.primary 14%
+    active: '#4C6F9C',                  // 뜻 팝업이 열린 단어 — 흰 글자 5.2:1
+    activeText: '#FFFFFF',
   },
 
   // Inline code blocks (Claude warm clay pastel)

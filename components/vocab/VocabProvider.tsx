@@ -1,8 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { createVocabMatcher, type VocabEntry } from '@/lib/vocab/matcher';
 import { hapticSelection } from '@/lib/utils/haptics';
-import { VocabContext, type VocabLookup } from './VocabContext';
+import { VocabActiveContext, VocabContext, type VocabLookup } from './VocabContext';
 import { VocabPopover, type VocabTarget } from './VocabPopover';
+
+type OpenTarget = VocabTarget & {
+  /** 누른 자리의 id — 팝업이 열린 동안 그 자리의 단어를 강조한다 */
+  occurrence: string;
+};
 
 interface VocabProviderProps {
   /** 등록 단어 목록. null 이거나 비어 있으면 꺼짐 */
@@ -15,22 +20,26 @@ interface VocabProviderProps {
  * 해설 시트처럼 감싸지 않은 영역은 영향을 받지 않는다.
  */
 export function VocabProvider({ entries, children }: VocabProviderProps) {
-  const [target, setTarget] = useState<VocabTarget | null>(null);
+  const [target, setTarget] = useState<OpenTarget | null>(null);
 
   const lookup = useMemo<VocabLookup | null>(() => {
     if (!entries || entries.length === 0) return null;
     return {
       matcher: createVocabMatcher(entries),
-      open: (entry, anchor) => {
+      open: (entry, anchor, occurrence) => {
         hapticSelection();
-        setTarget({ entry, anchor });
+        setTarget({ entry, anchor, occurrence });
       },
     };
   }, [entries]);
 
   return (
     <>
-      <VocabContext.Provider value={lookup}>{children}</VocabContext.Provider>
+      <VocabContext.Provider value={lookup}>
+        <VocabActiveContext.Provider value={target?.occurrence ?? null}>
+          {children}
+        </VocabActiveContext.Provider>
+      </VocabContext.Provider>
       {/* 팝업은 Provider 바깥 — 상세 설명 안의 단어까지 다시 표시하지 않는다 */}
       <VocabPopover target={target} onDismissed={() => setTarget(null)} />
     </>
