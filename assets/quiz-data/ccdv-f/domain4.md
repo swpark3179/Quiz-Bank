@@ -1,7 +1,11 @@
 <!-- 출처·작성 원칙: CertSafari CCDV-F 레슨(https://certsafari.com/anthropic/claude-developer-foundations/learn) 도메인 4(4.1)의 체크포인트·Predict-first 문항 15개에 1:1로 대응한다. 각 체크포인트가 묻는 개념과 정답 근거만 따르고, 시나리오·문장·보기는 새로 썼다(원문은 옮기지 않음). 순서 맞추기·짝 맞추기·빈칸·예측 형식은 4지선다로 바꿨다. 해설은 Anthropic 공식 문서(2026년 10월 기준)를 확인해 한글로 작성. -->
 
 ## 문제 1
-### **Anthropic support asks a team to include one identifier with every failed Messages API call they report, so that the request can be traced. The app uses the Python SDK and logs `log.warning("claude call failed", extra={"trace": message.____})`. Which attribute fills the blank?**
+### **Anthropic support asks a team to include one identifier with every failed Messages API call they report, so that the request can be traced. The app uses the Python SDK and logs failures with the line below. Which attribute fills the blank?**
+
+```python
+log.warning("claude call failed", extra={"trace": message.____})
+```
 
 | 보기 | 설명 |
 |------|------|

@@ -562,7 +562,16 @@ HIPAA가 활성화된 조직이 들어오는 진료소 메시지를 분류하는
 ---
 
 ## 문제 15
-### **A harmlessness screen must return a value the application can parse as a boolean. Which value completes the request field `"output_config": {"format": {"type": "____", "schema": {...}}}`?**
+### **A harmlessness screen must return a value the application can parse as a boolean. Which value completes the request field below?**
+
+```json
+"output_config": {
+  "format": {
+    "type": "____",
+    "schema": {...}
+  }
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1602,7 +1611,17 @@ PreToolUse 훅의 결과와 그 효과를 짝지으세요. (a) stderr에 사유�
 ---
 
 ## 문제 41
-### **A PreToolUse hook prints `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "Writes to prod schemas need a migration PR"}}` to stdout and exits 0. What happens to the tool call?**
+### **A PreToolUse hook prints the JSON below to stdout and exits 0. What happens to the tool call?**
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Writes to prod schemas need a migration PR"
+  }
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1640,7 +1659,14 @@ PreToolUse 훅이 stdout에 `{"hookSpecificOutput": {"hookEventName": "PreToolUs
 ---
 
 ## 문제 42
-### **Which value completes `"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "____"}` so that the hook blocks the tool call?**
+### **Which value completes the hook output below so that the hook blocks the tool call?**
+
+```json
+"hookSpecificOutput": {
+  "hookEventName": "PreToolUse",
+  "permissionDecision": "____"
+}
+```
 
 | 보기 | 설명 |
 |------|------|

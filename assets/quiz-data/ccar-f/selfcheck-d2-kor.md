@@ -487,7 +487,11 @@
 ---
 
 ## 문제 19
-### **개발자가 저장소 A에서 `claude mcp add --transport http tracker https://tracker.example.com/mcp`를 실행했다. 저장소 B로 옮겨 `/mcp`를 보니 tracker가 없다. 가장 그럴듯한 원인은?**
+### **개발자가 저장소 A에서 아래 명령을 실행했다. 저장소 B로 옮겨 `/mcp`를 보니 tracker가 없다. 가장 그럴듯한 원인은?**
+
+```bash
+claude mcp add --transport http tracker https://tracker.example.com/mcp
+```
 
 | 보기 | 설명 |
 |------|------|

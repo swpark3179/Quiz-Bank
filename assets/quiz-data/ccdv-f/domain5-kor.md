@@ -313,7 +313,16 @@
 ---
 
 ## 문제 11
-### **Claude Opus 5.5가 low effort로 실행되도록 다음 요청 본문을 완성하세요. `{"model": "claude-opus-5-5", "max_tokens": 4096, ____: {"effort": "low"}, "messages": [...]}`. 빈칸에 들어갈 최상위 필드는 무엇일까요?**
+### **Claude Opus 5.5가 low effort로 실행되도록 아래 요청 본문을 완성하세요. 빈칸에 들어갈 최상위 필드는 무엇일까요?**
+
+```json
+{
+  "model": "claude-opus-5-5",
+  "max_tokens": 4096,
+  ____: {"effort": "low"},
+  "messages": [...]
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -914,7 +923,12 @@ for event in stream:
 ---
 
 ## 문제 29
-### **야간 컴플라이언스 리포트 작업이 큰 max_tokens 값으로 Python SDK를 쓰기 때문에 스트리밍을 해야 하지만, 마지막에 완성된 Message 객체만 있으면 됩니다. 코드를 완성하세요. `with client.messages.stream(...) as stream:` 다음에 `message = stream.____()`.**
+### **야간 컴플라이언스 리포트 작업이 큰 max_tokens 값으로 Python SDK를 쓰기 때문에 스트리밍을 해야 하지만, 마지막에 완성된 Message 객체만 있으면 됩니다. 아래 코드를 완성하세요.**
+
+```python
+with client.messages.stream(...) as stream:
+    message = stream.____()
+```
 
 | 보기 | 설명 |
 |------|------|

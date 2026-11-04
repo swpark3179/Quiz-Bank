@@ -441,7 +441,16 @@ Claude의 응답에 `id`가 `toolu_A1`(`get_balance`)과 `toolu_B2`(`get_limits`
 ---
 
 ## 문제 12
-### **A file-conversion tool crashes on a corrupted upload. The app sends `{"type": "tool_result", "tool_use_id": "toolu_77", "content": "Conversion failed: the PDF header is damaged. Ask the user to re-export the file.", ___: true}`. Which field name fills the blank so that Claude treats the result as a failure?**
+### **A file-conversion tool crashes on a corrupted upload. The app sends the tool result below. Which field name fills the blank so that Claude treats the result as a failure?**
+
+```json
+{
+  "type": "tool_result",
+  "tool_use_id": "toolu_77",
+  "content": "Conversion failed: the PDF header is damaged. Ask the user to re-export the file.",
+  ___: true
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -965,7 +974,14 @@ Streamable HTTP 트랜스포트에서 클라이언트가 JSON-RPC 알림 하나�
 ---
 
 ## 문제 25
-### **A TypeScript client creates `new StdioClientTransport({ command: "node", args: ["build/inventory-server.js"] })` and passes it to `client.connect()`. What does this transport do?**
+### **A TypeScript client creates the transport below and passes it to `client.connect()`. What does this transport do?**
+
+```typescript
+new StdioClientTransport({
+  command: "node",
+  args: ["build/inventory-server.js"],
+})
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1003,7 +1019,11 @@ TypeScript 클라이언트가 `new StdioClientTransport({ command: "node", args:
 ---
 
 ## 문제 26
-### **A vendor gives a team the remote MCP endpoint `https://mcp.trackly.example/mcp`. To add it to Claude Code, a developer runs `claude mcp add --transport ___ trackly https://mcp.trackly.example/mcp`. Which value fills the blank?**
+### **A vendor gives a team the remote MCP endpoint `https://mcp.trackly.example/mcp`. To add it to Claude Code, a developer runs the command below. Which value fills the blank?**
+
+```bash
+claude mcp add --transport ___ trackly https://mcp.trackly.example/mcp
+```
 
 | 보기 | 설명 |
 |------|------|

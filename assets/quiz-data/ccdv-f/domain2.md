@@ -278,7 +278,16 @@
 ---
 
 ## 문제 8
-### **A health-analytics service calls `POST /v1/messages`. One workflow must run inference only on US infrastructure, while every other workflow keeps global routing. Which field belongs in the blank of the request body `{"model": "claude-sonnet-5-5", "max_tokens": 2048, ____: "us", "messages": [...]}`?**
+### **A health-analytics service calls `POST /v1/messages`. One workflow must run inference only on US infrastructure, while every other workflow keeps global routing. Which field belongs in the blank of the request body below?**
+
+```json
+{
+  "model": "claude-sonnet-5-5",
+  "max_tokens": 2048,
+  ____: "us",
+  "messages": [...]
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1795,7 +1804,15 @@ curl https://api.anthropic.com/v1/messages \
 ---
 
 ## 문제 45
-### **Inside an `async def` handler that uses `client = AsyncAnthropic()`, the line reads `message = ____ client.messages.create(model="claude-sonnet-5-5", max_tokens=1024, messages=msgs)`. Which keyword belongs in the blank so that `message` holds the response?**
+### **Inside an `async def` handler that uses `client = AsyncAnthropic()`, the code below creates a message. Which keyword belongs in the blank so that `message` holds the response?**
+
+```python
+message = ____ client.messages.create(
+    model="claude-sonnet-5-5",
+    max_tokens=1024,
+    messages=msgs,
+)
+```
 
 | 보기 | 설명 |
 |------|------|

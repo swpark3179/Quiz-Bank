@@ -168,7 +168,7 @@ export default function CategoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       {/* 웹에서만 짧은 진입 페이드 (네이티브는 스택 전환) */}
       <ScreenEnter>
         {/* 요약 헤더 */}

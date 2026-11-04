@@ -403,7 +403,16 @@ Claude Opus 5.5를 쓰는 지원 앱이 캐시된 60,000토큰 시스템 프롬�
 ---
 
 ## 문제 11
-### **Complete this request body so that Claude Opus 5.5 runs at low effort: `{"model": "claude-opus-5-5", "max_tokens": 4096, ____: {"effort": "low"}, "messages": [...]}`. Which top-level field fills the blank?**
+### **Complete the request body below so that Claude Opus 5.5 runs at low effort. Which top-level field fills the blank?**
+
+```json
+{
+  "model": "claude-opus-5-5",
+  "max_tokens": 4096,
+  ____: {"effort": "low"},
+  "messages": [...]
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1166,7 +1175,12 @@ for event in stream:
 ---
 
 ## 문제 29
-### **A nightly compliance-report job uses the Python SDK with a large max_tokens value, so it must stream, but it only needs the complete Message object at the end. Complete the code: `with client.messages.stream(...) as stream:` followed by `message = stream.____()`.**
+### **A nightly compliance-report job uses the Python SDK with a large max_tokens value, so it must stream, but it only needs the complete Message object at the end. Complete the code below.**
+
+```python
+with client.messages.stream(...) as stream:
+    message = stream.____()
+```
 
 | 보기 | 설명 |
 |------|------|

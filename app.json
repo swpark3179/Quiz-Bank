@@ -3,7 +3,7 @@
     "name": "문제은행",
     "slug": "quiz-bank",
     "version": "1.6.6",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "quizbank",
     "userInterfaceStyle": "light",

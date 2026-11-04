@@ -1,7 +1,15 @@
 <!-- 출처: https://github.com/shourabhmodak/claude-certified-architect-exam-prep (MIT) — sample01.md 의 한글 번역판. 문항·보기 순서·정답 번호는 원본과 동일. -->
 
 ## 문제 1
-### **엔지니어가 에이전트형 고객지원 봇을 만들었습니다. 루프 로직은 다음과 같습니다: `response = client.messages.create(model="claude-sonnet-4-6", ...)` / `text_output = response.content[0].text` / `if "TOOL_CALL:" in text_output:` / `tool_name = text_output.split("TOOL_CALL:")[1].strip()` / `result = run_tool(tool_name)`. 운영 환경에서 에이전트가 가끔 엉뚱한 도구를 호출하고, 도구 호출을 아예 놓치기도 합니다. 근본 원인은 무엇일까요?**
+### **엔지니어가 아래와 같은 루프 로직으로 에이전트형 고객지원 봇을 만들었습니다. 운영 환경에서 에이전트가 가끔 엉뚱한 도구를 호출하고, 도구 호출을 아예 놓치기도 합니다. 근본 원인은 무엇일까요?**
+
+```python
+response = client.messages.create(model="claude-sonnet-4-6", ...)
+text_output = response.content[0].text
+if "TOOL_CALL:" in text_output:
+    tool_name = text_output.split("TOOL_CALL:")[1].strip()
+    result = run_tool(tool_name)
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -42,7 +50,15 @@ if response.stop_reason == "tool_use":
 ---
 
 ## 문제 2
-### **보험 청구를 처리하는 에이전트 파이프라인이 운영 3시간 만에, 일부 청구 건이 무한 루프에 빠져 수천 토큰을 소모하고 있다는 사실이 발견됐습니다. 루프는 다음과 같습니다: `while True:` / `response = client.messages.create(...)` / `if response.stop_reason == "end_turn": break` / `process_tool_calls(response)`. 가장 가능성 높은 원인과 올바른 아키텍처 수정은 무엇일까요?**
+### **보험 청구를 처리하는 에이전트 파이프라인이 운영 3시간 만에, 일부 청구 건이 무한 루프에 빠져 수천 토큰을 소모하고 있다는 사실이 발견됐습니다. 루프는 아래와 같습니다. 가장 가능성 높은 원인과 올바른 아키텍처 수정은 무엇일까요?**
+
+```python
+while True:
+    response = client.messages.create(...)
+    if response.stop_reason == "end_turn":
+        break
+    process_tool_calls(response)
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -89,7 +105,22 @@ raise AgentError(f"{MAX_ITERATIONS}회 초과 — 순환 가능성")
 ---
 
 ## 문제 3
-### **항공편 검색 API의 도구 정의가 다음과 같습니다: `{"name": "search_flights", "description": "Search flights", "input_schema": {"type": "object", "properties": {"from": {"type": "string"}, "to": {"type": "string"}, "date": {"type": "string"}}}}`. 테스트에서 모델이 날짜에 `"next Tuesday"`, `"ASAP"` 같은 잘못된 문자열을 자주 넣고, 가끔 `from` 과 `to` 파라미터를 뒤바꿉니다. 효과가 가장 큰 수정은 무엇일까요?**
+### **항공편 검색 API의 도구 정의가 아래와 같습니다. 테스트에서 모델이 날짜에 `"next Tuesday"`, `"ASAP"` 같은 잘못된 문자열을 자주 넣고, 가끔 `from` 과 `to` 파라미터를 뒤바꿉니다. 효과가 가장 큰 수정은 무엇일까요?**
+
+```json
+{
+  "name": "search_flights",
+  "description": "Search flights",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "from": {"type": "string"},
+      "to": {"type": "string"},
+      "date": {"type": "string"}
+    }
+  }
+}
+```
 
 | 보기 | 설명 |
 |------|------|

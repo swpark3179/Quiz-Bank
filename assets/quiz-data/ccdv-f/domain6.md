@@ -996,7 +996,12 @@ Which risks are identified in both reports? Cite each report.
 ---
 
 ## 문제 25
-### **A Python service defines `class Order(BaseModel): quantity: int = Field(ge=100)` and calls `client.messages.parse()` with this model as the output format. The API's JSON Schema subset does not support a numeric `minimum`. What does the SDK do with this constraint?**
+### **A Python service defines the `Order` model below and calls `client.messages.parse()` with this model as the output format. The API's JSON Schema subset does not support a numeric `minimum`. What does the SDK do with this constraint?**
+
+```python
+class Order(BaseModel):
+    quantity: int = Field(ge=100)
+```
 
 | 보기 | 설명 |
 |------|------|

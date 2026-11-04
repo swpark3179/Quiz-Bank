@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePreventRemove } from '@react-navigation/native';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -87,6 +88,8 @@ export default function QuizScreen() {
   const feedbackTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const navigation = useNavigation();
+  // 가로 화면에서 옆으로 옮겨 간 내비게이션 바·카메라 컷아웃을 피한다
+  const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheet>(null);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -389,7 +392,10 @@ export default function QuizScreen() {
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingLeft: Spacing.base + insets.left, paddingRight: Spacing.base + insets.right },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* 진행 표시 */}
@@ -406,7 +412,14 @@ export default function QuizScreen() {
             {/* 문제 영역 */}
             {/* 몇 번째 문제인지는 위 진행 표시가 보여 준다 */}
             <View style={styles.questionCard}>
-              <MarkdownViewer content={currentQ.original.question} />
+              {/* 문제 문장 + (있으면) 그 아래 코드블록 등 본문 */}
+              <MarkdownViewer
+                content={
+                  currentQ.original.questionBody
+                    ? `${currentQ.original.question}\n\n${currentQ.original.questionBody}`
+                    : currentQ.original.question
+                }
+              />
             </View>
 
             {/* 보기 영역 */}
