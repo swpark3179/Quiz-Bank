@@ -780,7 +780,12 @@ Which risks are identified in both reports? Cite each report.
 ---
 
 ## 문제 25
-### **Python 서비스가 `class Order(BaseModel): quantity: int = Field(ge=100)`을 정의하고, 이 모델을 출력 형식으로 삼아 `client.messages.parse()`를 호출합니다. API가 지원하는 JSON Schema 부분 집합은 숫자 `minimum`을 지원하지 않습니다. SDK는 이 제약을 어떻게 처리할까요?**
+### **Python 서비스가 아래 `Order` 모델을 정의하고, 이 모델을 출력 형식으로 삼아 `client.messages.parse()`를 호출합니다. API가 지원하는 JSON Schema 부분 집합은 숫자 `minimum`을 지원하지 않습니다. SDK는 이 제약을 어떻게 처리할까요?**
+
+```python
+class Order(BaseModel):
+    quantity: int = Field(ge=100)
+```
 
 | 보기 | 설명 |
 |------|------|

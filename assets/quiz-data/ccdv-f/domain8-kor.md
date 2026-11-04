@@ -342,7 +342,16 @@
 ---
 
 ## 문제 12
-### **파일 변환 도구가 손상된 업로드 파일에서 실패했습니다. 앱은 `{"type": "tool_result", "tool_use_id": "toolu_77", "content": "Conversion failed: the PDF header is damaged. Ask the user to re-export the file.", ___: true}`를 보냅니다. Claude가 이 결과를 실패로 다루게 하려면 빈칸에 어떤 필드 이름이 들어가야 할까요?**
+### **파일 변환 도구가 손상된 업로드 파일에서 실패했습니다. 앱은 아래 도구 결과를 보냅니다. Claude가 이 결과를 실패로 다루게 하려면 빈칸에 어떤 필드 이름이 들어가야 할까요?**
+
+```json
+{
+  "type": "tool_result",
+  "tool_use_id": "toolu_77",
+  "content": "Conversion failed: the PDF header is damaged. Ask the user to re-export the file.",
+  ___: true
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -749,7 +758,14 @@
 ---
 
 ## 문제 25
-### **TypeScript 클라이언트가 `new StdioClientTransport({ command: "node", args: ["build/inventory-server.js"] })`를 만들어 `client.connect()`에 넘깁니다. 이 트랜스포트는 무엇을 할까요?**
+### **TypeScript 클라이언트가 아래 트랜스포트를 만들어 `client.connect()`에 넘깁니다. 이 트랜스포트는 무엇을 할까요?**
+
+```typescript
+new StdioClientTransport({
+  command: "node",
+  args: ["build/inventory-server.js"],
+})
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -778,7 +794,11 @@
 ---
 
 ## 문제 26
-### **공급업체가 원격 MCP 엔드포인트 `https://mcp.trackly.example/mcp`를 팀에 줬습니다. 이를 Claude Code에 추가하려고 개발자가 `claude mcp add --transport ___ trackly https://mcp.trackly.example/mcp`를 실행합니다. 빈칸에 들어갈 값은 무엇일까요?**
+### **공급업체가 원격 MCP 엔드포인트 `https://mcp.trackly.example/mcp`를 팀에 줬습니다. 이를 Claude Code에 추가하려고 개발자가 아래 명령을 실행합니다. 빈칸에 들어갈 값은 무엇일까요?**
+
+```bash
+claude mcp add --transport ___ trackly https://mcp.trackly.example/mcp
+```
 
 | 보기 | 설명 |
 |------|------|

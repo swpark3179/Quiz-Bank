@@ -4,11 +4,12 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   Alert,
   TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarChart } from 'react-native-gifted-charts';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchSessionStats, fetchCategorySummary, fetchQuestionStats } from '@/lib/db/stats';
@@ -26,9 +27,12 @@ import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
 export default function StatsScreen() {
+  // 화면 회전·창 크기 변경에 맞춰 차트 폭을 다시 계산한다
+  const { width: windowWidth } = useWindowDimensions();
+  // 가로 화면에서 옆으로 옮겨 간 내비게이션 바·카메라 컷아웃을 피한다
+  const insets = useSafeAreaInsets();
+  const screenWidth = windowWidth - insets.left - insets.right;
   const { category: categoryId } = useLocalSearchParams<{ category: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -213,7 +217,13 @@ export default function StatsScreen() {
     <View style={styles.safeArea}>
       {/* 로딩 골격에서 콘텐츠로 짧게 페이드 교체 */}
       <Animated.View entering={FadeIn.duration(160)} style={styles.fill}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingLeft: Spacing.base + insets.left, paddingRight: Spacing.base + insets.right },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
 
           {/* 전체 요약 카드 */}
           <View style={styles.summaryCard}>
@@ -257,9 +267,9 @@ export default function StatsScreen() {
                 // 막대가 아래에서 차오른다
                 isAnimated
                 animationDuration={600}
-                width={SCREEN_WIDTH - Spacing.base * 2 - Spacing.xl * 2}
+                width={screenWidth - Spacing.base * 2 - Spacing.xl * 2}
                 height={200}
-                barWidth={Math.max(20, (SCREEN_WIDTH - 100) / Math.max(chartData.length, 1))}
+                barWidth={Math.max(20, (screenWidth - 100) / Math.max(chartData.length, 1))}
                 maxValue={100}
                 noOfSections={5}
                 yAxisThickness={0}

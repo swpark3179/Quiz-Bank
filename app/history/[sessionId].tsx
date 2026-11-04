@@ -93,7 +93,7 @@ export default function SessionDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       {/* 로딩 골격에서 콘텐츠로 짧게 페이드 교체 */}
       <Animated.View entering={FadeIn.duration(160)} style={styles.fill}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

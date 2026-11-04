@@ -79,5 +79,27 @@ describe.each(config.flatMap((c) => c.files.map((f) => [`${c.id}/${f.id}.md`, f]
         .map((q) => q.id);
       expect(invalid).toEqual([]);
     });
+
+    it('해설·문제 본문의 코드블록이 모두 닫혀 있다 (중간에 끊긴 문항이 없다)', () => {
+      const fenceCount = (md: string) =>
+        md.split('\n').filter((l) => /^\s*(```|~~~)/.test(l)).length;
+      const unbalanced = questions
+        .filter((q) => fenceCount(q.explanation) % 2 !== 0 || fenceCount(q.questionBody ?? '') % 2 !== 0)
+        .map((q) => q.id);
+      expect(unbalanced).toEqual([]);
+    });
+
+    // 앱은 이 파일을 master 에서 바로 받아 간다. 문제 본문(questionBody)을 모르는 예전 앱의 파서는
+    // 본문 줄 중 "---"·"|"·"**정답" 으로 시작하는 줄을 문항 구조로 읽어 문항을 깨뜨린다.
+    it('문제 본문에 예전 앱 파서를 깨뜨리는 줄이 없다', () => {
+      const breaking = questions.flatMap((q) =>
+        (q.questionBody ?? '')
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l === '---' || l.startsWith('|') || /^\*\*정답[:：]/.test(l))
+          .map((l) => `${q.id}: ${l}`)
+      );
+      expect(breaking).toEqual([]);
+    });
   }
 );

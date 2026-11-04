@@ -19,6 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { Motion } from '@/lib/theme/motion';
@@ -111,43 +112,47 @@ export function VocabPopover({ target, onDismissed }: VocabPopoverProps) {
       statusBarTranslucent
       navigationBarTranslucent={Platform.OS === 'android'}
     >
-      <View
-        style={StyleSheet.absoluteFill}
-        onLayout={(e) => setRoot({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
-        pointerEvents="none"
-      />
-      <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
-        <Pressable
+      {/* Android 의 Modal 은 앱의 제스처 루트 밖이라, 뜻 본문의 표·코드 가로 스크롤(제스처 핸들러)이
+          동작하도록 모달 안에 루트를 따로 둔다 */}
+      <GestureHandlerRootView style={styles.gestureRoot}>
+        <View
           style={StyleSheet.absoluteFill}
-          onPress={requestClose}
-          accessibilityRole="button"
-          accessibilityLabel="뜻 닫기"
+          onLayout={(e) => setRoot({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+          pointerEvents="none"
         />
-      </Animated.View>
-
-      {/* 모달 크기를 잰 뒤에 그려 첫 프레임부터 제자리에 뜬다 */}
-      {target && root && (
-        <Animated.View
-          style={[
-            styles.card,
-            { width: cardW, left, maxHeight },
-            placeBelow ? { top: anchor.y + GAP } : { bottom: screenH - (anchor.y - GAP) },
-            // 누른 자리(꼬리)에서 커져 나오도록 변형 기준점을 꼬리에 둔다
-            { transformOrigin: `${caretX}px ${placeBelow ? '0%' : '100%'}` },
-            cardStyle,
-          ]}
-          accessibilityViewIsModal
-        >
-          <View
-            style={[
-              styles.caret,
-              { left: caretX - CARET / 2 },
-              placeBelow ? styles.caretTop : styles.caretBottom,
-            ]}
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={requestClose}
+            accessibilityRole="button"
+            accessibilityLabel="뜻 닫기"
           />
-          <PopoverBody key={target.entry.id} entry={target.entry} onClose={requestClose} />
         </Animated.View>
-      )}
+
+        {/* 모달 크기를 잰 뒤에 그려 첫 프레임부터 제자리에 뜬다 */}
+        {target && root && (
+          <Animated.View
+            style={[
+              styles.card,
+              { width: cardW, left, maxHeight },
+              placeBelow ? { top: anchor.y + GAP } : { bottom: screenH - (anchor.y - GAP) },
+              // 누른 자리(꼬리)에서 커져 나오도록 변형 기준점을 꼬리에 둔다
+              { transformOrigin: `${caretX}px ${placeBelow ? '0%' : '100%'}` },
+              cardStyle,
+            ]}
+            accessibilityViewIsModal
+          >
+            <View
+              style={[
+                styles.caret,
+                { left: caretX - CARET / 2 },
+                placeBelow ? styles.caretTop : styles.caretBottom,
+              ]}
+            />
+            <PopoverBody key={target.entry.id} entry={target.entry} onClose={requestClose} />
+          </Animated.View>
+        )}
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -277,6 +282,9 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   backdrop: {
     backgroundColor: Colors.bg.scrim,
   },

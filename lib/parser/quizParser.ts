@@ -5,6 +5,10 @@
  * ## 문제 N
  * ### **...질문...**
  *
+ * ```python            ← (선택) 문제 본문 아래 코드블록 등 추가 마크다운 → questionBody
+ * ...
+ * ```
+ *
  * | 보기 | 설명 |
  * | ① text | desc |
  * | **②** text | desc |  ← 볼드 = 정답
@@ -13,6 +17,8 @@
  * **해설:**
  * ...해설 내용...
  * ---   (또는 다음 ## 문제 / 파일 끝)
+ *
+ * 코드블록(``` / ~~~) 안의 줄은 구조로 해석하지 않는다 (---·| 행·**정답 등).
  */
 
 export interface Choice {
@@ -27,8 +33,13 @@ export interface Choice {
 export interface QuizQuestion {
   /** 파일 내 원래 문제 번호 (1-indexed) */
   id: number;
-  /** 문제 본문 (마크다운) */
+  /** 문제 본문 (마크다운) — "###" 한 줄. DB·기록 화면에는 이것만 저장/표시한다 */
   question: string;
+  /**
+   * 문제 본문 아래 추가 마크다운 ("###" 줄과 보기 표 사이 — 주로 코드블록).
+   * 퀴즈 화면에서 question 바로 아래에 이어 렌더링한다. 없으면 undefined.
+   */
+  questionBody?: string;
   /** 보기 목록 */
   choices: Choice[];
   /** 정답 보기 0-based index (단일) */
@@ -62,6 +73,20 @@ function symbolToIndex(sym: string): number {
   }
 
   return -1;
+}
+
+/** 코드블록 펜스(``` 또는 ~~~) 줄인지 */
+function isFenceLine(trimmed: string): boolean {
+  return trimmed.startsWith('```') || trimmed.startsWith('~~~');
+}
+
+/** 앞뒤 빈 줄을 걷어낸 마크다운. 내용이 없으면 undefined */
+function trimBlankLines(lines: string[]): string | undefined {
+  let start = 0;
+  let end = lines.length;
+  while (start < end && !lines[start].trim()) start++;
+  while (end > start && !lines[end - 1].trim()) end--;
+  return start < end ? lines.slice(start, end).join('\n') : undefined;
 }
 
 /** 볼드 마커 제거 */
@@ -150,13 +175,23 @@ export function parseQuizMarkdown(
     let state: 'header' | 'question' | 'choices' | 'answer' | 'explanation' | 'done' | string =
       'header';
     const explLines: string[] = [];
+    // 문제 본문 아래 추가 마크다운 ("###" 줄 ~ 보기 표 첫 행 사이)
+    const bodyLines: string[] = [];
+    let bodyClosed = false;
+    // 코드블록 안인지 — 안쪽 줄은 구조(---·보기 행·정답)로 해석하지 않는다
+    let inFence = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
+      const fenceLine = isFenceLine(trimmed);
+      const wasInFence = inFence;
+      if (fenceLine) inFence = !inFence;
+      // 펜스 줄 자체이거나 코드블록 안쪽인 줄
+      const fenced = fenceLine || wasInFence;
 
-      // --- 구분선 → 블록 종료
-      if (trimmed === '---') {
+      // --- 구분선 → 블록 종료 (코드블록 안의 --- 는 제외)
+      if (!fenced && trimmed === '---') {
         state = 'done';
         break;
       }
@@ -182,6 +217,16 @@ export function parseQuizMarkdown(
         }
 
         case 'choices': {
+          // 보기 표가 시작되기 전의 줄(코드블록 포함)은 문제 본문 추가 내용
+          if (!bodyClosed && (fenced || !trimmed.startsWith('|'))) {
+            if (fenced || !/^\*\*정답[:：]/.test(trimmed)) {
+              bodyLines.push(line);
+              break;
+            }
+          }
+          if (fenced) break;
+          bodyClosed = true;
+
           // 테이블 헤더/구분선은 건너뜀
           if (trimmed.startsWith('|') && /^\|[\s\-|]+\|$/.test(trimmed)) break;
 
@@ -210,7 +255,7 @@ export function parseQuizMarkdown(
 
         case 'explanation': {
           // "**해설:**" 또는 "**해설**:"은 설명 시작 마커
-          if (/^\*\*해설[:：]?\*\*/.test(trimmed) || /^해설[:：]/.test(trimmed)) {
+          if (!fenced && (/^\*\*해설[:：]?\*\*/.test(trimmed) || /^해설[:：]/.test(trimmed))) {
             // 같은 줄에 해설 내용이 있을 수도 있음
             const inline = trimmed.replace(/^\*\*해설[:：]?\*\*[:：]?\s*/, '').replace(/^해설[:：]\s*/, '');
             if (inline) explLines.push(inline);
@@ -228,9 +273,11 @@ export function parseQuizMarkdown(
     explanation = explLines.join('\n').trim();
 
     if (questionId > 0 && questionText && choices.length > 0 && answer >= 0) {
+      const questionBody = trimBlankLines(bodyLines);
       questions.push({
         id: questionId,
         question: questionText,
+        ...(questionBody ? { questionBody } : {}),
         choices,
         answer,
         explanation,

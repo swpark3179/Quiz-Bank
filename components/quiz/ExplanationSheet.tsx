@@ -11,6 +11,7 @@ import BottomSheet, {
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { MarkdownViewer } from '../MarkdownViewer';
 import { NordButton } from '../ui/NordButton';
@@ -38,6 +39,8 @@ export function ExplanationSheet({
   nextLabel = '다음 문제',
 }: ExplanationSheetProps) {
   const scrollRef = useRef<ScrollView>(null);
+  // 가로 화면에서 옆으로 옮겨 간 내비게이션 바·카메라 컷아웃을 피한다
+  const insets = useSafeAreaInsets();
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -73,7 +76,10 @@ export function ExplanationSheet({
     >
       <BottomSheetScrollView
         ref={scrollRef as never}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingLeft: Spacing.base + insets.left, paddingRight: Spacing.base + insets.right },
+        ]}
       >
         {/* 결과 상태 카드 — 옅은 배경 + 아이콘 + 문구 (꽉 찬 색 띠 대신) */}
         <View

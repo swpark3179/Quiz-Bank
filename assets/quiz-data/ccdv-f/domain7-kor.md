@@ -436,7 +436,16 @@ api_key = os.getenv("ANTHROPIC_API_KEY")
 ---
 
 ## 문제 15
-### **무해성 스크린은 애플리케이션이 불리언으로 파싱할 수 있는 값을 돌려줘야 합니다. 요청 필드 `"output_config": {"format": {"type": "____", "schema": {...}}}`를 완성하는 값은 무엇일까요?**
+### **무해성 스크린은 애플리케이션이 불리언으로 파싱할 수 있는 값을 돌려줘야 합니다. 아래 요청 필드를 완성하는 값은 무엇일까요?**
+
+```json
+"output_config": {
+  "format": {
+    "type": "____",
+    "schema": {...}
+  }
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1242,7 +1251,17 @@ fi
 ---
 
 ## 문제 41
-### **PreToolUse 훅이 stdout에 `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "운영 스키마 쓰기는 마이그레이션 PR이 필요함"}}`을 출력하고 exit 0으로 끝납니다. 도구 호출은 어떻게 될까요?**
+### **PreToolUse 훅이 stdout에 아래 JSON을 출력하고 exit 0으로 끝납니다. 도구 호출은 어떻게 될까요?**
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "운영 스키마 쓰기는 마이그레이션 PR이 필요함"
+  }
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1271,7 +1290,14 @@ fi
 ---
 
 ## 문제 42
-### **훅이 도구 호출을 막도록 `"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "____"}`를 완성하는 값은 무엇일까요?**
+### **훅이 도구 호출을 막도록 아래 출력을 완성하는 값은 무엇일까요?**
+
+```json
+"hookSpecificOutput": {
+  "hookEventName": "PreToolUse",
+  "permissionDecision": "____"
+}
+```
 
 | 보기 | 설명 |
 |------|------|

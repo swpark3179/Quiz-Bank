@@ -982,7 +982,11 @@ web-researcher 서브에이전트가 끝난 뒤 코디네이터가 종합 서브
 ---
 
 ## 문제 27
-### **Your policy is to block refund_customer calls over $500 when the category is "restricted". A teammate registers `HookMatcher(matcher="refund_customer.*category=restricted", hooks=[check_refund])` under PreToolUse. What happens when the agent calls refund_customer with amount 900 and category "restricted"?**
+### **Your policy is to block refund_customer calls over $500 when the category is "restricted". A teammate registers the hook matcher below under PreToolUse. What happens when the agent calls refund_customer with amount 900 and category "restricted"?**
+
+```python
+HookMatcher(matcher="refund_customer.*category=restricted", hooks=[check_refund])
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1514,7 +1518,11 @@ PreToolUse 훅이 환불 도구 인자 안의 `category` 필드를 기준으로,
 ---
 
 ## 문제 41
-### **After an expensive codebase analysis that ended with a JWT proposal, an engineer wants to try OAuth2 on a separate branch. They call `forked = fork_session(session_id, title="Try the OAuth approach")` in Python, and no agent output appears. What explains this, and what is the next step?**
+### **After an expensive codebase analysis that ended with a JWT proposal, an engineer wants to try OAuth2 on a separate branch. They run the Python line below, and no agent output appears. What explains this, and what is the next step?**
+
+```python
+forked = fork_session(session_id, title="Try the OAuth approach")
+```
 
 | 보기 | 설명 |
 |------|------|

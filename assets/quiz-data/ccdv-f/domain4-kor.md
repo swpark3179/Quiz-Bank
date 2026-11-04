@@ -1,7 +1,11 @@
 <!-- domain4.md 의 한글판. 문항·보기 순서·정답 번호는 영문판과 같다. 질문·보기는 영문판 해설의 '문제 번역'을 옮겼고, 해설은 영문판에서 '문제 번역' 블록만 뺐다. -->
 
 ## 문제 1
-### **Anthropic 지원팀이 요청을 추적할 수 있도록, 보고하는 모든 실패한 Messages API 호출에 식별자 하나를 함께 적어 달라고 합니다. 앱은 Python SDK를 쓰며 `log.warning("claude call failed", extra={"trace": message.____})`로 기록합니다. 빈칸에 들어갈 속성은 무엇일까요?**
+### **Anthropic 지원팀이 요청을 추적할 수 있도록, 보고하는 모든 실패한 Messages API 호출에 식별자 하나를 함께 적어 달라고 합니다. 앱은 Python SDK를 쓰며 아래 줄로 실패를 기록합니다. 빈칸에 들어갈 속성은 무엇일까요?**
+
+```python
+log.warning("claude call failed", extra={"trace": message.____})
+```
 
 | 보기 | 설명 |
 |------|------|

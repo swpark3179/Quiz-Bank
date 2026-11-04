@@ -215,7 +215,16 @@
 ---
 
 ## 문제 8
-### **한 헬스 분석 서비스가 `POST /v1/messages`를 호출합니다. 워크플로 하나는 추론을 반드시 미국 인프라에서만 실행해야 하고, 나머지 워크플로는 모두 글로벌 라우팅을 유지합니다. 요청 본문 `{"model": "claude-sonnet-5-5", "max_tokens": 2048, ____: "us", "messages": [...]}`의 빈칸에 들어갈 필드는 무엇일까요?**
+### **한 헬스 분석 서비스가 `POST /v1/messages`를 호출합니다. 워크플로 하나는 추론을 반드시 미국 인프라에서만 실행해야 하고, 나머지 워크플로는 모두 글로벌 라우팅을 유지합니다. 아래 요청 본문의 빈칸에 들어갈 필드는 무엇일까요?**
+
+```json
+{
+  "model": "claude-sonnet-5-5",
+  "max_tokens": 2048,
+  ____: "us",
+  "messages": [...]
+}
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -1399,7 +1408,15 @@ curl https://api.anthropic.com/v1/messages \
 ---
 
 ## 문제 45
-### **`client = AsyncAnthropic()`을 쓰는 `async def` 핸들러 안에 `message = ____ client.messages.create(model="claude-sonnet-5-5", max_tokens=1024, messages=msgs)`라는 줄이 있습니다. `message`가 응답을 담으려면 빈칸에 어떤 키워드가 들어가야 할까요?**
+### **`client = AsyncAnthropic()`을 쓰는 `async def` 핸들러 안에 아래 코드가 있습니다. `message`가 응답을 담으려면 빈칸에 어떤 키워드가 들어가야 할까요?**
+
+```python
+message = ____ client.messages.create(
+    model="claude-sonnet-5-5",
+    max_tokens=1024,
+    messages=msgs,
+)
+```
 
 | 보기 | 설명 |
 |------|------|

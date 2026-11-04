@@ -1,7 +1,15 @@
 <!-- 출처: https://github.com/shourabhmodak/claude-certified-architect-exam-prep (MIT) — sample-questions.md Q1·Q2·Q4~Q10 + cca-f-simulator.html 중복 제외 13문항. 해설은 공식 문서 기준으로 새로 작성. -->
 
 ## 문제 1
-### **An engineer builds an agentic customer support bot. The loop logic is: `response = client.messages.create(model="claude-sonnet-4-6", ...)` / `text_output = response.content[0].text` / `if "TOOL_CALL:" in text_output:` / `tool_name = text_output.split("TOOL_CALL:")[1].strip()` / `result = run_tool(tool_name)`. In production, the agent occasionally calls the wrong tool and sometimes misses tool calls entirely. What is the root cause?**
+### **An engineer builds an agentic customer support bot with the loop logic shown below. In production, the agent occasionally calls the wrong tool and sometimes misses tool calls entirely. What is the root cause?**
+
+```python
+response = client.messages.create(model="claude-sonnet-4-6", ...)
+text_output = response.content[0].text
+if "TOOL_CALL:" in text_output:
+    tool_name = text_output.split("TOOL_CALL:")[1].strip()
+    result = run_tool(tool_name)
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -49,7 +57,15 @@ if response.stop_reason == "tool_use":
 ---
 
 ## 문제 2
-### **An agentic pipeline processes insurance claims. After 3 hours in production, ops notices some claims are stuck in infinite loops consuming thousands of tokens. The loop is: `while True:` / `response = client.messages.create(...)` / `if response.stop_reason == "end_turn": break` / `process_tool_calls(response)`. What is the most likely cause and correct architectural fix?**
+### **An agentic pipeline processes insurance claims. After 3 hours in production, ops notices some claims are stuck in infinite loops consuming thousands of tokens. The loop is shown below. What is the most likely cause and correct architectural fix?**
+
+```python
+while True:
+    response = client.messages.create(...)
+    if response.stop_reason == "end_turn":
+        break
+    process_tool_calls(response)
+```
 
 | 보기 | 설명 |
 |------|------|
@@ -103,7 +119,22 @@ raise AgentError(f"{MAX_ITERATIONS}회 초과 — 순환 가능성")
 ---
 
 ## 문제 3
-### **A tool definition for a flight search API is: `{"name": "search_flights", "description": "Search flights", "input_schema": {"type": "object", "properties": {"from": {"type": "string"}, "to": {"type": "string"}, "date": {"type": "string"}}}}`. In testing, the model frequently passes malformed date strings (`"next Tuesday"`, `"ASAP"`) and occasionally swaps the `from` and `to` parameters. What is the highest-impact fix?**
+### **A tool definition for a flight search API is shown below. In testing, the model frequently passes malformed date strings (`"next Tuesday"`, `"ASAP"`) and occasionally swaps the `from` and `to` parameters. What is the highest-impact fix?**
+
+```json
+{
+  "name": "search_flights",
+  "description": "Search flights",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "from": {"type": "string"},
+      "to": {"type": "string"},
+      "date": {"type": "string"}
+    }
+  }
+}
+```
 
 | 보기 | 설명 |
 |------|------|
