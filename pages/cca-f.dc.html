@@ -167,7 +167,10 @@ class Component extends DCLogic {
       rows.forEach(r => r.classList.toggle('active', r === row));
 
       if (frame.getAttribute('data-file') !== file) {
-        frame.src = encoded;
+        // location.replace: 메뉴 한 번에 히스토리는 #해시 하나만 쌓이게 한다
+        // (frame.src 를 바꾸면 iframe 이동이 한 칸 더 쌓여 뒤로 가기 한 번에 메뉴와 본문이 어긋난다)
+        try { frame.contentWindow.location.replace(encoded); }
+        catch (e) { frame.src = encoded; }
         frame.setAttribute('data-file', file);
       }
       crumbTitle.textContent = title;
