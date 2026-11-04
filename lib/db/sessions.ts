@@ -52,8 +52,8 @@ export async function createSession(params: {
   );
 }
 
-/** 개별 응답 저장 */
-export async function saveAnswer(params: {
+/** 저장할 개별 응답 */
+export interface NewAnswer {
   id: string;
   sessionId: string;
   questionId: number;
@@ -66,7 +66,10 @@ export async function saveAnswer(params: {
   correctLabel: string;
   mappedCorrectIndex: number;
   displayOrder: number;
-}): Promise<void> {
+}
+
+/** 개별 응답 저장 */
+export async function saveAnswer(params: NewAnswer): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
     `INSERT INTO answers

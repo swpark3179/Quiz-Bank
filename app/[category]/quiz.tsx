@@ -28,8 +28,13 @@ import { VocabProvider } from '@/components/vocab/VocabProvider';
 import { VocabToggleButton } from '@/components/vocab/VocabToggleButton';
 import { useVocabIndex } from '@/hooks/use-vocab-index';
 import { getPreference, setPreference } from '@/lib/local/preferences';
-import { createSession, saveAnswer, updateSessionProgress } from '@/lib/db/sessions';
 import type { QuizSetup } from '@/lib/quiz/retry';
+import type { ShuffledQuestion } from '@/lib/quiz/shuffler';
+import {
+  createSessionRecorder,
+  MIN_ANSWERS_TO_KEEP,
+  type AnswerInput,
+} from '@/lib/quiz/sessionRecorder';
 import { stripChoiceSymbol, mapExplanationSymbols } from '@/lib/utils/quizUtils';
 import { hapticAnswerResult, hapticSelection } from '@/lib/utils/haptics';
 import { confirmAsync } from '@/lib/utils/confirm';
@@ -46,6 +51,23 @@ const FINISH_DELAY = Motion.duration.progress + 50;
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** 한 문제의 응답 기록 (섞인 보기 기준의 정답 번호·해설도 함께 남긴다) */
+function buildAnswer(q: ShuffledQuestion, chosenIdx: number, questionIdx: number): AnswerInput {
+  return {
+    id: uuid.v4() as string,
+    questionId: q.original.id,
+    sourceFileId: q.original.sourceFileId,
+    questionText: q.original.question,
+    chosenIndex: chosenIdx,
+    correctIndex: q.original.answer,
+    isCorrect: chosenIdx === q.mappedAnswer,
+    explanation: mapExplanationSymbols(q.original.explanation, q.original.choices, q.shuffledChoices),
+    correctLabel: stripChoiceSymbol(q.shuffledChoices[q.mappedAnswer]?.label ?? ''),
+    mappedCorrectIndex: q.mappedAnswer,
+    displayOrder: questionIdx + 1,
+  };
+}
+
 export default function QuizScreen() {
   const { setup: setupStr } = useLocalSearchParams<{ setup: string }>();
   const router = useRouter();
@@ -61,9 +83,13 @@ export default function QuizScreen() {
 
   const { shuffled, mode, categoryId, sourceFileIds } = setup;
 
-  // 세션 ID (고정) + 세션 생성 여부 추적
+  // 세션 ID (고정)
   const sessionId = useRef<string>(uuid.v4() as string).current;
-  const sessionCreated = useRef(false);
+  // 풀이 기록: 응답을 모았다가 이력에 남길 만큼 풀었을 때부터 DB 에 쓴다
+  // (끝까지 풀면 항상, 중간에 나가면 MIN_ANSWERS_TO_KEEP 문제 이상 풀었을 때만 남는다)
+  const [recorder] = useState(() =>
+    createSessionRecorder({ sessionId, categoryId, sourceFileIds, mode })
+  );
 
   // 현재 문제 인덱스
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -74,16 +100,12 @@ export default function QuizScreen() {
   // 누적 정답 수 (ref로 최신값 보장)
   const correctCountRef = useRef(0);
   const [correctCount, setCorrectCount] = useState(0);
-  // 실제로 푼(응답한) 문제 수 — 모수(total)로 사용
-  const answeredCountRef = useRef(0);
 
   // 즉시 확인 모드: 오답일 때 정답 보기를 뒤늦게 강조했는지
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   // 마지막 제출 후 결과 화면으로 넘어가는 중 (진행바를 끝까지 채우고 버튼을 잠근다)
   const [finishing, setFinishing] = useState(false);
   const finishingRef = useRef(false);
-  // 진행 중인 응답 저장 — 결과로 넘어가기 전에 끝나기를 기다린다
-  const pendingSave = useRef<Promise<void> | null>(null);
   // 피드백 연출용 타이머 — 문제를 넘기거나 화면을 떠나면 취소
   const feedbackTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -129,12 +151,17 @@ export default function QuizScreen() {
   // 답을 하나라도 고른 뒤 나가려 하면 확인한다 (헤더 닫기, Android 뒤로 가기 모두).
   // 결과 화면으로 넘어가는 중(finishing)에는 막지 않는다.
   usePreventRemove(Object.keys(selections).length > 0 && !finishing, ({ data }) => {
+    let message: string;
+    if (mode !== 'immediate') {
+      message = '모두 푼 뒤 한 번에 채점하는 방식이라, 지금 나가면 고른 답이 저장되지 않아요.';
+    } else if (recorder.answeredCount() >= MIN_ANSWERS_TO_KEEP) {
+      message = '지금까지 푼 문제는 풀이 이력에 저장돼요.';
+    } else {
+      message = `${MIN_ANSWERS_TO_KEEP}문제 이상 풀어야 풀이 이력에 저장돼요. 지금 나가면 저장되지 않아요.`;
+    }
     confirmAsync({
       title: '퀴즈를 그만둘까요?',
-      message:
-        mode === 'immediate'
-          ? '지금까지 푼 문제는 풀이 이력에 저장돼요.'
-          : '모두 푼 뒤 한 번에 채점하는 방식이라, 지금 나가면 고른 답이 저장되지 않아요.',
+      message,
       confirmLabel: '그만두기',
       cancelLabel: '계속 풀기',
       destructive: true,
@@ -216,53 +243,15 @@ export default function QuizScreen() {
     return 'default';
   };
 
-  /** DB에 개별 응답 저장 */
-  const persistAnswer = async (chosenIdx: number, correct: boolean, mappedExplanation: string) => {
-    // 최초 1회만 세션 생성 (total은 0에서 시작해 응답할 때마다 누적)
-    if (!sessionCreated.current) {
-      sessionCreated.current = true;
-      await createSession({
-        id: sessionId,
-        categoryId,
-        sourceFileIds,
-        total: 0,
-        mode,
-      });
-    }
-
-    await saveAnswer({
-      id: uuid.v4() as string,
-      sessionId,
-      questionId: currentQ.original.id,
-      sourceFileId: currentQ.original.sourceFileId,
-      questionText: currentQ.original.question,
-      chosenIndex: chosenIdx,
-      correctIndex: currentQ.original.answer,
-      isCorrect: correct,
-      explanation: mappedExplanation,
-      correctLabel: stripChoiceSymbol(currentQ.shuffledChoices[currentQ.mappedAnswer]?.label ?? ''),
-      mappedCorrectIndex: currentQ.mappedAnswer,
-      displayOrder: currentIdx + 1,
-    });
-
-    // 실제로 푼 문제만 모수에 반영 (중간에 나가도 풀지 않은 문제는 제외됨)
-    answeredCountRef.current += 1;
-    await updateSessionProgress(sessionId, answeredCountRef.current, correctCountRef.current);
-  };
-
   /** 다음 문제 이동 또는 결과 화면 */
-  const moveNext = async (finalCorrect: number) => {
+  const moveNext = async () => {
     if (finishingRef.current) return;
     sheetRef.current?.close();
 
     if (currentIdx + 1 >= total) {
       if (!beginFinish()) return;
-      // 모든 문제 완료 — 마지막 응답 저장이 끝난 뒤, 실제 푼 문제 수 기준으로 최종 반영
-      await pendingSave.current;
-      await Promise.all([
-        updateSessionProgress(sessionId, answeredCountRef.current, finalCorrect),
-        wait(FINISH_DELAY),
-      ]);
+      // 모든 문제 완료 — 문제 수와 관계없이 남은 응답을 모두 저장한 뒤 결과로
+      await Promise.all([recorder.finish(), wait(FINISH_DELAY)]);
       router.replace({
         pathname: '/result',
         params: { sessionId, categoryId },
@@ -293,14 +282,7 @@ export default function QuizScreen() {
     }
     later(() => sheetRef.current?.expand(), correct ? SHEET_DELAY_CORRECT : SHEET_DELAY_WRONG);
 
-    const mappedExplanation = mapExplanationSymbols(
-      currentQ.original.explanation,
-      currentQ.original.choices,
-      currentQ.shuffledChoices
-    );
-
-    pendingSave.current = persistAnswer(choiceArrayIdx, correct, mappedExplanation);
-    await pendingSave.current;
+    await recorder.add(buildAnswer(currentQ, choiceArrayIdx, currentIdx));
   };
 
   /** 일괄 확인 모드: 이전 문제로 이동 */
@@ -330,49 +312,15 @@ export default function QuizScreen() {
     if (!beginFinish()) return;
     const startedAt = Date.now();
 
-    // 실제로 응답한 문제 인덱스(오름차순)
+    // 실제로 응답한 문제만, 출제 순서대로 기록
     const answeredIndices = Object.keys(selections)
       .map(Number)
       .sort((a, b) => a - b);
-
-    await createSession({
-      id: sessionId,
-      categoryId,
-      sourceFileIds,
-      total: 0,
-      mode,
-    });
-
-    let correct = 0;
     for (const idx of answeredIndices) {
-      const q = shuffled[idx];
-      const chosenIdx = selections[idx];
-      const isAnswerCorrect = chosenIdx === q.mappedAnswer;
-      if (isAnswerCorrect) correct += 1;
-
-      const mappedExplanation = mapExplanationSymbols(
-        q.original.explanation,
-        q.original.choices,
-        q.shuffledChoices
-      );
-
-      await saveAnswer({
-        id: uuid.v4() as string,
-        sessionId,
-        questionId: q.original.id,
-        sourceFileId: q.original.sourceFileId,
-        questionText: q.original.question,
-        chosenIndex: chosenIdx,
-        correctIndex: q.original.answer,
-        isCorrect: isAnswerCorrect,
-        explanation: mappedExplanation,
-        correctLabel: stripChoiceSymbol(q.shuffledChoices[q.mappedAnswer]?.label ?? ''),
-        mappedCorrectIndex: q.mappedAnswer,
-        displayOrder: idx + 1,
-      });
+      await recorder.add(buildAnswer(shuffled[idx], selections[idx], idx));
     }
+    await recorder.finish();
 
-    await updateSessionProgress(sessionId, answeredIndices.length, correct);
     // 저장이 빨리 끝나도 진행바가 끝까지 차는 모습은 보여 준다
     await wait(Math.max(0, FINISH_DELAY - (Date.now() - startedAt)));
     router.replace({
@@ -382,7 +330,7 @@ export default function QuizScreen() {
   };
 
   const handleExplanationNext = async () => {
-    await moveNext(correctCountRef.current);
+    await moveNext();
   };
 
   return (
