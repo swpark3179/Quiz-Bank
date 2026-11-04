@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Linking,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,9 +24,8 @@ import { ScreenEnter } from '@/components/ui/ScreenEnter';
 import { PressableScale } from '@/components/ui/PressableScale';
 import Animated from 'react-native-reanimated';
 import { listEntering } from '@/lib/theme/motion';
-
-// GitHub Pages로 배포된 레슨·자습 가이드 모음
-const STUDY_GUIDE_URL = 'https://swpark3179.github.io/Quiz-Bank';
+import { STUDY_GUIDE_URL } from '@/lib/utils/studyGuide';
+import { openInBrowser } from '@/lib/utils/openExternal';
 
 /** 오류 화면에 함께 보여줄 기기·앱 정보 (기기별 문제 진단용) */
 function diagnosticEnvironment(): string {
@@ -88,13 +86,6 @@ export default function HomeScreen() {
 
   const handleSelect = (category: Category) => {
     router.push(`/${category.id}`);
-  };
-
-  // 앱 내부가 아닌 기기의 기본 브라우저로 연다
-  const handleOpenStudyGuide = () => {
-    Linking.openURL(STUDY_GUIDE_URL).catch((e) => {
-      console.error('학습 가이드 열기 오류:', e);
-    });
   };
 
   if (loading) {
@@ -171,19 +162,7 @@ export default function HomeScreen() {
             </View>
           }
           ListFooterComponent={
-            <PressableScale
-              style={styles.guideCard}
-              onPress={handleOpenStudyGuide}
-              accessibilityRole="link"
-              accessibilityLabel="학습 가이드, 레슨과 자습 가이드를 브라우저에서 열기"
-            >
-              <Ionicons name="library-outline" size={22} color={Colors.accent.primary} />
-              <View style={styles.textBox}>
-                <Text style={styles.guideTitle}>학습 가이드</Text>
-                <Text style={styles.guideDesc}>레슨·자습 가이드를 브라우저에서 열어요</Text>
-              </View>
-              <Ionicons name="open-outline" size={18} color={Colors.text.tertiary} />
-            </PressableScale>
+            <StudyGuideCard onOpenInApp={() => router.push('/guide')} />
           }
           renderItem={({ item: cat, index }) => {
             const stat = summaries[cat.id];
@@ -240,6 +219,59 @@ export default function HomeScreen() {
   );
 }
 
+/**
+ * 학습 가이드 카드. 본문을 누르면 앱 안 화면(WebView)으로, 오른쪽 ↗ 를 누르면 기기 브라우저로 연다.
+ * 웹(데스크탑 Electron 포함)은 WebView 가 없어 카드 전체가 브라우저로 여는 버튼 하나다.
+ */
+function StudyGuideCard({ onOpenInApp }: { onOpenInApp: () => void }) {
+  const openBrowser = () => openInBrowser(STUDY_GUIDE_URL);
+
+  if (Platform.OS === 'web') {
+    return (
+      <PressableScale
+        style={[styles.guideCard, styles.guideRow]}
+        onPress={openBrowser}
+        accessibilityRole="link"
+        accessibilityLabel="학습 가이드, 레슨과 자습 가이드를 브라우저에서 열기"
+      >
+        <Ionicons name="library-outline" size={22} color={Colors.accent.primary} />
+        <View style={styles.textBox}>
+          <Text style={styles.guideTitle}>학습 가이드</Text>
+          <Text style={styles.guideDesc}>레슨·자습 가이드를 브라우저에서 열어요</Text>
+        </View>
+        <Ionicons name="open-outline" size={18} color={Colors.text.tertiary} />
+      </PressableScale>
+    );
+  }
+
+  return (
+    <View style={styles.guideCard}>
+      <PressableScale
+        style={[styles.guideRow, styles.guideFill]}
+        onPress={onOpenInApp}
+        accessibilityRole="button"
+        accessibilityLabel="학습 가이드, 레슨과 자습 가이드를 앱에서 보기"
+      >
+        <Ionicons name="library-outline" size={22} color={Colors.accent.primary} />
+        <View style={styles.textBox}>
+          <Text style={styles.guideTitle}>학습 가이드</Text>
+          <Text style={styles.guideDesc}>레슨·자습 가이드를 앱에서 열어요</Text>
+        </View>
+      </PressableScale>
+      <View style={styles.guideDivider} />
+      <TouchableOpacity
+        style={styles.guideBrowserButton}
+        onPress={openBrowser}
+        accessibilityRole="link"
+        accessibilityLabel="학습 가이드를 브라우저에서 열기"
+      >
+        <Ionicons name="open-outline" size={18} color={Colors.text.link} />
+        <Text style={styles.guideBrowserLabel}>브라우저</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -290,18 +322,44 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadow.sm,
   },
+  // 점선 테두리 틀 — 안에 '앱에서 보기'(guideRow)와 '브라우저'(guideBrowserButton)가 나란히 놓인다
   guideCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+    alignItems: 'stretch',
     marginTop: Spacing.sm,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.base,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: Colors.border,
     backgroundColor: Colors.bg.secondary,
+  },
+  guideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
+  },
+  guideFill: {
+    flex: 1,
+  },
+  guideDivider: {
+    width: StyleSheet.hairlineWidth,
+    marginVertical: Spacing.sm,
+    backgroundColor: Colors.border,
+  },
+  guideBrowserButton: {
+    minWidth: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  guideBrowserLabel: {
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.medium,
+    color: Colors.text.link,
   },
   guideTitle: {
     fontSize: Typography.size.base,
