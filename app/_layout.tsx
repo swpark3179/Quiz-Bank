@@ -60,6 +60,10 @@ export default function RootLayout() {
           name="stats/[category]"
           options={{ title: '정답률 통계', headerBackTitle: '문제 목록' }}
         />
+        <Stack.Screen
+          name="guide"
+          options={{ title: '학습 가이드', headerBackTitle: '홈' }}
+        />
       </Stack>
     </GestureHandlerRootView>
   );
