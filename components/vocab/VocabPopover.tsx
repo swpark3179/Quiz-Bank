@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Platform,
+  type LayoutChangeEvent,
+  type ViewStyle,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,12 +21,25 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+  type PanGesture,
+} from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { Motion } from '@/lib/theme/motion';
 import { fetchVocabDetail, peekVocabDetail, type VocabDetail } from '@/lib/local/vocab';
 import type { VocabEntry } from '@/lib/vocab/matcher';
+import {
+  clamp,
+  clampOffset,
+  dragBounds,
+  maximizedFrame,
+  type DragBounds,
+} from '@/lib/vocab/popoverLayout';
+import { hapticSelection } from '@/lib/utils/haptics';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { SkeletonBlock } from '@/components/ui/Skeleton';
 import type { VocabAnchor } from './VocabContext';
@@ -47,11 +62,19 @@ const GAP = 20;
 const CARET = 12;
 // 아래쪽 공간이 이만큼 있으면 아래에 띄운다 (읽던 줄을 가리지 않는 쪽 우선)
 const PREFERRED_SPACE = 280;
+// 최대화했을 때 카드 최대 너비 — 데스크탑처럼 넓은 화면에서 한 줄이 지나치게 길어지지 않게
+const MAXIMIZED_MAX_WIDTH = 720;
+// 머리를 이만큼 꾹 눌러야 잡힌다 (네이티브) — 그냥 탭하거나 닫기를 누를 때 움직이지 않게
+const DRAG_LONG_PRESS_MS = 250;
+// 잡혀 있는 동안 살짝 들어 올린 느낌
+const LIFT_SCALE = 0.02;
+const NO_BOUNDS: DragBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
 
 /**
  * 단어 뜻 팝업 — 누른 단어 바로 위/아래에 꼬리 달린 카드로 뜬다.
  * 머리(단어·발음·품사·한 줄 뜻)는 index.json 에서 바로 그리고,
  * 상세 설명(vocab/{id}.md)은 열면서 받아 아래에 이어 붙인다.
+ * 머리를 꾹 눌러 끌면 옮길 수 있고(웹은 바로 끈다), 머리의 버튼으로 화면 가득 펼칠 수 있다.
  */
 export function VocabPopover({ target, onDismissed }: VocabPopoverProps) {
   const windowSize = useWindowDimensions();
@@ -65,15 +88,34 @@ export function VocabPopover({ target, onDismissed }: VocabPopoverProps) {
   const fade = useSharedValue(0);
   const pop = useSharedValue(0);
   const [closing, setClosing] = useState(false);
+  const [maximized, setMaximized] = useState(false);
+
+  // 머리를 끌어 옮긴 거리 — 레이아웃은 그대로 두고 transform 으로만 옮긴다
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+  const bounds = useSharedValue<DragBounds>(NO_BOUNDS);
+  const lift = useSharedValue(0);
+  // 옮긴 뒤에는 꼬리가 누른 단어를 가리키지 않으므로 숨긴다
+  const moved = useSharedValue(false);
+  const caret = useSharedValue(1);
 
   useEffect(() => {
     if (!target) return;
     setClosing(false);
+    // 새 단어는 누른 자리에서, 원래 크기로 연다
+    setMaximized(false);
+    dragX.set(0);
+    dragY.set(0);
+    lift.set(0);
+    moved.set(false);
+    caret.set(1);
     fade.set(0);
     pop.set(0);
     fade.set(withTiming(1, { duration: Motion.duration.color, easing: Motion.easing.standard }));
     pop.set(withSpring(1, Motion.spring.popover));
-  }, [target, fade, pop]);
+  }, [target, fade, pop, dragX, dragY, lift, moved, caret]);
 
   const requestClose = () => {
     if (closing) return;
@@ -82,6 +124,19 @@ export function VocabPopover({ target, onDismissed }: VocabPopoverProps) {
     pop.set(withTiming(0, out));
     // 끝났는지와 상관없이 정리한다 — 중간에 끊겨도 투명한 모달이 화면을 막고 남지 않게
     fade.set(withTiming(0, out, () => runOnJS(onDismissed)()));
+  };
+
+  const toggleMaximize = () => {
+    setMaximized((m) => !m);
+    // 크기가 바뀌는 순간을 등장 스프링으로 짧게 이어 준다 (레이아웃 애니메이션은 웹에서 불안정)
+    pop.set(0.6);
+    pop.set(withSpring(1, Motion.spring.popover));
+  };
+
+  // Android 뒤로 가기: 펼쳐 둔 상태면 먼저 원래 크기로
+  const handleBack = () => {
+    if (maximized) toggleMaximize();
+    else requestClose();
   };
 
   // 위치 계산: 아래 공간이 충분하면 아래, 아니면 더 넓은 쪽
@@ -93,22 +148,72 @@ export function VocabPopover({ target, onDismissed }: VocabPopoverProps) {
   const maxHeight = Math.max(160, Math.min(placeBelow ? spaceBelow : spaceAbove, screenH * 0.6));
   const left = clamp(anchor.x - cardW / 2, EDGE, screenW - EDGE - cardW);
   const caretX = clamp(anchor.x - left, Radius.lg + CARET / 2, cardW - Radius.lg - CARET / 2);
+  const full = maximizedFrame({
+    screenW,
+    screenH,
+    insets,
+    edge: EDGE,
+    maxWidth: MAXIMIZED_MAX_WIDTH,
+  });
+
+  // 카드 크기가 바뀔 때마다(설명 로드, 화면 회전, 최대화 해제) 옮길 수 있는 범위를 다시 잰다.
+  // 이미 옮겨 둔 카드가 커져도 화면 밖으로 밀려나지 않게 현재 위치도 범위 안으로 당긴다.
+  const handleCardLayout = (e: LayoutChangeEvent) => {
+    if (maximized) return;
+    const next = dragBounds({ frame: e.nativeEvent.layout, screenW, screenH, insets, edge: EDGE });
+    bounds.set(next);
+    const offset = clampOffset({ x: dragX.get(), y: dragY.get() }, next);
+    dragX.set(offset.x);
+    dragY.set(offset.y);
+  };
+
+  const dragGesture = useMemo<PanGesture>(() => {
+    const pan = Gesture.Pan()
+      .enabled(!maximized)
+      .activeCursor('grabbing')
+      .onStart(() => {
+        startX.set(dragX.get());
+        startY.set(dragY.get());
+        lift.set(withTiming(1, { duration: Motion.duration.fast, easing: Motion.easing.standard }));
+        runOnJS(hapticSelection)();
+      })
+      .onUpdate((e) => {
+        const b = bounds.get();
+        dragX.set(Math.min(Math.max(startX.get() + e.translationX, b.minX), b.maxX));
+        dragY.set(Math.min(Math.max(startY.get() + e.translationY, b.minY), b.maxY));
+        if (!moved.get() && (e.translationX !== 0 || e.translationY !== 0)) {
+          moved.set(true);
+          caret.set(withTiming(0, { duration: Motion.duration.color }));
+        }
+      })
+      .onFinalize(() => {
+        lift.set(withTiming(0, { duration: Motion.duration.fast, easing: Motion.easing.standard }));
+      });
+    // 웹(데스크탑)은 창 제목줄처럼 바로 끌고, 터치 화면은 꾹 눌러야 잡힌다
+    return Platform.OS === 'web' ? pan : pan.activateAfterLongPress(DRAG_LONG_PRESS_MS);
+  }, [maximized, dragX, dragY, startX, startY, bounds, lift, moved, caret]);
 
   const backdropStyle = useAnimatedStyle(() => ({ opacity: fade.get() }));
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: fade.get(),
-    transform: [
-      { translateY: (placeBelow ? -6 : 6) * (1 - pop.get()) },
-      { scale: 0.92 + 0.08 * pop.get() },
-    ],
-  }));
+  const cardStyle = useAnimatedStyle(() => {
+    // 펼친 동안에는 옮긴 거리를 쓰지 않는다 — 되돌리면 옮겨 둔 자리로 돌아간다
+    const free = maximized ? 0 : 1;
+    return {
+      opacity: fade.get(),
+      transform: [
+        { translateX: dragX.get() * free },
+        { translateY: dragY.get() * free + (placeBelow ? -6 : 6) * (1 - pop.get()) },
+        { scale: (0.92 + 0.08 * pop.get()) * (1 + LIFT_SCALE * lift.get()) },
+      ],
+    };
+  });
+  const caretStyle = useAnimatedStyle(() => ({ opacity: caret.get() }));
 
   return (
     <Modal
       visible={target !== null}
       transparent
       animationType="none"
-      onRequestClose={requestClose}
+      onRequestClose={handleBack}
       statusBarTranslucent
       navigationBarTranslucent={Platform.OS === 'android'}
     >
@@ -134,22 +239,37 @@ export function VocabPopover({ target, onDismissed }: VocabPopoverProps) {
           <Animated.View
             style={[
               styles.card,
-              { width: cardW, left, maxHeight },
-              placeBelow ? { top: anchor.y + GAP } : { bottom: screenH - (anchor.y - GAP) },
-              // 누른 자리(꼬리)에서 커져 나오도록 변형 기준점을 꼬리에 둔다
-              { transformOrigin: `${caretX}px ${placeBelow ? '0%' : '100%'}` },
+              maximized
+                ? { ...full, transformOrigin: '50% 50%' }
+                : [
+                    { width: cardW, left, maxHeight },
+                    placeBelow ? { top: anchor.y + GAP } : { bottom: screenH - (anchor.y - GAP) },
+                    // 누른 자리(꼬리)에서 커져 나오도록 변형 기준점을 꼬리에 둔다
+                    { transformOrigin: `${caretX}px ${placeBelow ? '0%' : '100%'}` },
+                  ],
               cardStyle,
             ]}
+            onLayout={handleCardLayout}
             accessibilityViewIsModal
           >
-            <View
-              style={[
-                styles.caret,
-                { left: caretX - CARET / 2 },
-                placeBelow ? styles.caretTop : styles.caretBottom,
-              ]}
+            {!maximized && (
+              <Animated.View
+                style={[
+                  styles.caret,
+                  { left: caretX - CARET / 2 },
+                  placeBelow ? styles.caretTop : styles.caretBottom,
+                  caretStyle,
+                ]}
+              />
+            )}
+            <PopoverBody
+              key={target.entry.id}
+              entry={target.entry}
+              onClose={requestClose}
+              headerGesture={dragGesture}
+              maximized={maximized}
+              onToggleMaximize={toggleMaximize}
             />
-            <PopoverBody key={target.entry.id} entry={target.entry} onClose={requestClose} />
           </Animated.View>
         )}
       </GestureHandlerRootView>
@@ -157,7 +277,22 @@ export function VocabPopover({ target, onDismissed }: VocabPopoverProps) {
   );
 }
 
-function PopoverBody({ entry, onClose }: { entry: VocabEntry; onClose: () => void }) {
+interface PopoverBodyProps {
+  entry: VocabEntry;
+  onClose: () => void;
+  /** 머리를 끌어 카드를 옮기는 제스처 */
+  headerGesture: PanGesture;
+  maximized: boolean;
+  onToggleMaximize: () => void;
+}
+
+function PopoverBody({
+  entry,
+  onClose,
+  headerGesture,
+  maximized,
+  onToggleMaximize,
+}: PopoverBodyProps) {
   // 한 번 열어 본 단어는 캐시에서 바로 그린다 (undefined = 받는 중)
   const [detail, setDetail] = useState<VocabDetail | undefined>(() => peekVocabDetail(entry.id));
 
@@ -176,36 +311,53 @@ function PopoverBody({ entry, onClose }: { entry: VocabEntry; onClose: () => voi
 
   return (
     <>
-      <View
-        style={styles.header}
-        accessible
-        accessibilityLabel={[entry.word, entry.pos, entry.meaning].filter(Boolean).join(', ')}
-      >
-        <View style={styles.headerText}>
-          <Text style={styles.word} selectable>
-            {entry.word}
-          </Text>
-          {(entry.pos || ipa) && (
-            <View style={styles.metaRow}>
-              {entry.pos && (
-                <View style={styles.posChip}>
-                  <Text style={styles.posText}>{entry.pos}</Text>
-                </View>
-              )}
-              {ipa && <Text style={styles.ipa}>/{ipa}/</Text>}
-            </View>
-          )}
+      {/* 머리 전체가 잡는 곳 — 단어 글자는 꾹 누르면 텍스트 선택이 먼저 가져가므로 선택 불가로 둔다 */}
+      <GestureDetector gesture={headerGesture}>
+        <View style={[styles.header, !maximized && webGrabCursor]}>
+          {/* 읽기 묶음은 글자 쪽에만 — 머리 전체를 묶으면 iOS 에서 버튼에 초점이 가지 않는다 */}
+          <View
+            style={styles.headerText}
+            accessible
+            accessibilityLabel={[entry.word, entry.pos, entry.meaning].filter(Boolean).join(', ')}
+          >
+            <Text style={styles.word}>{entry.word}</Text>
+            {(entry.pos || ipa) && (
+              <View style={styles.metaRow}>
+                {entry.pos && (
+                  <View style={styles.posChip}>
+                    <Text style={styles.posText}>{entry.pos}</Text>
+                  </View>
+                )}
+                {ipa && <Text style={styles.ipa}>/{ipa}/</Text>}
+              </View>
+            )}
+          </View>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={onToggleMaximize}
+              hitSlop={6}
+              style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={maximized ? '원래 크기로' : '크게 보기'}
+            >
+              <Ionicons
+                name={maximized ? 'contract-outline' : 'expand-outline'}
+                size={17}
+                color={Colors.text.secondary}
+              />
+            </Pressable>
+            <Pressable
+              onPress={onClose}
+              hitSlop={6}
+              style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="닫기"
+            >
+              <Ionicons name="close" size={18} color={Colors.text.secondary} />
+            </Pressable>
+          </View>
         </View>
-        <Pressable
-          onPress={onClose}
-          hitSlop={6}
-          style={({ pressed }) => [styles.close, pressed && styles.closePressed]}
-          accessibilityRole="button"
-          accessibilityLabel="닫기"
-        >
-          <Ionicons name="close" size={18} color={Colors.text.secondary} />
-        </Pressable>
-      </View>
+      </GestureDetector>
 
       <Text style={styles.meaning} selectable>
         {entry.meaning}
@@ -220,8 +372,11 @@ function PopoverBody({ entry, onClose }: { entry: VocabEntry; onClose: () => voi
       )}
 
       {detail?.status === 'ok' && (
-        <Animated.View entering={FadeIn.duration(Motion.duration.base)} style={styles.detail}>
-          <DetailScroll markdown={detail.markdown} />
+        <Animated.View
+          entering={FadeIn.duration(Motion.duration.base)}
+          style={[styles.detail, maximized && styles.fill]}
+        >
+          <DetailScroll markdown={detail.markdown} fill={maximized} />
         </Animated.View>
       )}
 
@@ -235,17 +390,20 @@ function PopoverBody({ entry, onClose }: { entry: VocabEntry; onClose: () => voi
   );
 }
 
-/** 상세 설명 — 카드보다 길면 안에서 스크롤하고, 끝에 닿기 전까지 아래쪽을 옅게 흐려 더 있음을 알린다 */
-function DetailScroll({ markdown }: { markdown: string }) {
+/**
+ * 상세 설명 — 카드보다 길면 안에서 스크롤하고, 끝에 닿기 전까지 아래쪽을 옅게 흐려 더 있음을 알린다.
+ * @param fill 카드를 펼쳤을 때 남은 높이를 모두 스크롤 영역으로 쓴다
+ */
+function DetailScroll({ markdown, fill = false }: { markdown: string; fill?: boolean }) {
   const [viewHeight, setViewHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [atEnd, setAtEnd] = useState(false);
   const overflows = viewHeight > 0 && contentHeight > viewHeight + 1;
 
   return (
-    <View style={styles.detailScrollWrap}>
+    <View style={[styles.detailScrollWrap, fill && styles.fill]}>
       <ScrollView
-        style={styles.detailScroll}
+        style={[styles.detailScroll, fill && styles.fill]}
         contentContainerStyle={styles.detailContent}
         showsVerticalScrollIndicator={false}
         onLayout={(e) => setViewHeight(e.nativeEvent.layout.height)}
@@ -277,9 +435,9 @@ function DetailScroll({ markdown }: { markdown: string }) {
 // 아래로 갈수록 진해지는 띠 — 그라데이션 의존성 없이 카드 색으로 흐린다
 const FADE_STEPS = [0.12, 0.3, 0.5, 0.7, 0.86, 0.96];
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), Math.max(min, max));
-}
+// 웹: 머리에 마우스를 올리면 잡을 수 있다는 커서 ('grab' 은 RN 스타일 타입에 없어 웹에서만 넘긴다).
+// 끄는 동안의 'grabbing' 과 글자 선택 막기는 제스처 핸들러가 웹에서 직접 처리한다.
+const webGrabCursor = Platform.OS === 'web' ? ({ cursor: 'grab' } as unknown as ViewStyle) : null;
 
 const styles = StyleSheet.create({
   gestureRoot: {
@@ -355,14 +513,20 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.sm,
     color: Colors.text.secondary,
   },
-  close: {
+  headerActions: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  headerButton: {
     width: 32,
     height: 32,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    // 웹: 머리의 잡기 커서 위에서도 버튼은 손가락 커서
+    cursor: 'pointer',
   },
-  closePressed: {
+  headerButtonPressed: {
     backgroundColor: Colors.bg.secondary,
   },
   meaning: {
@@ -397,6 +561,13 @@ const styles = StyleSheet.create({
   detailScroll: {
     flexGrow: 0,
     flexShrink: 1,
+  },
+  // 펼친 카드의 남은 높이 채우기 — `flex: 1` 은 detailScroll 의 flexGrow: 0 과 섞이면
+  // 기준 크기 0 에 늘어나지 않는 상태가 되어 본문이 사라지므로 개별 속성으로 덮어쓴다
+  fill: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
   },
   fade: {
     position: 'absolute',
