@@ -241,11 +241,16 @@ while True:
 | 단계 | 내용 |
 |------|------|
 | **bump-version** | 버전 증가 → 커밋 → `vX.Y.Z` 태그 생성 & Push |
-| **build-android** | `expo prebuild` → Gradle 로 **release APK + AAB** 빌드 (release keystore 서명 · 서명 검증) |
+| **build-android** | `expo prebuild` → Gradle 로 **release APK + AAB** 빌드 (R8 코드 축소·최적화·난독화 · release keystore 서명 · 서명 검증) |
+| **smoke-test-android** | release APK 를 에뮬레이터에서 실행해 홈 화면(DB 열기)과 주요 화면 확인. 실패하면 Release 생성·Play 업로드 중단 — [Android 배포 가이드 4.6](docs/android-deployment.md#46-r8-과-릴리스-스모크-테스트) |
 | **build-ios** | macOS 러너 + Xcode 26 → `xcodebuild` 로 archive/export → **IPA** |
 | **submit-testflight** | `altool` 로 App Store Connect(TestFlight) 업로드 |
 | **submit-google-play** | (선택, `upload_google_play`) AAB 를 Google Play **내부 테스트 트랙**에 업로드 — [Android 배포 가이드 6.7](docs/android-deployment.md#67-선택-play-업로드-자동화) |
 | **create-release** | APK + AAB + IPA 를 첨부한 **GitHub Release** 생성 (AAB 는 Google Play 업로드용) |
+
+#### `Android Release Check` 워크플로 (`android-release-check.yml`)
+
+`app.json` · 의존성 · `plugins/` 처럼 네이티브 빌드 구성을 바꾸는 PR 에서 자동으로 돕니다. 릴리스와 같은 R8 설정으로 APK 를 빌드해 에뮬레이터 스모크 테스트를 돌리므로, 릴리스 빌드에서만 나는 문제를 머지 전에 잡을 수 있습니다.
 
 #### `Windows Desktop Release` 워크플로 (`windows-desktop-release.yml`)
 

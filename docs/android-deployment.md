@@ -212,16 +212,17 @@ gh workflow run native-build-testflight.yml -f version_bump=patch -f upload_test
 ### 4.2 워크플로 흐름
 
 ```
-bump-version ──┬─▶ build-android ──┬─▶ submit-google-play (선택)
-               │                   └──────────────────────┐
-               │                                          ├─▶ create-release (APK + AAB + IPA 첨부)
-               └─▶ build-ios ──────┬──────────────────────┘
+bump-version ──┬─▶ build-android ─▶ smoke-test-android ──┬─▶ submit-google-play (선택)
+               │                                         └─────────────────────┐
+               │                                                               ├─▶ create-release (APK + AAB + IPA 첨부)
+               └─▶ build-ios ──────┬───────────────────────────────────────────┘
                                    └─▶ submit-testflight (선택)
 
 워크플로 전체 성공 후 ─▶ Windows Desktop Release (workflow_run 으로 자동 실행)
 ```
 
-- `submit-google-play` 는 `build-android` 만 성공하면 iOS 빌드·`create-release` 와 상관없이 실행됩니다. ([6.7](#67-선택-play-업로드-자동화))
+- `smoke-test-android` 는 `build-android` 가 만든 APK 를 에뮬레이터에서 실행해 봅니다. 실패하면 Release 생성과 Play 업로드를 하지 않습니다. ([4.6](#46-r8-과-릴리스-스모크-테스트))
+- `submit-google-play` 는 `build-android` 와 `smoke-test-android` 만 성공하면 iOS 빌드·`create-release` 와 상관없이 실행됩니다. ([6.7](#67-선택-play-업로드-자동화))
 - 선택 잡(`submit-google-play` · `submit-testflight`)이 실패해도 Release 는 만들어지지만, 워크플로 전체가 실패로 끝나므로 Windows Desktop Release 는 자동 실행되지 않습니다. 이때는 실패한 잡을 **Re-run** 하거나 Windows 워크플로를 수동으로 실행합니다.
 
 `build-android` 잡의 단계는 다음과 같습니다. (지난 실행 기준 약 20분, 대부분 Gradle 빌드 시간)
@@ -232,12 +233,15 @@ bump-version ──┬─▶ build-android ──┬─▶ submit-google-play (�
 | Setup Java / Android SDK | Temurin JDK 17, `platform-tools` 설치 |
 | Install dependencies | `pnpm install --frozen-lockfile` |
 | Expo prebuild (android) | `expo prebuild --platform android --no-install --clean` 으로 `android/` 생성 |
+| Verify R8 settings | minify · `proguard-android-optimize.txt` · Expo SDK 54 보완 keep 규칙이 모두 들어갔는지 확인 (`scripts/verify-android-r8.sh`, [4.6](#46-r8-과-릴리스-스모크-테스트)) |
 | Decode keystore | `ANDROID_KEYSTORE_BASE64` → `android/app/release.keystore` |
 | Configure gradle signing | `MYAPP_RELEASE_*` 값을 `android/gradle.properties` 에 추가하고, `android/app/build.gradle` 에 release 서명 설정을 주입. 주입이 안 되면 즉시 실패 ([3.2](#32-워크플로-수정)) |
 | Build release APK & AAB | `./gradlew assembleRelease bundleRelease --no-daemon` — 한 번의 Gradle 실행으로 둘 다 생성 |
 | Locate APK & AAB | `app-release.apk` · `app-release.aab` 로 복사 |
+| Report R8 results | `mapping.txt` 가 없으면 실패(R8 이 안 돈 것). AAB 의 `r8.json`(Play 가 DEX 코드 최적화 비율을 계산하는 파일)을 Step Summary 에 표시 |
 | Verify release signing | release keystore · APK · AAB 의 SHA-256 인증서 지문 비교. 다르거나 debug 서명이면 실패 ([3.2](#32-워크플로-수정)) |
 | Upload APK / AAB artifact | `app-release-apk` · `app-release-aab` 아티팩트로 업로드 → `create-release` 가 받아 릴리스에 첨부 |
+| Upload R8 mapping artifact | 난독화된 스택을 풀 때 쓰는 `mapping.txt` 를 `r8-mapping` 아티팩트로 보관 (공개 Release 에는 올리지 않음. Play 는 AAB 에 포함된 매핑을 씀) |
 
 ### 4.3 결과 확인
 
@@ -265,6 +269,9 @@ keytool -printcert -jarfile app-release.aab
 - **`bump-version` 은 맨 먼저 버전 커밋과 태그를 `master` 에 push 합니다.** 이후 빌드가 실패해도 버전은 이미 올라가 있습니다.
 - 그래서 실패한 경우 워크플로를 새로 실행하지 말고, 해당 실행 화면에서 **Re-run failed jobs** 를 누르세요. 새로 실행하면 버전이 한 번 더 올라갑니다.
 - `create-release` 는 Android 와 iOS 빌드가 **모두** 성공해야 실행됩니다. iOS 만 실패한 경우에도 APK·AAB 는 실행 화면의 **Artifacts → `app-release-apk` / `app-release-aab`** 에서 받을 수 있습니다. (아티팩트 기본 보관 기간 90일)
+- `smoke-test-android` 가 실패하면 `create-release` 와 `submit-google-play` 가 실행되지 않습니다. 실행 화면의 **Artifacts → `smoke-output`** 에서 `logcat.txt`, 스크린샷, UI dump 를 보고 원인을 확인합니다. ([4.6](#46-r8-과-릴리스-스모크-테스트))
+  - 에뮬레이터가 늦게 뜨는 등 테스트 환경 문제라면 그 잡만 **Re-run** 하면 이어서 진행됩니다.
+  - 앱 문제라면 이 버전은 배포하지 말고, 고친 뒤 워크플로를 새로 실행합니다.
 - `submit-google-play` 만 실패했다면 그 잡만 **Re-run** 하면 됩니다. 업로드 단계에서 실패하면 Play 에는 아무것도 반영되지 않으므로 같은 AAB 로 다시 시도해도 됩니다. 반대로 이미 업로드가 끝난 실행을 다시 돌리면 "버전 코드가 이미 사용됨" 오류가 납니다.
 - 워크플로가 끝나면 로컬에서 `git pull` 로 버전 bump 커밋을 받아 두세요.
 
@@ -277,6 +284,55 @@ keytool -printcert -jarfile app-release.aab
 새 버전도 같은 방법으로 설치하면 기존 앱 위에 덮어써지고 풀이 기록이 유지됩니다. 서명 키가 같고 versionCode 가 더 크기 때문입니다. 단, 서명 키가 바뀌는 버전([3.4](#34-기존-사용자에게-미치는-영향))은 예외입니다.
 
 `app-release.aab` 는 Google Play 업로드용이라 기기에서 열어도 설치되지 않습니다.
+
+### 4.6 R8 과 릴리스 스모크 테스트
+
+릴리스 빌드는 R8 로 코드를 축소·최적화·난독화합니다. Play Console 의 **DEX 코드 최적화** 기준(최적화·난독화·축소 비율 각각 25% 이상)을 맞추기 위해서입니다. R8 이 꺼져 있던 v1.6.6~v1.7.1 은 "난독화(1%)" 경고를 받았습니다.
+
+| 설정 | 위치 | 내용 |
+|------|------|------|
+| minify (R8) | `app.json` → `expo-build-properties` → `enableMinifyInReleaseBuilds: true` | `android/gradle.properties` 에 `android.enableMinifyInReleaseBuilds=true` 가 들어감 |
+| 코드 최적화 | `plugins/withAndroidR8.js` | 템플릿의 `proguard-android.txt`(`-dontoptimize` 포함)를 `proguard-android-optimize.txt` 로 교체 |
+| 보완 keep 규칙 | `plugins/android-r8-rules.pro` → `withAndroidR8` 가 `android/app/proguard-rules.pro` 에 추가 | Expo SDK 54 의 expo-modules-core 에 빠져 있는 규칙. 아래 참고 |
+| 리소스 축소 | 사용하지 않음 (`enableShrinkResourcesInReleaseBuilds` 없음) | DEX 지표와 관계없고, React Native 는 이미지 리소스를 런타임에 이름으로 찾으므로 켜지 않음 |
+
+**보완 keep 규칙이 필요한 이유**
+
+v1.6.2~v1.6.5 에서는 R8 을 켠 빌드가 실기기에서 DB 를 열지 못했습니다.
+
+```
+NativeDatabase.constructor: The 2nd argument cannot be cast to type expo.modules.sqlite.OpenDatabaseOptions
+→ Caused by: java.lang.NullPointerException
+```
+
+- expo 모듈은 JS 객체를 Record 로 바꿀 때 리플렉션으로 `@Field` 어노테이션의 `key` 를 읽습니다. R8 이 이 어노테이션 클래스를 변형하면 그 줄에서 NPE 가 납니다.
+- Expo 는 expo-modules-core 58.x 의 consumer 규칙으로 이 문제를 고쳤지만([expo/expo#51206](https://github.com/expo/expo/pull/51206), [expo/expo#46852](https://github.com/expo/expo/pull/46852)), SDK 54 계열에는 들어 있지 않습니다.
+- 그래서 `plugins/android-r8-rules.pro` 에 같은 규칙을 넣었습니다. `expo.modules.kotlin.records` 패키지와 `Enumerable` 마커 인터페이스를 지킵니다.
+- Expo SDK 58 이상으로 올리면 라이브러리에 같은 규칙이 들어 있으므로 이 파일의 규칙은 지워도 됩니다. 다른 SDK 로 올릴 때도 아래 스모크 테스트가 통과하는지 확인합니다.
+
+**스모크 테스트** (`scripts/android-smoke-test.sh`)
+
+R8 문제는 릴리스 빌드를 기기에서 실행해야만 드러납니다. 그래서 APK 를 에뮬레이터(API 34, x86_64)에서 실행해 아래를 확인합니다.
+
+1. 앱을 실행하면 홈 화면("카테고리를 선택해주세요")이 뜬다. DB 열기, 카테고리, 통계 조회가 여기서 확인됩니다. 홈의 오류 화면이 뜨면 화면의 오류 문구를 로그에 남기고 실패합니다.
+2. 딥링크(`quizbank:///…`)로 카테고리 · 통계 · 풀이 이력 · 학습 가이드 화면을 열어도 앱이 종료되지 않는다.
+3. logcat 에 앱 크래시, 네이티브 함수 호출 거부(`has been rejected`, `cannot be cast to type`), DB 조회 오류가 없다.
+
+결과(`logcat.txt`, 화면별 스크린샷, UI dump)는 `smoke-output` 아티팩트로 남습니다.
+
+같은 테스트가 두 곳에서 돕니다.
+
+| 워크플로 | 언제 | 무엇을 |
+|----------|------|--------|
+| `Android Release Check (R8 smoke test)` (`android-release-check.yml`) | `app.json`, `package.json`, `pnpm-lock.yaml`, `plugins/**` 등 네이티브 빌드 구성을 바꾸는 PR, 또는 수동 실행 | 같은 설정으로 x86_64 만, debug 키로 서명해 빌드한 APK. 머지 전에 문제를 잡습니다. `r8.json` 의 비율도 Step Summary 에서 볼 수 있습니다. |
+| 릴리스 워크플로의 `smoke-test-android` | 릴리스마다 | 실제로 배포할 APK (release 키 서명, 4개 ABI) |
+
+스모크 테스트는 퀴즈 풀이처럼 화면을 직접 눌러야 하는 흐름까지는 확인하지 않습니다. R8 구성이나 Expo SDK 를 바꾼 버전은 내부 테스트 트랙에서 실기기로 아래를 확인합니다.
+
+- 퀴즈 풀이 · 결과 저장 · 햅틱
+- 단어 뜻 팝업
+- 통계 차트
+- 가이드를 브라우저로 열기
 
 ---
 
@@ -464,7 +520,7 @@ on:
 - `submit-google-play` 는 `build-android` 만 성공하면 실행되므로 iOS 빌드가 실패해도 Play 업로드는 진행됩니다. Release 생성(`create-release`)과도 서로 기다리지 않습니다.
 - 앱이 아직 한 번도 검토·출시되지 않은 **초안** 상태라면 `status: draft` 로 올려야 합니다. (아니면 `Only releases with status draft may be created on draft app` 오류) [6.5](#65-첫-업로드-수동) 에서 내부 테스트 버전을 출시까지 마쳤다면 `completed` 그대로 둡니다.
 - `track` 은 `internal` / `alpha`(비공개 테스트) / `beta`(공개 테스트) / `production` 중에서 고를 수 있지만, 워크플로는 `internal` 로 고정했습니다. 내부 테스트에서 확인한 뒤 Play Console 에서 상위 트랙으로 승격합니다.
-- 릴리스 빌드는 R8(minify)을 쓰지 않습니다. v1.6.2~v1.6.5 에서 켰다가 expo 모듈의 Kotlin 리플렉션 기반 인자 변환이 깨져 DB 를 열지 못했기 때문입니다. 다시 켜려면 릴리스 빌드를 실기기에서 확인한 뒤 CI 의 `Verify R8 is disabled` 단계를 함께 고칩니다.
+- 릴리스 빌드는 R8(코드 축소·최적화·난독화)을 씁니다. `submit-google-play` 는 `smoke-test-android`(에뮬레이터 스모크 테스트)가 통과한 AAB 만 올립니다. ([4.6](#46-r8-과-릴리스-스모크-테스트))
 - `eas.json` 의 `submit` 설정(`serviceAccountKeyPath`)은 EAS Submit 용이며, 이 저장소의 CI 는 EAS 를 쓰지 않으므로 사용되지 않습니다.
 
 #### 실행 방법
@@ -483,8 +539,10 @@ on:
 
 - [ ] 배포할 변경이 모두 `master` 에 머지되어 있다
 - [ ] 로컬에서 `pnpm test` · `pnpm lint` 가 통과한다
+- [ ] 네이티브 빌드 구성(`app.json`, 의존성, `plugins/`)을 바꿨다면 PR 의 `Android Release Check (R8 smoke test)` 가 통과했다 ([4.6](#46-r8-과-릴리스-스모크-테스트))
 - [ ] 변경 규모에 맞는 `version_bump` 를 골랐다 (patch / minor / major)
 - [ ] `Verify release signing` 단계가 통과했다 (release keystore · APK · AAB 의 SHA-256 일치)
+- [ ] `smoke-test-android` 가 통과했다 (R8 릴리스 APK 가 에뮬레이터에서 홈 화면까지 뜸)
 - [ ] 릴리스에 `app-release.apk` · `app-release.aab` 가 함께 첨부되었다
 - [ ] 실기기에서 설치·업데이트를 확인했다 (release 서명 첫 버전은 v1.5.1 이하 삭제 후 설치 — [3.4](#34-기존-사용자에게-미치는-영향))
 - [ ] (Play) 앱 서명 키 방식을 정했다 — [6.3](#63-앱-서명-키-결정-첫-업로드-전에)
@@ -519,7 +577,12 @@ on:
 | Play 업로드: `The caller does not have permission` (403) | 서비스 계정이 Play Console 에 초대되지 않았거나, 앱 권한·출시 권한이 없거나, Google Play Android Developer API 가 사용 설정되지 않음 | [6.7](#67-선택-play-업로드-자동화) 1·2단계 확인. 초대 직후에는 권한이 반영될 때까지 시간이 걸릴 수 있음 |
 | Play 업로드: `Package not found: com.swpark3179.quizbank` | Play Console 에 앱이 없거나 첫 버전을 아직 올리지 않음, 또는 서비스 계정이 다른 개발자 계정에 초대됨 | [6.5](#65-첫-업로드-수동) 의 첫 업로드를 먼저 수동으로 진행 |
 | Play 업로드: `Only releases with status draft may be created on draft app` | 앱이 아직 한 번도 출시되지 않은 초안 상태 | Play Console 에서 첫 내부 테스트 버전을 출시하거나, 워크플로의 `status` 를 `draft` 로 바꿔 업로드 후 Play Console 에서 출시 |
-| Play: 난독화 파일·네이티브 디버그 기호 경고 | R8 난독화를 쓰지 않아 mapping 파일이 없고, 네이티브 기호를 함께 올리지 않음 | 경고일 뿐 출시에는 문제없음 |
+| Play: 네이티브 디버그 기호 경고 | 네이티브(.so) 기호 파일을 함께 올리지 않음 | 경고일 뿐 출시에는 문제없음. R8 매핑은 AAB 에 포함되어 자동으로 올라감 |
+| Play: DEX 코드 최적화가 기준점 미만 (최적화·난독화·축소 중 25% 미만 항목) | R8 이 꺼진 빌드(v1.6.6~v1.7.1)이거나, keep 규칙이 너무 넓어 비율이 낮음 | `Report R8 results` 단계의 Step Summary 에서 `r8.json` 비율 확인. 넓은 `-keep class 패키지.** { *; }` 규칙을 줄임 ([4.6](#46-r8-과-릴리스-스모크-테스트)) |
+| `Verify R8 settings` 실패 | `app.json` 의 `enableMinifyInReleaseBuilds` 또는 `./plugins/withAndroidR8` 가 빠졌거나, Expo 템플릿이 바뀌어 플러그인이 적용되지 않음 | 로컬에서 `expo prebuild --platform android` 후 `bash scripts/verify-android-r8.sh` 로 확인 |
+| `withAndroidR8: getDefaultProguardFile("proguard-android.txt") not found` (prebuild 실패) | Expo SDK 업그레이드로 템플릿 `build.gradle` 의 `proguardFiles` 줄이 바뀜 | 새 템플릿이 이미 `proguard-android-optimize.txt` 를 쓰면 플러그인의 교체 부분을 정리, 아니면 정규식 수정 |
+| `smoke-test-android`: `home screen shows the load error screen` / `native module call rejected` | 릴리스 빌드에서만 나는 R8 문제. 예: v1.6.2~v1.6.5 의 `The 2nd argument cannot be cast to type …OpenDatabaseOptions` | `smoke-output` 의 logcat 에서 실패한 함수와 타입을 찾아 `plugins/android-r8-rules.pro` 에 keep 규칙 추가. 같은 증상이 Expo 저장소에 보고·수정되었는지도 확인 |
+| `smoke-test-android`: `home screen did not appear` 이지만 스크린샷은 정상 | 에뮬레이터가 느리거나 시스템 대화상자가 화면을 가림 | 그 잡만 **Re-run** |
 
 ---
 
