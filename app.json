@@ -48,13 +48,15 @@
         "expo-build-properties",
         {
           "android": {
+            "enableMinifyInReleaseBuilds": true,
             "extraGradleProperties": {
               "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
             }
           }
         }
       ],
-      "./plugins/withAndroidBackupRules"
+      "./plugins/withAndroidBackupRules",
+      "./plugins/withAndroidR8"
     ],
     "experiments": {
       "typedRoutes": true,

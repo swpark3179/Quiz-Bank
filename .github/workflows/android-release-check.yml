@@ -1,0 +1,122 @@
+name: Android Release Check (R8 smoke test)
+
+# R8(코드 축소·최적화·난독화)로 빌드한 릴리스 APK 를 에뮬레이터에서 실행해,
+# 릴리스 빌드에서만 드러나는 문제를 머지 전에 잡는다.
+#   - v1.6.2~v1.6.5 에서는 R8 을 켠 빌드가 실기기에서만 DB 를 열지 못했고
+#     (expo Record 인자 변환 NPE), 출시한 뒤에야 알게 되었다.
+#   - 네이티브 빌드 구성(app.json, 의존성, config plugin)을 바꾸는 PR 에서 자동으로 돈다.
+#
+# 릴리스 워크플로(native-build-testflight.yml)와 같은 prebuild·R8 설정으로 빌드하되,
+#   - DEX 는 ABI 와 무관하므로 x86_64 만 빌드해 시간을 줄이고
+#   - 서명은 Expo 템플릿 기본값(debug keystore)을 써서 시크릿 없이 돈다.
+# 같은 스모크 테스트가 릴리스 워크플로의 smoke-test-android job 에서 실제 배포본으로 한 번 더 돈다.
+
+on:
+  pull_request:
+    paths:
+      - 'app.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'plugins/**'
+      - 'scripts/verify-android-r8.sh'
+      - 'scripts/report-android-r8.sh'
+      - 'scripts/android-smoke-test.sh'
+      - '.github/workflows/android-release-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-smoke:
+    name: Build R8 release APK & smoke test on emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Expo prebuild (android)
+        run: pnpm exec expo prebuild --platform android --no-install --clean
+
+      - name: Verify R8 settings
+        run: bash scripts/verify-android-r8.sh
+
+      - name: Build release APK & AAB (x86_64, debug-signed)
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease bundleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+
+      - name: Locate APK & AAB
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n1)
+          AAB=$(find android/app/build/outputs/bundle/release -name "*.aab" | head -n1)
+          [ -n "$APK" ] || { echo "::error::No APK produced"; exit 1; }
+          [ -n "$AAB" ] || { echo "::error::No AAB produced"; exit 1; }
+          cp "$APK" app-release.apk
+          cp "$AAB" app-release.aab
+          ls -l app-release.apk app-release.aab
+
+      - name: Report R8 results
+        run: bash scripts/report-android-r8.sh app-release.aab android/app/build/outputs/mapping/release/mapping.txt
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke test on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/android-smoke-test.sh app-release.apk smoke-output
+
+      - name: Upload smoke test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-output
+          path: smoke-output
+          if-no-files-found: ignore
+
+      - name: Upload R8 mapping
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-mapping
+          path: android/app/build/outputs/mapping/release/
+          if-no-files-found: ignore

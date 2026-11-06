@@ -8,7 +8,10 @@ name: App Build & Release — Android APK · iOS TestFlight (Main)
 # Android / iOS 빌드가 모두 성공하면 새 GitHub Release 를 생성하고(APK + AAB + IPA 첨부),
 # iOS 는 App Store Connect API(altool)로 TestFlight 에 업로드한다.
 # upload_google_play 를 켜면 AAB 를 Google Play Developer API(서비스 계정)로
-# 내부 테스트 트랙에 업로드한다. (iOS 빌드와 무관하게 build-android 만 성공하면 실행)
+# 내부 테스트 트랙에 업로드한다. (iOS 빌드와 무관하게 build-android·smoke-test-android 만 성공하면 실행)
+# Android 릴리스 빌드는 R8(코드 축소·최적화·난독화)을 쓴다. 릴리스 빌드에서만 드러나는 문제를
+# 막기 위해 smoke-test-android 가 APK 를 에뮬레이터에서 실행해 보고, 실패하면 Release 생성과
+# Play 업로드를 하지 않는다. (같은 테스트가 PR 에서 android-release-check.yml 로도 돈다)
 # Android 배포 절차: docs/android-deployment.md
 #
 # 주의: 워크플로 name 을 바꾸면 windows-desktop-release.yml 의 workflow_run 트리거도
@@ -162,19 +165,14 @@ jobs:
       - name: Expo prebuild (android)
         run: pnpm exec expo prebuild --platform android --no-install --clean
 
-      # R8(minify) 을 켠 v1.6.2~v1.6.5 에서 expo 모듈의 Kotlin 리플렉션 기반 인자 변환이
-      # 깨져 DB 를 열지 못했다:
-      #   NativeDatabase.constructor: The 2nd argument cannot be cast to type
-      #   expo.modules.sqlite.OpenDatabaseOptions ... Caused by: java.lang.NullPointerException
-      # 릴리스 빌드에서만 나타나므로 실기기 검증 없이 다시 켜지지 않도록 막아 둔다.
-      - name: Verify R8 is disabled
-        run: |
-          set -e
-          if grep -q '^android.enableMinifyInReleaseBuilds=true' android/gradle.properties; then
-            echo "::error::R8 minify is enabled. It broke expo record conversion in v1.6.2-v1.6.5; re-enable only after testing a release build on a device."
-            exit 1
-          fi
-          grep -n "minifyEnabled\|shrinkResources\|proguardFiles" android/app/build.gradle || true
+      # Play Console 의 "DEX 코드 최적화"(최적화·난독화·축소 비율 25% 이상) 대응으로 R8 을 켠다.
+      #   - minify: app.json 의 expo-build-properties (enableMinifyInReleaseBuilds)
+      #   - proguard-android-optimize.txt 와 Expo SDK 54 보완 keep 규칙: plugins/withAndroidR8.js
+      # 보완 규칙이 빠지면 v1.6.2~v1.6.5 처럼 expo Record 인자 변환이 NPE 로 깨져 DB 를 열지 못하므로
+      # (NativeDatabase.constructor: The 2nd argument cannot be cast to type ...OpenDatabaseOptions)
+      # Gradle 빌드 전에 설정이 모두 들어갔는지 확인한다.
+      - name: Verify R8 settings
+        run: bash scripts/verify-android-r8.sh
 
       # 백업·기기 간 이전으로 어긋난 SQLite DB 가 복원되지 않도록 files/SQLite/ 를 제외한다.
       # (plugins/withAndroidBackupRules.js) 설정이 빠진 채 배포되지 않게 확인한다.
@@ -228,8 +226,11 @@ jobs:
           EOF
 
           # 이어 붙인 결과가 줄 단위로 온전한지 Gradle 빌드(약 20분) 전에 확인한다.
-          grep -qxF 'MYAPP_RELEASE_STORE_FILE=release.keystore' "$PROPS" \
-            || { echo "::error::'MYAPP_RELEASE_STORE_FILE=release.keystore' is not a standalone line in $PROPS"; exit 1; }
+          for line in 'MYAPP_RELEASE_STORE_FILE=release.keystore' \
+                      'android.enableMinifyInReleaseBuilds=true'; do
+            grep -qxF "$line" "$PROPS" \
+              || { echo "::error::'$line' is not a standalone line in $PROPS"; exit 1; }
+          done
 
           # build.gradle 에 release signingConfig 가 없으면 주입
           BUILD_GRADLE=android/app/build.gradle
@@ -330,6 +331,15 @@ jobs:
           fi
           cp "$AAB" app-release.aab
 
+      # R8 이 실제로 돌았는지(mapping.txt) 확인하고, Play Console 이 DEX 코드 최적화 비율을
+      # 계산할 때 쓰는 r8.json 을 Step Summary 에 보여 준다. (AAB 에는 매핑이 자동으로 포함되어
+      # Play Console 이 역난독화에 쓰므로 별도 업로드는 필요 없다)
+      - name: Report R8 results
+        run: |
+          MAPPING=android/app/build/outputs/mapping/release/mapping.txt
+          bash scripts/report-android-r8.sh app-release.aab "$MAPPING"
+          cp "$MAPPING" mapping.txt
+
       # APK·AAB 가 debug.keystore 가 아니라 ANDROID_KEYSTORE_BASE64 의 release keystore 로
       # 서명되었는지 인증서 SHA-256 지문을 비교해 확인한다. 서명 주입이 다시 깨져도
       # 릴리스가 만들어지기 전에 여기서 멈춘다.
@@ -411,6 +421,63 @@ jobs:
         with:
           name: app-release-aab
           path: app-release.aab
+
+      # 난독화된 크래시 스택을 직접 풀어볼 때 쓰는 R8 매핑 파일.
+      # 공개 Release 자산에는 올리지 않고 Actions artifact 로만 보관한다.
+      - name: Upload R8 mapping artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-mapping
+          path: mapping.txt
+
+  # build-android 가 만든 release APK(R8 적용, release keystore 서명)를 에뮬레이터에서 실행해
+  # 홈 화면(DB 열기)과 주요 화면이 열리는지 확인한다. (scripts/android-smoke-test.sh)
+  # 실패하면 create-release 와 submit-google-play 가 실행되지 않는다. 버전 태그는 이미 만들어진
+  # 상태이므로, 에뮬레이터 문제로 실패했다면 이 job 만 Re-run 한다. (docs/android-deployment.md 4.4)
+  smoke-test-android:
+    name: Smoke test Android release APK (emulator)
+    needs: [bump-version, build-android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout tagged code
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.bump-version.outputs.new_version }}
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke test on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/android-smoke-test.sh app-release.apk smoke-output
+
+      - name: Upload smoke test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-output
+          path: smoke-output
+          if-no-files-found: ignore
 
   build-ios:
     name: Build iOS IPA (local)
@@ -659,13 +726,13 @@ jobs:
 
   # build-android 가 올린 app-release-aab 아티팩트(release keystore = Play 업로드 키로 서명,
   # Verify release signing 통과)를 Google Play 내부 테스트 트랙에 올린다.
-  #   - iOS 빌드·create-release 와 독립적으로 build-android 만 성공하면 실행된다.
+  #   - iOS 빌드·create-release 와 독립적으로 build-android 와 smoke-test-android 만 성공하면 실행된다.
   #   - Play Developer API 는 Play Console 에 앱과 첫 버전이 있어야 쓸 수 있으므로
   #     첫 업로드는 Play Console 에서 수동으로 한다. (docs/android-deployment.md 6.5)
   #   - 상위 트랙(비공개 테스트·프로덕션)으로는 Play Console 에서 승격한다.
   submit-google-play:
     name: Upload Android to Google Play
-    needs: build-android
+    needs: [build-android, smoke-test-android]
     if: ${{ github.event.inputs.upload_google_play == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -707,7 +774,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [bump-version, build-android, build-ios]
+    needs: [bump-version, build-android, smoke-test-android, build-ios]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
