@@ -6,11 +6,21 @@ import path from 'path';
 const plugin = require('../../plugins/withAndroidR8');
 
 const applyOptimizeProguardFile: (contents: string) => string = plugin.applyOptimizeProguardFile;
-const applyR8Rules: (contents: string, rules: string) => string = plugin.applyR8Rules;
+const applyR8Rules: (contents: string, rules: string, tag?: string) => string = plugin.applyR8Rules;
+const removeR8Rules: (contents: string, tag: string) => string = plugin.removeR8Rules;
+const isEdgeToEdgeEnabled: (config: { android?: { edgeToEdgeEnabled?: boolean } }) => boolean =
+  plugin.isEdgeToEdgeEnabled;
 const BLOCK_BEGIN: string = plugin.BLOCK_BEGIN;
 const BLOCK_END: string = plugin.BLOCK_END;
+const EDGE_TO_EDGE_BLOCK_TAG: string = plugin.EDGE_TO_EDGE_BLOCK_TAG;
+const EDGE_TO_EDGE_BLOCK_BEGIN: string = plugin.EDGE_TO_EDGE_BLOCK_BEGIN;
+const EDGE_TO_EDGE_BLOCK_END: string = plugin.EDGE_TO_EDGE_BLOCK_END;
 
 const RULES = fs.readFileSync(path.join(__dirname, '../../plugins/android-r8-rules.pro'), 'utf8');
+const EDGE_TO_EDGE_RULES = fs.readFileSync(
+  path.join(__dirname, '../../plugins/android-r8-edge-to-edge.pro'),
+  'utf8'
+);
 
 const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
 
@@ -108,5 +118,84 @@ describe('android-r8-rules.pro', () => {
     const lines = RULES.split('\n');
     expect(lines).toContain('-keep class expo.modules.kotlin.records.** { *; }');
     expect(lines).toContain('-keep interface expo.modules.kotlin.types.Enumerable');
+  });
+});
+
+describe('edge-to-edge 규칙 블록', () => {
+  const TEMPLATE = '# Add any project specific keep options here:\n';
+  const withMain = applyR8Rules(TEMPLATE, RULES);
+
+  it('보완 규칙 블록과 따로 덧붙이고, 기존 블록은 건드리지 않는다', () => {
+    const next = applyR8Rules(withMain, EDGE_TO_EDGE_RULES, EDGE_TO_EDGE_BLOCK_TAG);
+
+    expect(next.startsWith(withMain)).toBe(true);
+    expect(count(next, BLOCK_BEGIN)).toBe(1);
+    expect(count(next, EDGE_TO_EDGE_BLOCK_BEGIN)).toBe(1);
+    expect(next.endsWith(`${EDGE_TO_EDGE_BLOCK_END}\n`)).toBe(true);
+    expect(next).toContain('-assumevalues class com.facebook.react.views.view.WindowUtilKt {');
+  });
+
+  it('여러 번 적용해도 블록은 하나씩만 남는다', () => {
+    const once = applyR8Rules(withMain, EDGE_TO_EDGE_RULES, EDGE_TO_EDGE_BLOCK_TAG);
+    const twice = applyR8Rules(applyR8Rules(once, RULES), EDGE_TO_EDGE_RULES, EDGE_TO_EDGE_BLOCK_TAG);
+
+    expect(twice).toBe(once);
+  });
+
+  it('보완 규칙 블록이 뒤에 오더라도 서로의 끝 표시를 헷갈리지 않는다', () => {
+    const edgeFirst = applyR8Rules(TEMPLATE, EDGE_TO_EDGE_RULES, EDGE_TO_EDGE_BLOCK_TAG);
+    const both = applyR8Rules(edgeFirst, RULES);
+
+    expect(applyR8Rules(both, '-keep class new.Rule')).toBe(
+      applyR8Rules(edgeFirst, '-keep class new.Rule')
+    );
+    expect(applyR8Rules(both, '-dontwarn new.Rule', EDGE_TO_EDGE_BLOCK_TAG)).toContain(BLOCK_BEGIN);
+  });
+
+  it('edge-to-edge 를 끄면 블록만 지워 원래 내용으로 돌아간다', () => {
+    const added = applyR8Rules(withMain, EDGE_TO_EDGE_RULES, EDGE_TO_EDGE_BLOCK_TAG);
+
+    expect(removeR8Rules(added, EDGE_TO_EDGE_BLOCK_TAG)).toBe(withMain);
+    expect(removeR8Rules(withMain, EDGE_TO_EDGE_BLOCK_TAG)).toBe(withMain);
+  });
+
+  it('끝 표시가 없는 깨진 블록이면 오류를 낸다', () => {
+    const broken = `${withMain}${EDGE_TO_EDGE_BLOCK_BEGIN}\n-dontwarn a.B\n`;
+    expect(() => removeR8Rules(broken, EDGE_TO_EDGE_BLOCK_TAG)).toThrow(/end quiz-bank-edge-to-edge/);
+    expect(() => applyR8Rules(broken, EDGE_TO_EDGE_RULES, EDGE_TO_EDGE_BLOCK_TAG)).toThrow(
+      /end quiz-bank-edge-to-edge/
+    );
+  });
+});
+
+describe('isEdgeToEdgeEnabled', () => {
+  it('Expo 와 같이 app.json 에서 false 로 적었을 때만 꺼진 것으로 본다', () => {
+    expect(isEdgeToEdgeEnabled({})).toBe(true);
+    expect(isEdgeToEdgeEnabled({ android: {} })).toBe(true);
+    expect(isEdgeToEdgeEnabled({ android: { edgeToEdgeEnabled: true } })).toBe(true);
+    expect(isEdgeToEdgeEnabled({ android: { edgeToEdgeEnabled: false } })).toBe(false);
+  });
+
+  it('app.json 은 edge-to-edge 를 켜 두었다 (android-r8-edge-to-edge.pro 의 전제)', () => {
+    const appJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../app.json'), 'utf8'));
+    expect(isEdgeToEdgeEnabled(appJson.expo)).toBe(true);
+  });
+});
+
+describe('android-r8-edge-to-edge.pro', () => {
+  it('scripts/verify-android-r8.sh 가 찾는 규칙 줄을 그대로 담고 있다', () => {
+    const lines = EDGE_TO_EDGE_RULES.split('\n');
+    expect(lines).toContain('    boolean isEdgeToEdgeFeatureFlagOn() return true;');
+    expect(lines).toContain('    boolean isEdgeToEdgeFeatureFlagOn return true;');
+  });
+
+  it('주석 말고는 WindowUtilKt 에 대한 -assumevalues 규칙만 담는다', () => {
+    const rules = EDGE_TO_EDGE_RULES.split('\n').filter((line) => line.trim() && !line.trim().startsWith('#'));
+    expect(rules).toEqual([
+      '-assumevalues class com.facebook.react.views.view.WindowUtilKt {',
+      '    boolean isEdgeToEdgeFeatureFlagOn return true;',
+      '    boolean isEdgeToEdgeFeatureFlagOn() return true;',
+      '}',
+    ]);
   });
 });

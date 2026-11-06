@@ -239,6 +239,7 @@ bump-version ──┬─▶ build-android ─▶ smoke-test-android ──┬�
 | Build release APK & AAB | `./gradlew assembleRelease bundleRelease --no-daemon` — 한 번의 Gradle 실행으로 둘 다 생성 |
 | Locate APK & AAB | `app-release.apk` · `app-release.aab` 로 복사 |
 | Report R8 results | `mapping.txt` 가 없으면 실패(R8 이 안 돈 것). AAB 의 `r8.json`(Play 가 DEX 코드 최적화 비율을 계산하는 파일)을 Step Summary 에 표시 |
+| Report deprecated edge-to-edge APIs | APK 의 DEX 에 남은 Android 15 지원 중단 창 API 호출을 Play 표시 이름·원래 이름과 함께 Step Summary 에 표시. 실패하지 않음 ([4.7](#47-play-console-더-넓은-화면용으로-지원-중단된-api-경고)) |
 | Verify release signing | release keystore · APK · AAB 의 SHA-256 인증서 지문 비교. 다르거나 debug 서명이면 실패 ([3.2](#32-워크플로-수정)) |
 | Upload APK / AAB artifact | `app-release-apk` · `app-release-aab` 아티팩트로 업로드 → `create-release` 가 받아 릴리스에 첨부 |
 | Upload R8 mapping artifact | 난독화된 스택을 풀 때 쓰는 `mapping.txt` 를 `r8-mapping` 아티팩트로 보관 (공개 Release 에는 올리지 않음. Play 는 AAB 에 포함된 매핑을 씀) |
@@ -294,6 +295,7 @@ keytool -printcert -jarfile app-release.aab
 | minify (R8) | `app.json` → `expo-build-properties` → `enableMinifyInReleaseBuilds: true` | `android/gradle.properties` 에 `android.enableMinifyInReleaseBuilds=true` 가 들어감 |
 | 코드 최적화 | `plugins/withAndroidR8.js` | 템플릿의 `proguard-android.txt`(`-dontoptimize` 포함)를 `proguard-android-optimize.txt` 로 교체 |
 | 보완 keep 규칙 | `plugins/android-r8-rules.pro` → `withAndroidR8` 가 `android/app/proguard-rules.pro` 에 추가 | Expo SDK 54 의 expo-modules-core 에 빠져 있는 규칙. 아래 참고 |
+| edge-to-edge 가정 규칙 | `plugins/android-r8-edge-to-edge.pro` → `withAndroidR8` 가 edge-to-edge 가 켜져 있을 때만 추가 | 실행되지 않는 React Native 상태 표시줄 코드를 지워 Play 의 지원 중단 API 경고 대상을 줄임 ([4.7](#47-play-console-더-넓은-화면용으로-지원-중단된-api-경고)) |
 | 리소스 축소 | 사용하지 않음 (`enableShrinkResourcesInReleaseBuilds` 없음) | DEX 지표와 관계없고, React Native 는 이미지 리소스를 런타임에 이름으로 찾으므로 켜지 않음 |
 
 **보완 keep 규칙이 필요한 이유**
@@ -333,6 +335,57 @@ R8 문제는 릴리스 빌드를 기기에서 실행해야만 드러납니다. �
 - 단어 뜻 팝업
 - 통계 차트
 - 가이드를 브라우저로 열기
+
+### 4.7 Play Console: 더 넓은 화면용으로 지원 중단된 API 경고
+
+v1.7.2 를 올렸을 때 Play Console 이 아래 권장 사항을 보여 주었습니다.
+
+> 앱에서 더 넓은 화면용으로 지원 중단된 API 또는 파라미터를 사용합니다 — `Window.getStatusBarColor`, `Window.setStatusBarColor`, `Window.setNavigationBarColor`, `LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT`, `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`
+
+- **출시를 막는 경고는 아닙니다.** Android 15 이상(targetSdk 35+)에서는 이 API 들이 아무 효과가 없고, 앱은 이미 edge-to-edge 로 그려집니다. (`app.json` 의 `edgeToEdgeEnabled: true`)
+- Play 는 DEX 에 호출이 **남아 있는지**를 봅니다. 실제로 실행되는지는 따지지 않습니다. 아래 `b3.b.runGuarded` 는 이 앱에서 한 번도 실행되지 않는 코드인데도 잡혔습니다.
+- 앱 코드에는 이 호출이 없습니다. `app/_layout.tsx` 의 `<StatusBar style="dark" />` 는 아이콘 색만 바꾸므로 지원 중단 대상이 아닙니다. 호출은 모두 React Native · Material · AndroidX 라이브러리 안에 있습니다.
+
+**시작 위치별 원인과 처리**
+
+| Play 시작 위치 | 원래 코드 | 하는 일 | 처리 |
+|----------------|-----------|---------|------|
+| `b3.b.runGuarded` | React Native `StatusBarModule.setColor` 의 Runnable | JS 의 `StatusBar backgroundColor` 적용 (`getStatusBarColor`, `setStatusBarColor`) | **제거**. edge-to-edge 앱에서는 실행되지 않음 (아래 규칙) |
+| (목록에 따로 없음) | React Native `WindowUtil.kt` 의 `statusBarHide` · `statusBarShow` 중 edge-to-edge 가 아닐 때의 분기 | 상태 표시줄을 숨기거나 보일 때 cutout 모드 변경 (`SHORT_EDGES`, `DEFAULT`) | **제거**. 같은 규칙으로 빠짐. React Native 에서 `DEFAULT` 를 쓰는 곳은 이곳뿐 |
+| `StatusBarModule.getTypedExportedConstants` | React Native | 앱 시작 때 현재 상태 표시줄 색을 읽어 JS 상수로 넘김 (`getStatusBarColor`) | 유지. 읽기만 함. 지우려면 Android 의 `Window` 메서드 자체에 가정을 걸어야 해서 다른 라이브러리 동작까지 바뀜 |
+| `WindowUtilKt.enableEdgeToEdge` | React Native | Android 14 이하에서 상태 표시줄·내비게이션 바를 투명하게 하고 화면을 cutout 영역까지 넓힘 (`setStatusBarColor`, `setNavigationBarColor`, Android 9~10 의 `SHORT_EDGES`) | 유지. 지우면 Android 14 이하에서 상태 표시줄이 테마 색(`#ECEFF4`)으로 칠해지고 Modal 도 같은 영향을 받음. React Native 최신 버전에도 남아 있다고 보고됨 |
+| `com.google.android.material.datepicker.l.I` | Material Components 1.13.0 `MaterialDatePicker` → `EdgeToEdgeUtils.applyEdgeToEdge` (react-native-screens 의존성) | 날짜 선택기를 전체 화면으로 띄울 때 시스템 바 색 지정 | 유지. 앱은 날짜 선택기를 쓰지 않아 실행되지 않지만, 라이브러리 안의 코드라 손대지 않음 |
+| `M3.i.l`, `M3.i.x` | R8 이 이름을 바꾼 Material 또는 AndroidX 코드로 추정 (예: `BottomSheetDialog`, core-splashscreen `applyAppSystemUiTheme`) | 시스템 바 색 지정 | 유지. 원래 이름은 아래 CI 리포트로 확인 |
+
+**적용한 규칙** — `plugins/android-r8-edge-to-edge.pro`
+
+```
+-assumevalues class com.facebook.react.views.view.WindowUtilKt {
+    boolean isEdgeToEdgeFeatureFlagOn return true;
+    boolean isEdgeToEdgeFeatureFlagOn() return true;
+}
+```
+
+- React Native 은 `isEdgeToEdgeFeatureFlagOn` 값으로 edge-to-edge 코드와 예전 코드를 고릅니다. 이 값은 `MainApplication.onCreate` 의 `loadReactNative()` 가 `BuildConfig.IS_EDGE_TO_EDGE_ENABLED`(= `gradle.properties` 의 `edgeToEdgeEnabled=true`)를 보고 `true` 로 바꾼 뒤 다시 바뀌지 않습니다. 이 값을 읽는 코드(React 모듈, `ReactActivityDelegate`, Modal, Expo 의 `EdgeToEdgePackage`)는 모두 그 뒤에 실행됩니다.
+- 그래서 R8 에 "항상 `true`" 라고 알려 주어도 실행 결과는 같습니다. R8 은 실행될 일이 없는 `false` 쪽 분기만 DEX 에서 지웁니다. Android 14 이하에서 쓰는 `enableEdgeToEdge` 와 상태 표시줄 아이콘 색(`setStyle`), 숨기기(`setHidden`)는 그대로입니다.
+- `withAndroidR8` 플러그인이 `android/app/proguard-rules.pro` 에 `quiz-bank-edge-to-edge` 블록으로 넣습니다. `app.json` 에서 `android.edgeToEdgeEnabled` 를 `false` 로 바꾸면 이 가정이 틀리므로 블록을 넣지 않습니다. `scripts/verify-android-r8.sh` 는 블록과 `edgeToEdgeEnabled=true` 가 어긋나면 Gradle 빌드 전에 실패합니다.
+- release 빌드(R8)에만 적용됩니다. 개발 빌드는 바뀌지 않습니다.
+
+**남는 경고**
+
+나머지 시작 위치는 Android 14 이하에서 실제로 쓰이거나, React Native(미리 빌드된 `react-android`)·Material·AndroidX 안에 있는 코드입니다. 그래서 이 앱에서 경고를 완전히 없앨 수는 없습니다. 아래 방법은 동작이 바뀌어 쓰지 않았습니다.
+
+- `-assumenosideeffects class android.view.Window { void setStatusBarColor(int); ... }` 로 호출을 모두 지우기: Android 14 이하에서 상태 표시줄·Modal·바텀시트의 시스템 바가 칠해집니다.
+- edge-to-edge 끄기: targetSdk 36(Android 16)부터 끌 수 없고, 꺼도 코드는 DEX 에 남습니다.
+- `MaterialDatePicker` 의 호출만 지우기: 지금은 쓰지 않지만, 나중에 Material 날짜 선택기를 쓰는 라이브러리를 넣으면 Android 14 이하에서 화면이 어긋납니다.
+
+남은 항목은 React Native · Material · AndroidX 가 해당 호출을 정리한 버전으로 올릴 때 다시 확인합니다. React Native 가 edge-to-edge 가 아닐 때의 경로(`StatusBarModule.setColor`, `statusBarHide` · `statusBarShow` 의 예전 분기)를 지운 버전으로 올리면 이 규칙도 지워도 됩니다.
+
+**확인 방법**
+
+- PR 의 `Android Release Check` 와 릴리스 워크플로의 **Report deprecated edge-to-edge APIs** 단계가 APK 의 DEX 에서 같은 호출을 찾아 Step Summary 에 표로 보여 줍니다. (`scripts/report-android-edge-to-edge.sh`) Play 에 보이는 이름(`b3.b.runGuarded` 같은 난독화 이름)과 `mapping.txt` 로 푼 원래 이름이 함께 나옵니다. 정보 표시용이라 실패하지 않습니다.
+- 규칙이 적용되면 표에 `StatusBarModule$setColor$1` 과 `LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT` 가 나오지 않습니다.
+- Play Console 의 권장 사항은 새 버전을 올린 뒤에 다시 계산됩니다.
 
 ---
 
@@ -580,6 +633,8 @@ on:
 | Play: 네이티브 디버그 기호 경고 | 네이티브(.so) 기호 파일을 함께 올리지 않음 | 경고일 뿐 출시에는 문제없음. R8 매핑은 AAB 에 포함되어 자동으로 올라감 |
 | Play: DEX 코드 최적화가 기준점 미만 (최적화·난독화·축소 중 25% 미만 항목) | R8 이 꺼진 빌드(v1.6.6~v1.7.1)이거나, keep 규칙이 너무 넓어 비율이 낮음 | `Report R8 results` 단계의 Step Summary 에서 `r8.json` 비율 확인. 넓은 `-keep class 패키지.** { *; }` 규칙을 줄임 ([4.6](#46-r8-과-릴리스-스모크-테스트)) |
 | `Verify R8 settings` 실패 | `app.json` 의 `enableMinifyInReleaseBuilds` 또는 `./plugins/withAndroidR8` 가 빠졌거나, Expo 템플릿이 바뀌어 플러그인이 적용되지 않음 | 로컬에서 `expo prebuild --platform android` 후 `bash scripts/verify-android-r8.sh` 로 확인 |
+| `Verify R8 settings`: `quiz-bank-edge-to-edge block but … does not contain 'edgeToEdgeEnabled=true'` | edge-to-edge 를 끈 채 이전 `android/` 를 재사용함 | `expo prebuild --clean` 으로 다시 생성. 플러그인은 edge-to-edge 가 꺼져 있으면 블록을 넣지 않음 ([4.7](#47-play-console-더-넓은-화면용으로-지원-중단된-api-경고)) |
+| Play: 더 넓은 화면용으로 지원 중단된 API 또는 파라미터를 사용 | React Native · Material · AndroidX 안의 Android 14 이하용 코드 | 출시에는 문제없음. 실행되지 않는 React Native 코드는 R8 규칙으로 제거함. 남은 위치는 Step Summary 의 `Report deprecated edge-to-edge APIs` 표로 확인 ([4.7](#47-play-console-더-넓은-화면용으로-지원-중단된-api-경고)) |
 | `withAndroidR8: getDefaultProguardFile("proguard-android.txt") not found` (prebuild 실패) | Expo SDK 업그레이드로 템플릿 `build.gradle` 의 `proguardFiles` 줄이 바뀜 | 새 템플릿이 이미 `proguard-android-optimize.txt` 를 쓰면 플러그인의 교체 부분을 정리, 아니면 정규식 수정 |
 | `smoke-test-android`: `home screen shows the load error screen` / `native module call rejected` | 릴리스 빌드에서만 나는 R8 문제. 예: v1.6.2~v1.6.5 의 `The 2nd argument cannot be cast to type …OpenDatabaseOptions` | `smoke-output` 의 logcat 에서 실패한 함수와 타입을 찾아 `plugins/android-r8-rules.pro` 에 keep 규칙 추가. 같은 증상이 Expo 저장소에 보고·수정되었는지도 확인 |
 | `smoke-test-android`: `home screen did not appear` 이지만 스크린샷은 정상 | 에뮬레이터가 느리거나 시스템 대화상자가 화면을 가림 | 그 잡만 **Re-run** |

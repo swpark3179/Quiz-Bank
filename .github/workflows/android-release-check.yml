@@ -20,6 +20,7 @@ on:
       - 'plugins/**'
       - 'scripts/verify-android-r8.sh'
       - 'scripts/report-android-r8.sh'
+      - 'scripts/report-android-edge-to-edge.sh'
       - 'scripts/android-smoke-test.sh'
       - '.github/workflows/android-release-check.yml'
   workflow_dispatch:
@@ -88,6 +89,11 @@ jobs:
 
       - name: Report R8 results
         run: bash scripts/report-android-r8.sh app-release.aab android/app/build/outputs/mapping/release/mapping.txt
+
+      # Play Console "더 넓은 화면용으로 지원 중단된 API" 경고 대상이 DEX 에 어디 남았는지 보여 준다.
+      # (plugins/android-r8-edge-to-edge.pro 로 지운 React Native 코드가 다시 나타나는지도 여기서 본다)
+      - name: Report deprecated edge-to-edge APIs
+        run: bash scripts/report-android-edge-to-edge.sh app-release.apk android/app/build/outputs/mapping/release/mapping.txt
 
       - name: Enable KVM
         run: |
