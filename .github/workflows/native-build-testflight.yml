@@ -340,6 +340,13 @@ jobs:
           bash scripts/report-android-r8.sh app-release.aab "$MAPPING"
           cp "$MAPPING" mapping.txt
 
+      # Play Console 의 "더 넓은 화면용으로 지원 중단된 API 또는 파라미터" 경고 대상(Android 15 에서
+      # 지원 중단된 Window 상태 표시줄·탐색 메뉴 색 API, cutout 모드)이 DEX 에 어디 남았는지
+      # Play 에 보이는 난독화 이름과 원래 이름을 함께 Step Summary 에 보여 준다.
+      # 정보 표시용이라 실패하지 않는다. (docs/android-deployment.md 4.7)
+      - name: Report deprecated edge-to-edge APIs
+        run: bash scripts/report-android-edge-to-edge.sh app-release.apk mapping.txt
+
       # APK·AAB 가 debug.keystore 가 아니라 ANDROID_KEYSTORE_BASE64 의 release keystore 로
       # 서명되었는지 인증서 SHA-256 지문을 비교해 확인한다. 서명 주입이 다시 깨져도
       # 릴리스가 만들어지기 전에 여기서 멈춘다.
