@@ -2,7 +2,7 @@
   "expo": {
     "name": "문제은행",
     "slug": "quiz-bank",
-    "version": "1.7.1",
+    "version": "1.7.2",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "quizbank",
@@ -11,13 +11,13 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.swpark3179.quizbank",
-      "buildNumber": "17",
+      "buildNumber": "18",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "versionCode": 17,
+      "versionCode": 18,
       "adaptiveIcon": {
         "backgroundColor": "#ECEFF4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
