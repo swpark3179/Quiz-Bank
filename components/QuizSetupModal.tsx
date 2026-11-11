@@ -21,6 +21,8 @@ export interface QuizSetupOptions {
   count: number | 'all';
   mode: 'immediate' | 'deferred';
   selectedFileIds: string[];
+  /** 한 번도 풀지 않은 문제에서만 출제 */
+  unseenOnly: boolean;
 }
 
 interface QuizSetupModalProps {
@@ -29,6 +31,8 @@ interface QuizSetupModalProps {
   totalQuestions: number;    // 선택된 파일들의 총 문제 수
   isRandom: boolean;         // 무작위 모드 (파일 다중 선택 포함)
   preSelectedFileId?: string; // 단일 파일 선택 모드
+  /** 파일 id → 안 푼 문제 수. null 이면 풀이 기록을 아직 못 읽었다 ('안 푼 문제만' 잠금) */
+  unseenCounts?: Record<string, number> | null;
   onConfirm: (options: QuizSetupOptions) => void;
   onClose: () => void;
   loading?: boolean;          // 문제를 준비하는 중 (시작 버튼 로딩, 닫기 잠금)
@@ -43,6 +47,7 @@ export function QuizSetupModal({
   totalQuestions,
   isRandom,
   preSelectedFileId,
+  unseenCounts = null,
   onConfirm,
   onClose,
   loading = false,
@@ -56,11 +61,15 @@ export function QuizSetupModal({
   // 단어장 모드는 기기에 기억해 두고 퀴즈 화면이 같은 값으로 시작한다 (풀이 중 헤더에서도 바꿀 수 있다)
   const [vocabMode, setVocabMode] = useState(() => getPreference('vocabMode'));
   const vocabEntries = useVocabIndex();
+  // '안 푼 문제만'도 기기에 기억해 두고 다음 설정에 그대로 쓴다
+  const [unseenOnly, setUnseenOnly] = useState(() => getPreference('unseenOnly'));
 
   // 시트는 화면에 남아 있다가 다시 열리므로, 열 때마다 저장된 값을 다시 읽는다
   // (퀴즈 화면 헤더에서 바꾼 값을 반영)
   useEffect(() => {
-    if (visible) setVocabMode(getPreference('vocabMode'));
+    if (!visible) return;
+    setVocabMode(getPreference('vocabMode'));
+    setUnseenOnly(getPreference('unseenOnly'));
   }, [visible]);
 
   const toggleVocabMode = () => {
@@ -69,12 +78,38 @@ export function QuizSetupModal({
     setPreference('vocabMode', next);
   };
 
-  // 무작위 모드: 선택된 파일들의 총 문제 수 합산
-  const effectiveTotal = isRandom
-    ? files
-        .filter((f) => selectedFileIds.includes(f.id))
-        .reduce((sum, f) => sum + f.questionCount, 0)
+  const toggleUnseenOnly = () => {
+    const next = !unseenOnly;
+    setUnseenOnly(next);
+    setPreference('unseenOnly', next);
+  };
+
+  const chosenFiles = isRandom ? files.filter((f) => selectedFileIds.includes(f.id)) : [];
+  const hasSelection = isRandom ? chosenFiles.length > 0 : true;
+
+  // 선택한 파일들의 전체 / 안 푼 문제 수
+  const allTotal = isRandom
+    ? chosenFiles.reduce((sum, f) => sum + f.questionCount, 0)
     : totalQuestions;
+  const unseenTotal =
+    unseenCounts === null
+      ? null
+      : isRandom
+      ? chosenFiles.reduce((sum, f) => sum + (unseenCounts[f.id] ?? f.questionCount), 0)
+      : preSelectedFileId
+      ? unseenCounts[preSelectedFileId] ?? totalQuestions
+      : 0;
+
+  // 풀이 기록을 읽은 뒤에만 '안 푼 문제만'을 적용한다
+  const useUnseen = unseenOnly && unseenTotal !== null;
+  const effectiveTotal = useUnseen ? unseenTotal! : allTotal;
+
+  const unseenBadge =
+    unseenTotal !== null && hasSelection ? `안 푼 문제 ${unseenTotal}` : null;
+  const unseenDesc =
+    unseenTotal === 0 && hasSelection
+      ? '선택한 문제를 모두 한 번 이상 풀었어요'
+      : '한 번도 풀지 않은 문제에서만 출제해요';
 
   const toggleFile = (fileId: string) => {
     setSelectedFileIds((prev) =>
@@ -95,11 +130,13 @@ export function QuizSetupModal({
       : 'all';
 
   const handleConfirm = () => {
-    const count = resolvedCount === 'all' || resolvedCount === null ? effectiveTotal : resolvedCount;
     onConfirm({
-      count,
+      // '전체'는 그대로 넘겨 실제로 남은 문제를 모두 낸다
+      // (안 푼 문제 수는 파일을 열지 않고 센 추정치라 숫자로 바꾸면 모자랄 수 있다)
+      count: resolvedCount ?? 'all',
       mode,
       selectedFileIds: isRandom ? selectedFileIds : preSelectedFileId ? [preSelectedFileId] : [],
+      unseenOnly: useUnseen,
     });
   };
 
@@ -137,6 +174,9 @@ export function QuizSetupModal({
               <Text style={styles.sectionLabel}>문제 파일 선택 (1개 이상)</Text>
               {files.map((file) => {
                 const isSelected = selectedFileIds.includes(file.id);
+                const countLabel = useUnseen
+                  ? `안 푼 문제 ${unseenCounts?.[file.id] ?? file.questionCount} / ${file.questionCount}`
+                  : `${file.questionCount}문제`;
                 return (
                   <TouchableOpacity
                     key={file.id}
@@ -145,7 +185,7 @@ export function QuizSetupModal({
                     activeOpacity={0.8}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: isSelected }}
-                    accessibilityLabel={`${file.name}, ${file.questionCount}문제`}
+                    accessibilityLabel={`${file.name}, ${countLabel}`}
                   >
                     <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                       {isSelected && <Ionicons name="checkmark" size={15} color={Colors.text.inverse} />}
@@ -154,13 +194,54 @@ export function QuizSetupModal({
                       <Text style={[styles.fileName, isSelected && { color: Colors.accent.primary }]}>
                         {file.name}
                       </Text>
-                      <Text style={styles.fileCount}>{file.questionCount}문제</Text>
+                      <Text style={styles.fileCount}>{countLabel}</Text>
                     </View>
                   </TouchableOpacity>
                 );
               })}
             </View>
           )}
+
+          {/* 출제 범위: 한 번도 풀지 않은 문제만 — 켜면 아래 문제 수가 안 푼 문제 수에 맞춰진다 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>출제 범위</Text>
+            <TouchableOpacity
+              disabled={unseenTotal === null}
+              style={[
+                styles.modeOption,
+                styles.toggleOption,
+                unseenOnly && styles.modeOptionSelected,
+                unseenTotal === null && styles.toggleOptionDisabled,
+              ]}
+              onPress={toggleUnseenOnly}
+              activeOpacity={0.8}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: unseenOnly, disabled: unseenTotal === null }}
+              accessibilityLabel={`안 푼 문제만, ${unseenDesc}${unseenBadge ? `, ${unseenBadge}` : ''}`}
+            >
+              <View style={[styles.toggleIcon, unseenOnly && styles.toggleIconOn]}>
+                <Ionicons
+                  name={unseenOnly ? 'sparkles' : 'sparkles-outline'}
+                  size={18}
+                  color={unseenOnly ? Colors.text.inverse : Colors.accent.primary}
+                />
+              </View>
+              <View style={styles.toggleText}>
+                <View style={styles.toggleTitleRow}>
+                  <Text style={[styles.modeName, styles.toggleName, unseenOnly && { color: Colors.accent.primary }]}>
+                    안 푼 문제만
+                  </Text>
+                  {unseenBadge && (
+                    <View style={styles.toggleCount}>
+                      <Text style={styles.toggleCountText}>{unseenBadge}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.modeDesc}>{unseenDesc}</Text>
+              </View>
+              <NordSwitch value={unseenOnly} />
+            </TouchableOpacity>
+          </View>
 
           {/* 문제 수 선택 */}
           <View style={styles.section}>
@@ -221,7 +302,11 @@ export function QuizSetupModal({
               </TouchableOpacity>
             </View>
             {effectiveTotal === 0 && (
-              <Text style={styles.countHint}>파일을 고르면 문제 수를 정할 수 있어요</Text>
+              <Text style={styles.countHint}>
+                {useUnseen && hasSelection
+                  ? "안 푼 문제가 없어요. '안 푼 문제만'을 끄면 전체 문제에서 출제해요"
+                  : '파일을 고르면 문제 수를 정할 수 있어요'}
+              </Text>
             )}
           </View>
 
@@ -260,28 +345,28 @@ export function QuizSetupModal({
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>풀이 도우미</Text>
               <TouchableOpacity
-                style={[styles.modeOption, styles.vocabOption, vocabMode && styles.modeOptionSelected]}
+                style={[styles.modeOption, styles.toggleOption, vocabMode && styles.modeOptionSelected]}
                 onPress={toggleVocabMode}
                 activeOpacity={0.8}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: vocabMode }}
                 accessibilityLabel="단어장 모드, 문제 속 등록된 영어 단어를 눌러 뜻 보기"
               >
-                <View style={[styles.vocabIcon, vocabMode && styles.vocabIconOn]}>
+                <View style={[styles.toggleIcon, vocabMode && styles.toggleIconOn]}>
                   <Ionicons
                     name={vocabMode ? 'book' : 'book-outline'}
                     size={18}
                     color={vocabMode ? Colors.text.inverse : Colors.accent.primary}
                   />
                 </View>
-                <View style={styles.vocabText}>
-                  <View style={styles.vocabTitleRow}>
-                    <Text style={[styles.modeName, styles.vocabName, vocabMode && { color: Colors.accent.primary }]}>
+                <View style={styles.toggleText}>
+                  <View style={styles.toggleTitleRow}>
+                    <Text style={[styles.modeName, styles.toggleName, vocabMode && { color: Colors.accent.primary }]}>
                       단어장 모드
                     </Text>
                     {vocabEntries && (
-                      <View style={styles.vocabCount}>
-                        <Text style={styles.vocabCountText}>{vocabEntries.length}단어</Text>
+                      <View style={styles.toggleCount}>
+                        <Text style={styles.toggleCountText}>{vocabEntries.length}단어</Text>
                       </View>
                     )}
                   </View>
@@ -448,11 +533,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     backgroundColor: Colors.accent.primary,
   },
-  vocabOption: {
+  // 단어장 모드·안 푼 문제만 — 아이콘 + 제목·설명 + 스위치 한 줄
+  toggleOption: {
     alignItems: 'center',
     gap: Spacing.md,
   },
-  vocabIcon: {
+  toggleOptionDisabled: {
+    opacity: 0.5,
+  },
+  toggleIcon: {
     width: 36,
     height: 36,
     borderRadius: Radius.sm,
@@ -460,28 +549,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  vocabIconOn: {
+  toggleIconOn: {
     backgroundColor: Colors.accent.primary,
   },
-  vocabText: {
+  toggleText: {
     flex: 1,
   },
-  vocabTitleRow: {
+  toggleTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs + 2,
     marginBottom: 2,
   },
-  vocabName: {
+  toggleName: {
     marginBottom: 0,
   },
-  vocabCount: {
+  toggleCount: {
     backgroundColor: Colors.bg.secondary,
     borderRadius: Radius.xs,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
-  vocabCountText: {
+  toggleCountText: {
     fontSize: Typography.size.xs,
     fontWeight: Typography.weight.semibold,
     color: Colors.text.secondary,
