@@ -13,5 +13,10 @@ export {
   clearCategorySessions,
 } from './sessions';
 export type { SessionRow, AnswerRow } from './sessions';
-export { fetchSessionStats, fetchCategorySummary, fetchQuestionStats } from './stats';
+export {
+  fetchSessionStats,
+  fetchCategorySummary,
+  fetchQuestionStats,
+  fetchAnsweredQuestionIds,
+} from './stats';
 export type { SessionStat, CategorySummary, QuestionStat } from './stats';

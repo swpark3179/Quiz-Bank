@@ -14,10 +14,13 @@ import { File, Paths } from 'expo-file-system';
 export interface Preferences {
   /** 퀴즈 풀이 중 등록 단어를 눌러 뜻 보기 */
   vocabMode: boolean;
+  /** 퀴즈 설정: 한 번도 풀지 않은 문제에서만 출제 */
+  unseenOnly: boolean;
 }
 
 const DEFAULTS: Preferences = {
   vocabMode: false,
+  unseenOnly: false,
 };
 
 const FILE_NAME = 'preferences.json';

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown, QuizQuestion } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
 import type { QuizSetup } from '@/lib/quiz/retry';
-import { fetchCategorySummary, } from '@/lib/db/stats';
+import { fetchCategorySummary, fetchAnsweredQuestionIds } from '@/lib/db/stats';
+import { countUnseen, filterUnseen, type AnsweredIds } from '@/lib/quiz/unseen';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { QuizSetupModal, QuizSetupOptions } from '@/components/QuizSetupModal';
 import { NordBadge } from '@/components/ui/NordBadge';
@@ -43,6 +44,8 @@ export default function CategoryScreen() {
   const [preparingQuiz, setPreparingQuiz] = useState(false);
   // 준비가 끝난 퀴즈 — 시트 닫힘 애니메이션이 끝나면 이동한다
   const pendingQuizRef = useRef<QuizSetup | null>(null);
+  // 한 번이라도 푼 문제 번호 ('안 푼 문제만' 출제용). 시트를 열 때마다 새로 읽는다 (null = 읽는 중/실패)
+  const [answeredIds, setAnsweredIds] = useState<AnsweredIds | null>(null);
 
   useEffect(() => {
     if (categoryId) {
@@ -87,13 +90,31 @@ export default function CategoryScreen() {
     }
   };
 
+  /** 풀이 기록에서 푼 문제를 다시 읽는다 (퀴즈를 풀고 돌아온 뒤에도 최신 값으로) */
+  const loadAnsweredIds = () => {
+    setAnsweredIds(null);
+    fetchAnsweredQuestionIds(files.map((f) => f.id))
+      .then(setAnsweredIds)
+      .catch((e) => console.error('풀이 기록 로드 오류:', e));
+  };
+
+  const unseenCounts = useMemo(
+    () =>
+      answeredIds
+        ? Object.fromEntries(files.map((f) => [f.id, countUnseen(f, answeredIds)]))
+        : null,
+    [files, answeredIds]
+  );
+
   const openSingleFileSetup = (file: QuizFile) => {
+    loadAnsweredIds();
     setIsRandom(false);
     setSelectedFileForSetup(file);
     setModalVisible(true);
   };
 
   const openRandomSetup = () => {
+    loadAnsweredIds();
     setIsRandom(true);
     setSelectedFileForSetup(null);
     setModalVisible(true);
@@ -124,8 +145,16 @@ export default function CategoryScreen() {
         })
       );
       const allQuestions = allQuestionsResults.flat();
+      // '안 푼 문제만': 시트의 수는 추정치라, 실제 문제 번호로 정확히 거른다
+      const pool =
+        options.unseenOnly && answeredIds ? filterUnseen(allQuestions, answeredIds) : allQuestions;
+      if (pool.length === 0) {
+        Alert.alert('알림', '선택한 파일에 아직 풀지 않은 문제가 없어요.');
+        return;
+      }
 
-      const shuffled = shuffleQuiz(allQuestions, options.count === 'all' ? undefined : options.count);
+      // 고른 수보다 남은 문제가 적으면 남은 만큼만 낸다
+      const shuffled = shuffleQuiz(pool, options.count === 'all' ? undefined : options.count);
 
       pendingQuizRef.current = {
         shuffled,
@@ -277,6 +306,7 @@ export default function CategoryScreen() {
           }
           isRandom={isRandom}
           preSelectedFileId={selectedFileForSetup?.id}
+          unseenCounts={unseenCounts}
           onConfirm={handleSetupConfirm}
           onClose={() => setModalVisible(false)}
           loading={preparingQuiz}

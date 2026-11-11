@@ -120,6 +120,32 @@ export async function fetchAllCategorySummaries(
   return result;
 }
 
+/**
+ * 한 번이라도 푼(응답이 기록된) 문제 번호를 파일별로 모은다.
+ * 퀴즈 설정의 '안 푼 문제만' 출제에 쓴다. 기록이 없는 파일은 결과에 없다.
+ */
+export async function fetchAnsweredQuestionIds(
+  sourceFileIds: string[]
+): Promise<Record<string, Set<number>>> {
+  if (sourceFileIds.length === 0) return {};
+
+  const db = await getDatabase();
+  const placeholders = sourceFileIds.map(() => '?').join(',');
+
+  const rows = await db.getAllAsync<{ source_file_id: string; question_id: number }>(
+    `SELECT DISTINCT source_file_id, question_id
+     FROM answers
+     WHERE source_file_id IN (${placeholders})`,
+    sourceFileIds
+  );
+
+  const result: Record<string, Set<number>> = {};
+  for (const row of rows) {
+    (result[row.source_file_id] ??= new Set()).add(row.question_id);
+  }
+  return result;
+}
+
 /** 파일별 문제 정답률 통계 로드 */
 export async function fetchQuestionStats(
   sourceFileIds: string[]
