@@ -135,6 +135,25 @@ export function matchLexicon(tokens: ReadonlySet<string>, lexicon: WordAppLexico
   return out;
 }
 
+/** 마지막으로 맞춘 결과 — 퀴즈를 열기 전에 맞춘 것을 퀴즈 화면이 그대로 받는다 */
+let lastMatch: { lexicon: WordAppLexicon; key: string; entries: VocabEntry[] } | null = null;
+
+/**
+ * 한 퀴즈의 문제들 중 단어장 앱에 등록된 단어 (matchLexicon 결과를 기억해 둔다).
+ * 퀴즈 화면은 넘겨받은 JSON 으로 문제 객체를 새로 만들므로, 객체가 아니라 문제 번호로 같은 퀴즈인지 본다.
+ * 같은 배열을 돌려줘야 그 배열로 미리 만든 매처(getVocabMatcher)도 그대로 쓰인다.
+ */
+export function getWordAppEntries(lexicon: WordAppLexicon, questions: readonly QuizQuestion[]): VocabEntry[] {
+  const key = questions
+    .map((q) => `${q.sourceFileId}:${q.id}`)
+    .sort()
+    .join('|');
+  if (lastMatch && lastMatch.lexicon === lexicon && lastMatch.key === key) return lastMatch.entries;
+  const entries = matchLexicon(tokenize(questionTexts(questions)), lexicon);
+  lastMatch = { lexicon, key, entries };
+  return entries;
+}
+
 export function toVocabEntry(w: LexiconWord): VocabEntry {
   return {
     id: `${ID_PREFIX}${w.id}`,

@@ -31,7 +31,7 @@ import { useWordAppLexicon } from '@/hooks/use-word-app-lexicon';
 import { getPreference, setPreference } from '@/lib/local/preferences';
 import type { QuizSetup } from '@/lib/quiz/retry';
 import type { ShuffledQuestion } from '@/lib/quiz/shuffler';
-import { matchLexicon, questionTexts, resolveVocabSource, tokenize } from '@/lib/vocab/wordApp';
+import { getWordAppEntries, resolveVocabSource } from '@/lib/vocab/wordApp';
 import {
   createSessionRecorder,
   MIN_ANSWERS_TO_KEEP,
@@ -122,8 +122,9 @@ export default function QuizScreen() {
   // 단어장 앱 활용 모드: 퀴즈를 여는 순간 문제 텍스트를 공백 단위로 나눈 단어 배열을
   // 단어장 앱의 등록 단어 목록과 맞춰, 단어장 앱에 등록된 단어만 강조한다 (단어장 앱이 없으면 null)
   const wordAppLexicon = useWordAppLexicon();
+  // (퀴즈를 열기 전에 lib/quiz/prepareVocab.ts 가 같은 문제로 맞춰 두었으면 그 결과를 그대로 받는다)
   const wordAppEntries = React.useMemo(
-    () => (wordAppLexicon ? matchLexicon(tokenize(questionTexts(shuffled.map((q) => q.original))), wordAppLexicon) : null),
+    () => (wordAppLexicon ? getWordAppEntries(wordAppLexicon, shuffled.map((q) => q.original)) : null),
     [wordAppLexicon, shuffled]
   );
   const [preferredSource] = useState(() => getPreference('vocabSource'));

@@ -46,6 +46,26 @@ function sanitize(data: unknown): VocabEntry[] {
 
 let indexCache: VocabEntry[] | null = null;
 let indexRequest: Promise<VocabEntry[]> | null = null;
+/**
+ * 받기에 실패해 대체본을 쓴 마지막 결과. 내용이 같으면 같은 배열을 돌려줘
+ * 그 배열로 만든 매처(getVocabMatcher)를 다시 만들지 않게 한다.
+ */
+/** text 는 대체본으로 쓴 디스크 캐시 내용 (null = 앱 내장본) */
+let lastFallback: { text: string | null; list: VocabEntry[] } | null = null;
+let bundledIndex: VocabEntry[] | null = null;
+
+/**
+ * 이미 불러온 등록 단어 목록 (아직이면 null). 퀴즈 화면이 첫 렌더부터 단어를 강조하도록 동기로 읽는다.
+ * 대체본을 쓴 경우에도 돌려준다 — 다음 fetchVocabIndex 는 그래도 다시 받기를 시도한다.
+ */
+export function peekVocabIndex(): VocabEntry[] | null {
+  return indexCache ?? lastFallback?.list ?? null;
+}
+
+function fallbackFrom(text: string): VocabEntry[] {
+  if (lastFallback?.text !== text) lastFallback = { text, list: sanitize(JSON.parse(text)) };
+  return lastFallback.list;
+}
 
 /** 등록 단어 목록 (앱 세션 동안 메모리 캐시) */
 export function fetchVocabIndex(): Promise<VocabEntry[]> {
@@ -72,13 +92,15 @@ async function loadIndex(): Promise<VocabEntry[]> {
     const cached = desktop ? null : await readCached(INDEX_PATH);
     if (cached !== null) {
       try {
-        return sanitize(JSON.parse(cached));
+        return fallbackFrom(cached);
       } catch {
         // 손상된 캐시는 무시하고 내장 파일로 대체
       }
     }
     // [Fallback 2] 앱에 내장된 목록
-    return sanitize(require('@/assets/quiz-data/vocab/index.json'));
+    bundledIndex ??= sanitize(require('@/assets/quiz-data/vocab/index.json'));
+    lastFallback = { text: null, list: bundledIndex };
+    return bundledIndex;
   }
 }
 

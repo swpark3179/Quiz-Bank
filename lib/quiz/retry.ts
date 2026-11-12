@@ -10,6 +10,7 @@ import { fetchQuizFiles } from '../local/categories';
 import { fetchQuizMarkdown } from '../local/storage';
 import { parseQuizMarkdown } from '../parser/quizParser';
 import { shuffleQuiz, type ShuffledQuestion } from './shuffler';
+import { prepareQuizVocab } from './prepareVocab';
 
 export type QuizMode = 'immediate' | 'deferred';
 
@@ -52,6 +53,9 @@ export async function buildWrongAnswerQuiz(
   );
   const questions = questionsByFile.flat();
   if (questions.length === 0) return null;
+
+  // 단어장 모드: 퀴즈 화면이 뜰 때 멈추지 않게 '오답 불러오는 중' 동안 단어 매처를 만들어 둔다
+  await prepareQuizVocab(questions);
 
   return {
     shuffled: shuffleQuiz(questions),

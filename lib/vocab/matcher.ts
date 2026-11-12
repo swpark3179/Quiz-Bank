@@ -37,6 +37,11 @@ export interface VocabSegment {
 export interface VocabMatcher {
   /** 텍스트를 일반 조각과 단어 조각으로 나눈다 (매칭이 없으면 조각 1개) */
   split(text: string): VocabSegment[];
+  /**
+   * 정규식을 미리 한 번씩 돌려 컴파일을 끝낸다 (결과는 바뀌지 않는다).
+   * 엔진은 정규식을 처음 쓸 때 컴파일하므로, 하지 않으면 첫 문제를 그릴 때 그 비용을 치른다.
+   */
+  warm(): void;
 }
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -63,7 +68,7 @@ export function createVocabMatcher(entries: VocabEntry[]): VocabMatcher {
   }
 
   if (lookup.size === 0) {
-    return { split: (text) => [{ text }] };
+    return { split: (text) => [{ text }], warm: () => {} };
   }
 
   // 표현을 첫 글자별 정규식으로 나눈다. 수천 개를 한 정규식에 넣으면 패턴이 커져
@@ -122,5 +127,31 @@ export function createVocabMatcher(entries: VocabEntry[]): VocabMatcher {
       }
       return segments;
     },
+
+    warm() {
+      // 문제 텍스트는 한글이 섞여 있다 — 엔진이 문자열 종류별로 따로 컴파일하므로 같은 종류로 돌린다
+      for (const pattern of patterns.values()) {
+        pattern.lastIndex = 0;
+        pattern.exec(WARM_SAMPLE);
+      }
+    },
   };
+}
+
+/** warm() 이 정규식을 돌려 볼 문자열 (한글 = 2바이트 문자열) */
+const WARM_SAMPLE = '단어 word';
+
+const matcherCache = new WeakMap<VocabEntry[], VocabMatcher>();
+
+/**
+ * 같은 단어 목록(같은 배열)이면 이미 만든 매처를 돌려준다.
+ * 단어가 수천 개면 매처를 만드는 데 시간이 걸리므로, 퀴즈를 열기 전에 만들어 두고 퀴즈 화면은 그대로 쓴다.
+ */
+export function getVocabMatcher(entries: VocabEntry[]): VocabMatcher {
+  let matcher = matcherCache.get(entries);
+  if (!matcher) {
+    matcher = createVocabMatcher(entries);
+    matcherCache.set(entries, matcher);
+  }
+  return matcher;
 }

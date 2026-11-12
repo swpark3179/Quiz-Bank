@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { createVocabMatcher, type VocabEntry } from '@/lib/vocab/matcher';
+import { getVocabMatcher, type VocabEntry } from '@/lib/vocab/matcher';
 import { hapticSelection } from '@/lib/utils/haptics';
 import { VocabActiveContext, VocabContext, type VocabLookup } from './VocabContext';
 import { VocabPopover, type VocabTarget } from './VocabPopover';
@@ -25,7 +25,8 @@ export function VocabProvider({ entries, children }: VocabProviderProps) {
   const lookup = useMemo<VocabLookup | null>(() => {
     if (!entries || entries.length === 0) return null;
     return {
-      matcher: createVocabMatcher(entries),
+      // 퀴즈를 열기 전에 만들어 둔 매처가 있으면 그대로 쓴다 (lib/quiz/prepareVocab.ts)
+      matcher: getVocabMatcher(entries),
       open: (entry, anchor, occurrence) => {
         hapticSelection();
         setTarget({ entry, anchor, occurrence });
