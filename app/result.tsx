@@ -253,6 +253,7 @@ export default function ResultScreen() {
                 size="lg"
                 onPress={handleRetryWrong}
                 loading={preparingRetry}
+                loadingLabel="오답 불러오는 중"
                 icon={<Ionicons name="refresh-outline" size={18} color={Colors.accent.deep} />}
               />
             )}

@@ -3,12 +3,12 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
-  ActivityIndicator,
   ViewStyle,
   TextStyle,
   TouchableOpacityProps,
 } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '@/lib/theme';
+import { LoadingDots } from './LoadingDots';
 
 // tonal: 옅은 파랑 채움 — 화면 안의 보조 액션(통계 보기, 해설 등)
 type Variant = 'primary' | 'secondary' | 'tonal' | 'ghost' | 'danger';
@@ -19,6 +19,8 @@ interface NordButtonProps extends TouchableOpacityProps {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  /** 로딩 중 라벨 대신 보여 줄 문구 (예: '문제 불러오는 중'). 없으면 움직이는 점만 보인다 */
+  loadingLabel?: string;
   fullWidth?: boolean;
   icon?: React.ReactNode;
 }
@@ -113,6 +115,7 @@ export function NordButton({
   variant = 'primary',
   size = 'md',
   loading = false,
+  loadingLabel,
   fullWidth = false,
   icon,
   disabled,
@@ -130,23 +133,29 @@ export function NordButton({
       disabled={isDisabled}
       hitSlop={hitSlop ?? (size === 'sm' ? SM_HIT_SLOP : undefined)}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={loading && loadingLabel ? loadingLabel : label}
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       style={[
         styles.base,
         v.container,
         s.container,
         fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
+        // 로딩은 '눌러도 안 되는 버튼'이 아니라 '처리 중'이므로 흐리게 하지 않는다
+        disabled && !loading && styles.disabled,
         style,
       ]}
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'primary' || variant === 'danger' ? Colors.text.inverse : Colors.accent.deep}
-        />
+        <>
+          {loadingLabel ? (
+            <Text style={[styles.label, v.text, s.text]}>{loadingLabel}</Text>
+          ) : null}
+          <LoadingDots
+            color={v.text.color as string}
+            style={loadingLabel ? styles.loadingDots : undefined}
+          />
+        </>
       ) : (
         <>
           {icon}
@@ -174,5 +183,10 @@ const styles = StyleSheet.create({
   },
   label: {
     letterSpacing: 0.2,
+  },
+  // 글자 뒤에 붙는 점: 글자 기준선에 맞춰 살짝 띄운다
+  loadingDots: {
+    marginLeft: 2,
+    marginTop: 2,
   },
 });

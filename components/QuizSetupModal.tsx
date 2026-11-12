@@ -437,6 +437,7 @@ export function QuizSetupModal({
             onPress={handleConfirm}
             disabled={!canConfirm || effectiveTotal === 0}
             loading={loading}
+            loadingLabel="문제 불러오는 중"
             size="lg"
             style={styles.startButton}
           />
