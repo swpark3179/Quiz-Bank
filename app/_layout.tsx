@@ -32,7 +32,9 @@ export default function RootLayout() {
         <Stack.Screen
           name="[category]/quiz"
           options={{
+            // 헤더 가운데 제목은 비운다 — 풀이 중 시선이 문제에 머물도록 (title 은 화면 이름으로만 남긴다)
             title: '퀴즈',
+            headerTitle: '',
             // 풀이는 아래에서 올라오는 집중 모드 (헤더 왼쪽 닫기 X 와 짝)
             animation: 'slide_from_bottom',
             gestureEnabled: false,

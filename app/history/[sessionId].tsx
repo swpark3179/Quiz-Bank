@@ -31,6 +31,8 @@ export default function SessionDetailScreen() {
   const [answers, setAnswers] = useState<AnswerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState<string | null>(null);
+  // 오답 다시 풀기: 문제를 준비하는 동안 버튼에 로딩 표시 (두 번 눌러 두 번 열리지 않게도 막는다)
+  const [preparingRetry, setPreparingRetry] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -61,9 +63,10 @@ export default function SessionDetailScreen() {
   };
 
   const handleRetryWrong = async () => {
-    if (!session) return;
+    if (!session || preparingRetry) return;
 
     try {
+      setPreparingRetry(true);
       const setup = await buildWrongAnswerQuiz(sessionId, session.category_id, session.mode);
       if (!setup) {
         Alert.alert('확인', '오답 문제가 없습니다!');
@@ -77,6 +80,8 @@ export default function SessionDetailScreen() {
     } catch (e) {
       console.error('오답 재시험 준비 오류:', e);
       Alert.alert('오류', '오답 문제를 불러오지 못했습니다.');
+    } finally {
+      setPreparingRetry(false);
     }
   };
 
@@ -155,6 +160,8 @@ export default function SessionDetailScreen() {
                 fullWidth
                 size="lg"
                 onPress={handleRetryWrong}
+                loading={preparingRetry}
+                loadingLabel="오답 불러오는 중"
                 icon={<Ionicons name="refresh-outline" size={18} color={Colors.text.inverse} />}
               />
             )}
