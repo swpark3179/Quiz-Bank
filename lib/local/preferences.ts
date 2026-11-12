@@ -16,11 +16,17 @@ export interface Preferences {
   vocabMode: boolean;
   /** 퀴즈 설정: 한 번도 풀지 않은 문제에서만 출제 */
   unseenOnly: boolean;
+  /**
+   * 단어장 모드의 단어 출처 — bank: 이 앱 단어장(vocab/index.json), wordApp: 단어장 앱(Quiz Word)에 등록된 단어.
+   * 단어장 앱이 없으면 고를 수 없고 bank 로 동작한다 (resolveVocabSource).
+   */
+  vocabSource: 'bank' | 'wordApp';
 }
 
 const DEFAULTS: Preferences = {
   vocabMode: false,
   unseenOnly: false,
+  vocabSource: 'bank',
 };
 
 const FILE_NAME = 'preferences.json';

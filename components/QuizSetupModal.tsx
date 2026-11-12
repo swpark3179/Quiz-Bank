@@ -16,6 +16,8 @@ import { SheetHandle, SheetHeader, sheetStyles } from './ui/SheetParts';
 import type { QuizFile } from '@/lib/local/categories';
 import { getPreference, setPreference } from '@/lib/local/preferences';
 import { useVocabIndex } from '@/hooks/use-vocab-index';
+import { useWordAppLexicon } from '@/hooks/use-word-app-lexicon';
+import { resolveVocabSource, type VocabSource } from '@/lib/vocab/wordApp';
 
 export interface QuizSetupOptions {
   count: number | 'all';
@@ -61,6 +63,13 @@ export function QuizSetupModal({
   // 단어장 모드는 기기에 기억해 두고 퀴즈 화면이 같은 값으로 시작한다 (풀이 중 헤더에서도 바꿀 수 있다)
   const [vocabMode, setVocabMode] = useState(() => getPreference('vocabMode'));
   const vocabEntries = useVocabIndex();
+  // 단어장 모드의 단어 출처 — 단어장 앱(Quiz Word)이 있을 때만 고를 수 있다 (없으면 이 선택지 자체가 안 보인다)
+  const [vocabSource, setVocabSource] = useState<VocabSource>(() => getPreference('vocabSource'));
+  const wordAppLexicon = useWordAppLexicon();
+  const bankVocabAvailable = vocabEntries?.length !== 0;
+  const wordAppAvailable = !!wordAppLexicon;
+  const activeVocabSource = resolveVocabSource(vocabSource, { bank: bankVocabAvailable, wordApp: wordAppAvailable });
+  const vocabCount = activeVocabSource === 'wordApp' ? wordAppLexicon?.words.length : vocabEntries?.length;
   // '안 푼 문제만'도 기기에 기억해 두고 다음 설정에 그대로 쓴다
   const [unseenOnly, setUnseenOnly] = useState(() => getPreference('unseenOnly'));
 
@@ -69,6 +78,7 @@ export function QuizSetupModal({
   useEffect(() => {
     if (!visible) return;
     setVocabMode(getPreference('vocabMode'));
+    setVocabSource(getPreference('vocabSource'));
     setUnseenOnly(getPreference('unseenOnly'));
   }, [visible]);
 
@@ -76,6 +86,11 @@ export function QuizSetupModal({
     const next = !vocabMode;
     setVocabMode(next);
     setPreference('vocabMode', next);
+  };
+
+  const chooseVocabSource = (next: VocabSource) => {
+    setVocabSource(next);
+    setPreference('vocabSource', next);
   };
 
   const toggleUnseenOnly = () => {
@@ -340,8 +355,8 @@ export function QuizSetupModal({
             ))}
           </View>
 
-          {/* 단어장 모드 — 등록된 단어가 하나도 없으면 감춘다 */}
-          {vocabEntries?.length !== 0 && (
+          {/* 단어장 모드 — 이 앱 단어장과 단어장 앱 둘 다 단어가 없으면 감춘다 */}
+          {(bankVocabAvailable || wordAppAvailable) && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>풀이 도우미</Text>
               <TouchableOpacity
@@ -364,16 +379,53 @@ export function QuizSetupModal({
                     <Text style={[styles.modeName, styles.toggleName, vocabMode && { color: Colors.accent.primary }]}>
                       단어장 모드
                     </Text>
-                    {vocabEntries && (
+                    {vocabCount !== undefined && (
                       <View style={styles.toggleCount}>
-                        <Text style={styles.toggleCountText}>{vocabEntries.length}단어</Text>
+                        <Text style={styles.toggleCountText}>{vocabCount}단어</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={styles.modeDesc}>등록된 단어를 누르면 뜻을 보여 줘요</Text>
+                  <Text style={styles.modeDesc}>
+                    {activeVocabSource === 'wordApp'
+                      ? '단어장 앱에 등록된 단어를 누르면 뜻을 보여 줘요'
+                      : '등록된 단어를 누르면 뜻을 보여 줘요'}
+                  </Text>
                 </View>
                 <NordSwitch value={vocabMode} />
               </TouchableOpacity>
+
+              {/* 단어 출처 — 단어장 앱이 있고 이 앱 단어장에도 단어가 있을 때만 고른다 */}
+              {vocabMode && bankVocabAvailable && wordAppAvailable && (
+                <View style={styles.sourceOptions}>
+                  {(['bank', 'wordApp'] as const).map((src) => {
+                    const selected = activeVocabSource === src;
+                    const name = src === 'bank' ? '문제은행 단어장' : '단어장 앱';
+                    const desc =
+                      src === 'bank'
+                        ? '이 앱에 등록한 단어와 자세한 설명'
+                        : '단어장 앱에 등록된 단어 중 문제에 나온 것 · 자세히는 단어장 앱에서';
+                    return (
+                      <TouchableOpacity
+                        key={src}
+                        style={[styles.modeOption, selected && styles.modeOptionSelected]}
+                        onPress={() => chooseVocabSource(src)}
+                        activeOpacity={0.8}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selected }}
+                        accessibilityLabel={`${name}, ${desc}`}
+                      >
+                        <View style={[styles.radio, selected && styles.radioSelected]}>
+                          {selected && <View style={styles.radioDot} />}
+                        </View>
+                        <View style={styles.toggleText}>
+                          <Text style={[styles.modeName, selected && { color: Colors.accent.primary }]}>{name}</Text>
+                          <Text style={styles.modeDesc}>{desc}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
         </ScrollView>
@@ -532,6 +584,11 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: Radius.full,
     backgroundColor: Colors.accent.primary,
+  },
+  // 단어장 모드의 단어 출처 (문제은행 단어장 / 단어장 앱) — 스위치 아래 라디오 두 개
+  sourceOptions: {
+    // 단어장 모드에 딸린 선택이라 살짝 들여 쓴다
+    paddingLeft: Spacing.lg,
   },
   // 단어장 모드·안 푼 문제만 — 아이콘 + 제목·설명 + 스위치 한 줄
   toggleOption: {

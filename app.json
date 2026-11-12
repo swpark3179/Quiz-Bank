@@ -13,7 +13,11 @@
       "bundleIdentifier": "com.swpark3179.quizbank",
       "buildNumber": "19",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": ["quizword"]
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.swpark3179.shared"]
       }
     },
     "android": {
@@ -56,7 +60,8 @@
         }
       ],
       "./plugins/withAndroidBackupRules",
-      "./plugins/withAndroidR8"
+      "./plugins/withAndroidR8",
+      "./plugins/withWordAppQueries"
     ],
     "experiments": {
       "typedRoutes": true,

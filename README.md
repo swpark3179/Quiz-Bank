@@ -19,6 +19,7 @@
 - **풀이 이력 & 통계** — 차수(세션)별 풀이 기록을 저장하고, 카테고리별 정답률·추이를 차트로 시각화합니다.
 - **오답 다시 풀기** — 틀린 문제만 모아 새로운 세트로 재시험할 수 있습니다.
 - **단어장 모드** — 영어 문제 속 등록 단어에 옅은 파랑 배경이 깔리고, 누르면 그 자리에 뜻·예문 팝업이 뜹니다. 팝업 머리를 꾹 눌러 끌면(데스크탑은 바로 끌면) 옮길 수 있고, 머리의 펼치기 버튼으로 화면 가득 크게 볼 수 있습니다. 단어는 문제처럼 `assets/quiz-data/vocab/` 에 등록합니다.
+  - **단어장 앱 활용 모드** (iOS·Android) — 단어장 앱([Quiz Word](https://github.com/swpark3179/Quiz-Word))이 설치돼 있으면 퀴즈 설정의 단어장 모드에서 *문제은행 단어장 / 단어장 앱* 을 고를 수 있습니다. 단어장 앱을 고르면 문제를 여는 순간 문제 텍스트를 단어로 나눠 단어장 앱에 등록된 단어만 강조하고, 팝업의 **단어장에서 자세히** 로 단어장 앱의 상세 화면을 엽니다. 단어장 앱이 없으면 이 선택지는 보이지 않습니다. 아래 [단어장 앱 연동](#단어장-앱-연동-quiz-word).
 - **Nord Light 테마** — 차분한 Nord 팔레트 기반의 일관된 UI.
 - **오프라인 지원** — Windows 데스크탑 빌드는 문제 파일을 함께 패키징하여 네트워크 없이 동작합니다. 모바일·웹은 마지막으로 내려받은 문제를 기기에 저장해 두었다가 오프라인일 때 사용합니다.
 
@@ -86,6 +87,8 @@ lib/
   parser/quizParser.ts    # 마크다운 → 문제 객체 파싱
   quiz/shuffler.ts        # 문제·보기 셔플 + 정답 remapping
   vocab/matcher.ts        # 문제 텍스트에서 등록 단어 찾기
+  vocab/wordApp.ts        # 단어장 앱 연동 — 문제 단어 배열 ↔ 단어장 앱 단어 목록 맞추기, 상세 열기 주소
+  local/wordApp.ts        # 단어장 앱 단어 목록 읽기 (iOS App Group · Android ContentProvider)
   db/                     # expo-sqlite 스키마 · 세션 · 통계 쿼리
   theme/                  # Nord Light 컬러·스타일 토큰
   local/                  # 로컬(오프라인) 문제 로딩
@@ -213,6 +216,16 @@ while True:
 ```
 
 필드·매칭 규칙·템플릿은 [단어장 가이드](assets/quiz-data/vocab/README.md)에 정리되어 있습니다.
+
+#### 단어장 앱 연동 (Quiz Word)
+
+단어장 앱이 켜질 때 등록 단어 목록(`lexicon.json` — 표제어·한 줄 뜻·품사·발음·변화형)을 두 앱이 함께 읽는 곳에 써 두고, 이 앱이 그 목록을 읽습니다 (모바일 OS 는 앱끼리 보이지 않게 함수를 부르고 값을 돌려받을 수 없어서).
+
+- **iOS** — App Group `group.com.swpark3179.shared` 공유 폴더. Apple Developer 에서 이 그룹을 만들고 두 앱 App ID(`com.swpark3179.quizbank`, `com.swpark3179.quizword2`) 의 App Groups 에 넣은 뒤, **프로비저닝 프로파일을 다시 만들어** `IOS_PROVISIONING_PROFILE_*` 시크릿을 바꿔야 빌드됩니다. 단어장 앱 설치 여부는 `LSApplicationQueriesSchemes` 의 `quizword` 로 확인합니다 (`app.json`).
+- **Android** — 단어장 앱의 읽기 전용 ContentProvider `content://com.swpark3179.quizword2.lexicon/lexicon.json`. Android 11+ 에서 보이도록 `plugins/withWordAppQueries.js` 가 `<queries>` 에 단어장 앱 패키지를 넣습니다.
+- 단어장 앱을 **한 번은 켜야** 목록이 생깁니다. 이 앱이 다시 앞으로 올 때마다 목록을 새로 읽습니다.
+- 단어 상세는 `quizword://lookup?word=…&x-source=문제은행&x-error=quizbank://word-lookup-result` 로 엽니다. 단어장 앱에 그 단어가 없으면 단어장 앱이 `x-error` 주소를 열어 알려 오고, 이 앱이 알림을 띄웁니다 (`app/+native-intent.tsx`).
+- 네이티브 설정(entitlement · Info.plist · AndroidManifest)이 바뀌므로 OTA 가 아니라 **앱 바이너리 배포**(버전 `minor` 이상)로 반영합니다. 이전 빌드에서는 이 기능이 조용히 꺼져 있습니다.
 
 ### 4) 커밋 & Push
 
