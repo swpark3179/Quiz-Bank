@@ -318,6 +318,14 @@ R8 문제는 릴리스 빌드를 기기에서 실행해야만 드러납니다. �
 2. 딥링크(`quizbank:///…`)로 카테고리 · 통계 · 풀이 이력 · 학습 가이드 화면을 열어도 앱이 종료되지 않는다.
 3. logcat 에 앱 크래시, 네이티브 함수 호출 거부(`has been rejected`, `cannot be cast to type`), DB 조회 오류가 없다.
 
+에뮬레이터의 Google Play 서비스는 부팅 뒤 모듈을 갱신하면서 스스로 재시작합니다. 이때 그 프로세스의 글꼴 provider(WebView · EmojiCompat 이 씀)를 쓰던 앱도 Android 가 함께 끝냅니다. v1.9.1 릴리스에서는 학습 가이드(WebView)를 연 직후 이렇게 끝나 테스트가 실패했습니다. logcat 에 아래 줄이 남고, 앱 크래시는 아닙니다.
+
+```
+ActivityManager: Killing 3597:com.swpark3179.quizbank/u0a192 (adj 0): depends on provider com.google.android.gms/.fonts.provider.FontsProvider in dying proc com.google.android.gms.persistent
+```
+
+그래서 앱이 이런 이유(`depends on provider … in dying proc …`)로 끝나면 그 단계(앱 실행 또는 딥링크)를 최대 3번(`SMOKE_MAX_ATTEMPTS`)까지 다시 합니다. 다시 한 단계는 경고와 Step Summary 에 남습니다. 앱이 스스로 크래시해 끝났다면 다시 하지 않고 바로 실패합니다.
+
 결과(`logcat.txt`, 화면별 스크린샷, UI dump)는 `smoke-output` 아티팩트로 남습니다.
 
 같은 테스트가 두 곳에서 돕니다.
@@ -583,6 +591,8 @@ on:
 | `withAndroidR8: getDefaultProguardFile("proguard-android.txt") not found` (prebuild 실패) | Expo SDK 업그레이드로 템플릿 `build.gradle` 의 `proguardFiles` 줄이 바뀜 | 새 템플릿이 이미 `proguard-android-optimize.txt` 를 쓰면 플러그인의 교체 부분을 정리, 아니면 정규식 수정 |
 | `smoke-test-android`: `home screen shows the load error screen` / `native module call rejected` | 릴리스 빌드에서만 나는 R8 문제. 예: v1.6.2~v1.6.5 의 `The 2nd argument cannot be cast to type …OpenDatabaseOptions` | `smoke-output` 의 logcat 에서 실패한 함수와 타입을 찾아 `plugins/android-r8-rules.pro` 에 keep 규칙 추가. 같은 증상이 Expo 저장소에 보고·수정되었는지도 확인 |
 | `smoke-test-android`: `home screen did not appear` 이지만 스크린샷은 정상 | 에뮬레이터가 느리거나 시스템 대화상자가 화면을 가림 | 그 잡만 **Re-run** |
+| `smoke-test-android`: `app process died … (killed by the system: depends on provider … in dying proc …)` | 에뮬레이터의 Google Play 서비스가 재시작하면서 Android 가 앱을 함께 끝냄. 3번 다시 해도 계속 끝난 경우 ([4.6](#46-r8-과-릴리스-스모크-테스트)) | 앱 문제가 아니므로 그 잡만 **Re-run** |
+| `smoke-test-android`: `app process died …` 와 `app crashed (FATAL EXCEPTION)` / `(native signal)` | 앱 크래시. R8 이 지운 클래스·메서드 때문일 수 있음 | `smoke-output` 의 logcat 에서 `FATAL EXCEPTION` 아래 스택을 확인. R8 문제면 `plugins/android-r8-rules.pro` 에 keep 규칙 추가 |
 
 ---
 
