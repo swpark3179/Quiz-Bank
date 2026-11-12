@@ -22,6 +22,7 @@ import Animated, {
 import { fetchSession, fetchAnswers } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
+import { stashQuizSetup } from '@/lib/quiz/setupStore';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { Motion, listEntering } from '@/lib/theme/motion';
 import { NordButton } from '@/components/ui/NordButton';
@@ -150,7 +151,7 @@ export default function ResultScreen() {
       }
       router.replace({
         pathname: `/${categoryId}/quiz`,
-        params: { setup: JSON.stringify(setup) },
+        params: { setupId: stashQuizSetup(setup) },
       });
     } catch (e) {
       console.error('오답 재시험 준비 오류:', e);

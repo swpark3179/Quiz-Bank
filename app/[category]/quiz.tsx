@@ -30,6 +30,7 @@ import { useVocabIndex } from '@/hooks/use-vocab-index';
 import { useWordAppLexicon } from '@/hooks/use-word-app-lexicon';
 import { getPreference, setPreference } from '@/lib/local/preferences';
 import type { QuizSetup } from '@/lib/quiz/retry';
+import { getQuizSetup } from '@/lib/quiz/setupStore';
 import type { ShuffledQuestion } from '@/lib/quiz/shuffler';
 import { getWordAppEntries, resolveVocabSource } from '@/lib/vocab/wordApp';
 import {
@@ -53,6 +54,9 @@ const FINISH_DELAY = Motion.duration.progress + 50;
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** 설정을 찾지 못했을 때 — 문제가 없어 '문제를 불러오지 못했습니다'를 보여 준다 */
+const EMPTY_SETUP: QuizSetup = { shuffled: [], mode: 'deferred', categoryId: '', sourceFileIds: [] };
+
 /** 한 문제의 응답 기록 (섞인 보기 기준의 정답 번호·해설도 함께 남긴다) */
 function buildAnswer(q: ShuffledQuestion, chosenIdx: number, questionIdx: number): AnswerInput {
   return {
@@ -71,17 +75,11 @@ function buildAnswer(q: ShuffledQuestion, chosenIdx: number, questionIdx: number
 }
 
 export default function QuizScreen() {
-  const { setup: setupStr } = useLocalSearchParams<{ setup: string }>();
+  const { setupId } = useLocalSearchParams<{ setupId: string }>();
   const router = useRouter();
 
-  // params 파싱
-  const setup: QuizSetup = React.useMemo(() => {
-    try {
-      return JSON.parse(setupStr ?? '{}');
-    } catch {
-      return { shuffled: [], mode: 'deferred', categoryId: '', sourceFileIds: [] };
-    }
-  }, [setupStr]);
+  // 여는 화면이 보관소에 맡긴 설정 (주소에는 id 만 온다). 처음 한 번만 읽는다
+  const [setup] = useState<QuizSetup>(() => getQuizSetup(setupId) ?? EMPTY_SETUP);
 
   const { shuffled, mode, categoryId, sourceFileIds } = setup;
 
