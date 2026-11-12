@@ -9,6 +9,8 @@ import { fetchQuizMarkdown } from '../../../lib/local/storage';
 jest.mock('../../../lib/db/sessions', () => ({ fetchWrongAnswers: jest.fn() }));
 jest.mock('../../../lib/local/categories', () => ({ fetchQuizFiles: jest.fn() }));
 jest.mock('../../../lib/local/storage', () => ({ fetchQuizMarkdown: jest.fn() }));
+// 단어장 준비는 기기 설정·네이티브 모듈을 쓰므로 대체한다
+jest.mock('../../../lib/quiz/prepareVocab', () => ({ prepareQuizVocab: jest.fn() }));
 
 const mockWrongAnswers = fetchWrongAnswers as jest.Mock;
 const mockQuizFiles = fetchQuizFiles as jest.Mock;

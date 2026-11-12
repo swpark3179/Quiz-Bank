@@ -72,7 +72,15 @@ async function load(): Promise<WordAppLexicon | null> {
 }
 
 let cache: Promise<WordAppLexicon | null> | null = null;
+/** 다 읽은 목록 (읽는 중·아직 안 읽었으면 undefined) — peekWordAppLexicon 이 동기로 돌려준다 */
+let loaded: WordAppLexicon | null | undefined;
 let watching = false;
+
+/** 이미 읽은 단어장 앱 목록 (아직이면 undefined, 단어장 앱이 없으면 null) */
+export function peekWordAppLexicon(): WordAppLexicon | null | undefined {
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') return null;
+  return loaded;
+}
 
 /**
  * 단어장 앱의 등록 단어 목록 (없으면 null). 앱 세션 동안 기억하고,
@@ -83,10 +91,20 @@ export function fetchWordAppLexicon(): Promise<WordAppLexicon | null> {
   if (!watching) {
     watching = true;
     AppState.addEventListener('change', (state) => {
-      if (state === 'background') cache = null;
+      if (state === 'background') {
+        cache = null;
+        loaded = undefined;
+      }
     });
   }
-  cache ??= load();
+  if (!cache) {
+    const request = load();
+    cache = request;
+    request.then((l) => {
+      // 그사이 백그라운드로 가서 새로 읽기 시작했으면 옛 결과는 남기지 않는다
+      if (cache === request) loaded = l;
+    });
+  }
   return cache;
 }
 
@@ -95,6 +113,7 @@ export function openInWordApp(word: string): void {
   Linking.openURL(wordAppLookupUrl(word)).catch(() => {
     // 목록을 읽은 뒤 단어장 앱이 지워졌을 때
     cache = null;
+    loaded = undefined;
     Alert.alert('단어장', '단어장 앱을 열 수 없어요.');
   });
 }

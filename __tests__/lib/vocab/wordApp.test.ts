@@ -2,6 +2,7 @@ import { createVocabMatcher } from '../../../lib/vocab/matcher';
 import type { QuizQuestion } from '../../../lib/parser/quizParser';
 import {
   findInLexicon,
+  getWordAppEntries,
   matchLexicon,
   parseLexicon,
   parseWordLookupResult,
@@ -159,5 +160,41 @@ describe('단어장 앱 주소', () => {
     expect(parseWordLookupResult('quizbank://history')).toBeNull();
     expect(parseWordLookupResult('/cat/quiz?setup=1')).toBeNull();
     expect(parseWordLookupResult('')).toBeNull();
+  });
+});
+
+describe('getWordAppEntries', () => {
+  const question = (id: number, text: string, sourceFileId = 'f'): QuizQuestion => ({
+    id,
+    question: text,
+    choices: [{ index: 0, label: '① fork', description: '' }],
+    answer: 0,
+    explanation: '',
+    sourceFileId,
+  });
+  const questions = [question(1, 'The agent should escalate.'), question(2, 'Measure latency.')];
+
+  it('matchLexicon 과 같은 결과를 돌려준다', () => {
+    expect(getWordAppEntries(lexicon, questions)).toEqual(
+      matchLexicon(tokenize(questionTexts(questions)), lexicon)
+    );
+  });
+
+  it('번호가 같은 문제면 새로 만든 객체·다른 순서여도 같은 배열을 돌려준다 (퀴즈 화면이 미리 맞춘 결과를 받는다)', () => {
+    const prepared = getWordAppEntries(lexicon, questions);
+    const reparsed = JSON.parse(JSON.stringify(questions)).reverse();
+    expect(getWordAppEntries(lexicon, reparsed)).toBe(prepared);
+  });
+
+  it('문제 구성이나 단어 목록이 바뀌면 다시 맞춘다', () => {
+    const prepared = getWordAppEntries(lexicon, questions);
+    const other = getWordAppEntries(lexicon, [question(1, 'Use exponential backoff.', 'g')]);
+    expect(other).not.toBe(prepared);
+    expect(other.map((e) => e.word)).toEqual(['fork', 'exponential backoff']);
+
+    const relisted = parseLexicon(FILE)!;
+    const again = getWordAppEntries(relisted, questions);
+    expect(again).not.toBe(prepared);
+    expect(again).toEqual(prepared);
   });
 });

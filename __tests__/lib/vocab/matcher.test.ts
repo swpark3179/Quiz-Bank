@@ -1,4 +1,4 @@
-import { createVocabMatcher, type VocabEntry } from '../../../lib/vocab/matcher';
+import { createVocabMatcher, getVocabMatcher, type VocabEntry } from '../../../lib/vocab/matcher';
 
 const entry = (word: string, forms?: string[]): VocabEntry => ({
   id: word.replace(/\s+/g, '-'),
@@ -111,5 +111,31 @@ describe('createVocabMatcher', () => {
       .split('fork')
       .filter((s) => s.entry);
     expect(seg.entry?.id).toBe('first');
+  });
+});
+
+describe('warm', () => {
+  it('미리 컴파일해도 결과가 같다', () => {
+    const entries = [entry('escalate'), entry('exponential backoff'), entry('fork'), entry('context')];
+    const text = '에이전트가 Escalate 하고, exponential   backoff 로 fork를 다시 시도한다 (context).';
+    const before = createVocabMatcher(entries).split(text);
+    const warmed = createVocabMatcher(entries);
+    warmed.warm();
+    expect(warmed.split(text)).toEqual(before);
+    // 두 번 불러도, 등록 단어가 없어도 문제없다
+    warmed.warm();
+    expect(warmed.split(text)).toEqual(before);
+    expect(() => createVocabMatcher([]).warm()).not.toThrow();
+  });
+});
+
+describe('getVocabMatcher', () => {
+  it('같은 목록이면 만들어 둔 매처를, 다른 목록이면 새 매처를 돌려준다', () => {
+    const list = [entry('escalate')];
+    const matcher = getVocabMatcher(list);
+    expect(getVocabMatcher(list)).toBe(matcher);
+    // 내용이 같아도 다른 배열이면 새로 만든다 (목록이 바뀌었는지 배열로 판단)
+    expect(getVocabMatcher([entry('escalate')])).not.toBe(matcher);
+    expect(matcher.split('escalate').filter((s) => s.entry)).toHaveLength(1);
   });
 });

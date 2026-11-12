@@ -17,6 +17,8 @@ import { shuffleQuiz } from '@/lib/quiz/shuffler';
 import type { QuizSetup } from '@/lib/quiz/retry';
 import { fetchCategorySummary, fetchAnsweredQuestionIds } from '@/lib/db/stats';
 import { countUnseen, filterUnseen, type AnsweredIds } from '@/lib/quiz/unseen';
+import { prepareQuizVocab } from '@/lib/quiz/prepareVocab';
+import { waitForPaint } from '@/lib/utils/frame';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { QuizSetupModal, QuizSetupOptions } from '@/components/QuizSetupModal';
 import { NordBadge } from '@/components/ui/NordBadge';
@@ -130,6 +132,10 @@ export default function CategoryScreen() {
     setPreparingQuiz(true);
 
     try {
+      // 버튼의 '문제 불러오는 중' 이 먼저 그려지게 한 프레임 쉰다
+      // (받아 둔 문제는 바로 돌아와, 쉬지 않으면 로딩이 보이기도 전에 아래 작업이 JS 를 붙잡는다)
+      await waitForPaint();
+
       // 선택된 파일들 로드 & 파싱
       const fileIds = options.selectedFileIds;
       const targetFiles = isRandom
@@ -155,6 +161,8 @@ export default function CategoryScreen() {
 
       // 고른 수보다 남은 문제가 적으면 남은 만큼만 낸다
       const shuffled = shuffleQuiz(pool, options.count === 'all' ? undefined : options.count);
+      // 단어장 모드: 퀴즈 화면이 뜰 때 멈추지 않게 단어 매처를 지금(로딩이 움직이는 동안) 만들어 둔다
+      await prepareQuizVocab(shuffled.map((q) => q.original));
 
       pendingQuizRef.current = {
         shuffled,
