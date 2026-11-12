@@ -24,6 +24,8 @@ export interface VocabEntry {
   ipa?: string;
   /** 본문에서 함께 찾을 변형·구 (예: ["escalated", "escalation"]) */
   forms?: string[];
+  /** 'wordApp' 이면 단어장 앱(Quiz Word)에서 온 단어 — 상세 설명 대신 단어장 앱을 연다 (lib/vocab/wordApp.ts) */
+  source?: 'wordApp';
 }
 
 export interface VocabSegment {

@@ -31,6 +31,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/lib/theme';
 import { Motion } from '@/lib/theme/motion';
 import { fetchVocabDetail, peekVocabDetail, type VocabDetail } from '@/lib/local/vocab';
+import { openInWordApp } from '@/lib/local/wordApp';
+import { findInLexicon } from '@/lib/vocab/wordApp';
+import { useWordAppLexicon } from '@/hooks/use-word-app-lexicon';
 import type { VocabEntry } from '@/lib/vocab/matcher';
 import {
   clamp,
@@ -293,11 +296,22 @@ function PopoverBody({
   maximized,
   onToggleMaximize,
 }: PopoverBodyProps) {
+  // 단어장 앱에서 온 단어는 이 앱에 상세 설명이 없다 — 자세히는 단어장 앱에서 본다
+  const fromWordApp = entry.source === 'wordApp';
   // 한 번 열어 본 단어는 캐시에서 바로 그린다 (undefined = 받는 중)
-  const [detail, setDetail] = useState<VocabDetail | undefined>(() => peekVocabDetail(entry.id));
+  const [detail, setDetail] = useState<VocabDetail | undefined>(() =>
+    fromWordApp ? { status: 'none' } : peekVocabDetail(entry.id)
+  );
+  // '단어장에서 자세히' — 단어장 앱이 있고 그 앱에 이 단어가 있을 때만 (없으면 버튼 자체가 없다)
+  const wordAppLexicon = useWordAppLexicon();
+  const wordAppWord = fromWordApp
+    ? entry.word
+    : wordAppLexicon
+    ? findInLexicon(wordAppLexicon, entry.word)?.word
+    : undefined;
 
   useEffect(() => {
-    if (detail) return;
+    if (detail || fromWordApp) return;
     let active = true;
     fetchVocabDetail(entry.id).then((d) => {
       if (active) setDetail(d);
@@ -305,7 +319,7 @@ function PopoverBody({
     return () => {
       active = false;
     };
-  }, [entry.id, detail]);
+  }, [entry.id, detail, fromWordApp]);
 
   const ipa = entry.ipa?.replace(/^\/|\/$/g, '');
 
@@ -359,9 +373,23 @@ function PopoverBody({
         </View>
       </GestureDetector>
 
-      <Text style={styles.meaning} selectable>
+      <Text style={[styles.meaning, wordAppWord && styles.meaningWithAction]} selectable>
         {entry.meaning}
       </Text>
+
+      {wordAppWord && (
+        <Pressable
+          onPress={() => openInWordApp(wordAppWord)}
+          hitSlop={4}
+          style={({ pressed }) => [styles.wordAppButton, pressed && styles.headerButtonPressed]}
+          accessibilityRole="link"
+          accessibilityLabel="단어장 앱에서 자세히 보기"
+        >
+          <Ionicons name="book-outline" size={15} color={Colors.accent.primary} />
+          <Text style={styles.wordAppButtonText}>단어장에서 자세히</Text>
+          <Ionicons name="open-outline" size={13} color={Colors.accent.primary} />
+        </Pressable>
+      )}
 
       {detail === undefined && (
         <View style={styles.loading} accessibilityLabel="설명 불러오는 중">
@@ -537,6 +565,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     marginTop: Spacing.sm,
     paddingBottom: Spacing.md,
+  },
+  meaningWithAction: {
+    paddingBottom: Spacing.sm,
+  },
+  // 단어장 앱에서 단어 상세 열기 — 뜻 아래 작은 링크 버튼
+  wordAppButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Spacing.xs,
+    marginHorizontal: Spacing.base - Spacing.xs,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
+  },
+  wordAppButtonText: {
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.accent.primary,
   },
   loading: {
     gap: Spacing.sm,

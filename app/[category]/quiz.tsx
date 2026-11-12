@@ -27,9 +27,11 @@ import { ScreenEnter } from '@/components/ui/ScreenEnter';
 import { VocabProvider } from '@/components/vocab/VocabProvider';
 import { VocabToggleButton } from '@/components/vocab/VocabToggleButton';
 import { useVocabIndex } from '@/hooks/use-vocab-index';
+import { useWordAppLexicon } from '@/hooks/use-word-app-lexicon';
 import { getPreference, setPreference } from '@/lib/local/preferences';
 import type { QuizSetup } from '@/lib/quiz/retry';
 import type { ShuffledQuestion } from '@/lib/quiz/shuffler';
+import { matchLexicon, questionTexts, resolveVocabSource, tokenize } from '@/lib/vocab/wordApp';
 import {
   createSessionRecorder,
   MIN_ANSWERS_TO_KEEP,
@@ -116,7 +118,26 @@ export default function QuizScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   // 단어장 모드: 설정 시트에서 고른 값(기기에 저장)으로 시작하고, 헤더에서 바로 켜고 끈다
-  const vocabEntries = useVocabIndex();
+  const bankEntries = useVocabIndex();
+  // 단어장 앱 활용 모드: 퀴즈를 여는 순간 문제 텍스트를 공백 단위로 나눈 단어 배열을
+  // 단어장 앱의 등록 단어 목록과 맞춰, 단어장 앱에 등록된 단어만 강조한다 (단어장 앱이 없으면 null)
+  const wordAppLexicon = useWordAppLexicon();
+  const wordAppEntries = React.useMemo(
+    () => (wordAppLexicon ? matchLexicon(tokenize(questionTexts(shuffled.map((q) => q.original))), wordAppLexicon) : null),
+    [wordAppLexicon, shuffled]
+  );
+  const [preferredSource] = useState(() => getPreference('vocabSource'));
+  const vocabSource = resolveVocabSource(preferredSource, {
+    bank: bankEntries?.length !== 0,
+    wordApp: !!wordAppLexicon,
+  });
+  // 단어장 앱을 골랐으면 목록을 읽는 동안(undefined) 이 앱 단어로 잠깐 강조했다가 바뀌지 않게 기다린다
+  const vocabEntries =
+    vocabSource === 'wordApp'
+      ? wordAppEntries
+      : preferredSource === 'wordApp' && wordAppLexicon === undefined
+      ? null
+      : bankEntries;
   const [vocabOn, setVocabOn] = useState(() => getPreference('vocabMode'));
   const hasVocab = (vocabEntries?.length ?? 0) > 0;
 
