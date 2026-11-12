@@ -9,6 +9,9 @@
 #   2. 딥링크로 카테고리 · 통계 · 풀이 이력 · 학습 가이드 화면을 차례로 열어도 앱이 살아 있는지
 #   3. logcat 에 앱 크래시, 네이티브 함수 호출 거부(expo 인자 변환 실패), DB 조회 오류가 없는지
 #
+# 앱이 크래시가 아니라 에뮬레이터 쪽 사정으로 시스템에 의해 끝나면(killed_by_dying_provider 참고)
+# 그 단계를 SMOKE_MAX_ATTEMPTS 번까지 다시 해 본다. 다시 한 일은 경고와 Step Summary 에 남긴다.
+#
 # 사용법: bash scripts/android-smoke-test.sh <apk> [출력 디렉터리 (기본값: smoke-output)]
 # CI 에서는 reactivecircus/android-emulator-runner 의 script 로 실행한다.
 set -uo pipefail
@@ -21,10 +24,13 @@ HOME_TEXT='카테고리를 선택해주세요'
 ERROR_TEXT='오류 정보'
 HOME_TIMEOUT=${SMOKE_HOME_TIMEOUT:-120}
 SCREEN_WAIT=${SMOKE_SCREEN_WAIT:-8}
+MAX_ATTEMPTS=${SMOKE_MAX_ATTEMPTS:-3}
 REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
 mkdir -p "$OUT"
 FAILURES=()
+RETRIES=()
+KILL_REASON=''
 
 log() { echo "[smoke] $*"; }
 fail() {
@@ -33,6 +39,44 @@ fail() {
 }
 
 app_alive() { adb shell pidof "$PKG" > /dev/null 2>&1; }
+
+# 시스템(ActivityManager)이 앱을 끝낸 이유를 KILL_REASON 에 담는다. 앱이 스스로 크래시했으면 이 줄은 없다.
+# 방금 죽은 프로세스는 가장 최근에 시작된 앱 프로세스다.
+#   I ActivityManager: Start proc 3597:com.swpark3179.quizbank/u0a192 for next-top-activity {…}
+#   I ActivityManager: Killing 3597:com.swpark3179.quizbank/u0a192 (adj 0): <이유>
+read_kill_reason() {
+  local am pid
+  KILL_REASON=''
+  am=$(adb logcat -d -s ActivityManager:I 2> /dev/null | tr -d '\r')
+  pid=$(sed -nE "s#.*Start proc ([0-9]+):${PKG//./\\.}/.*#\\1#p" <<< "$am" | tail -1)
+  [ -n "$pid" ] || return 1
+  KILL_REASON=$(grep -F "Killing $pid:$PKG/" <<< "$am" | tail -1 | sed -E 's/.*\(adj -?[0-9]+\): //')
+  [ -n "$KILL_REASON" ]
+}
+
+# 앱 잘못이 아닌 이유로 시스템이 앱을 끝냈는지.
+# 에뮬레이터의 Google Play 서비스는 부팅 뒤 모듈을 갱신하면서 스스로 재시작하는데, 그 프로세스의
+# content provider(WebView · EmojiCompat 이 쓰는 글꼴 FontsProvider 등)를 쓰던 앱도 ActivityManager 가
+# 함께 끝낸다. v1.9.1 릴리스에서 /guide(WebView)를 연 직후 이렇게 끝나 스모크 테스트가 실패했다.
+#   ChimeraModuleLdr: Module config changed, forcing restart due to module com.google.android.gms.rcs
+#   ActivityManager: Killing 3597:com.swpark3179.quizbank/u0a192 (adj 0): depends on provider
+#     com.google.android.gms/.fonts.provider.FontsProvider in dying proc com.google.android.gms.persistent (adj -10000)
+# 크래시가 아니므로 그 단계를 다시 해 본다.
+killed_by_dying_provider() {
+  read_kill_reason || return 1
+  [[ $KILL_REASON == *'depends on provider'*'in dying proc'* ]]
+}
+
+note_retry() {
+  local msg="app was killed by the system $1 (not a crash: $KILL_REASON) — retrying"
+  echo "::warning::[smoke] $msg"
+  RETRIES+=("$msg")
+}
+
+# 실패 메시지 뒤에 붙일 시스템 종료 이유 (없으면 빈 문자열)
+kill_suffix() {
+  if [ -n "$KILL_REASON" ]; then echo " (killed by the system: $KILL_REASON)"; fi
+}
 
 # 시스템 대화상자(ANR 안내 등)가 화면을 가리면 UI dump 가 앱 화면을 못 읽으므로 먼저 닫는다.
 close_system_dialogs() {
@@ -67,7 +111,10 @@ finish() {
   local summary=${GITHUB_STEP_SUMMARY:-/dev/null}
   if [ ${#FAILURES[@]} -eq 0 ]; then
     log "PASSED"
-    echo "### Android smoke test: passed" >> "$summary"
+    {
+      echo "### Android smoke test: passed"
+      write_retries
+    } >> "$summary"
     exit 0
   fi
 
@@ -75,10 +122,18 @@ finish() {
   {
     echo "### Android smoke test: failed"
     for f in "${FAILURES[@]}"; do echo "- $f"; done
+    write_retries
     echo
     echo "logcat · 스크린샷 · UI dump 는 smoke-output artifact 에 있습니다."
   } >> "$summary"
   exit 1
+}
+
+write_retries() {
+  [ ${#RETRIES[@]} -gt 0 ] || return 0
+  echo
+  echo "다시 시도한 단계 (에뮬레이터 쪽 사정으로 시스템이 앱을 끝냄, 앱 크래시 아님):"
+  for r in "${RETRIES[@]}"; do echo "- $r"; done
 }
 
 check_logcat() {
@@ -130,16 +185,27 @@ if ! adb install -r -g "$APK"; then
 fi
 
 adb logcat -c || true
-log "launch $PKG"
-adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
+launch_app() {
+  log "launch $PKG"
+  adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
+}
+launch_app
 
 # 1. 홈 화면
 home_ok=false
+attempt=1
 deadline=$((SECONDS + HOME_TIMEOUT))
 while [ $SECONDS -lt $deadline ]; do
   sleep 3
   if ! app_alive; then
-    fail "app process died during launch"
+    if killed_by_dying_provider && [ $attempt -lt $MAX_ATTEMPTS ]; then
+      note_retry "during launch"
+      attempt=$((attempt + 1))
+      launch_app
+      deadline=$((SECONDS + HOME_TIMEOUT))
+      continue
+    fi
+    fail "app process died during launch$(kill_suffix)"
     break
   fi
   close_system_dialogs
@@ -179,14 +245,22 @@ PY
   for route in "$CATEGORY" "stats/$CATEGORY" "history?from=main" "guide"; do
     name=$(printf '%02d-%s' "$step" "$(echo "$route" | tr '/?=&' '----')")
     step=$((step + 1))
-    log "open $SCHEME:///$route"
-    adb shell "am start -W -a android.intent.action.VIEW -d '$SCHEME:///$route' $PKG" > /dev/null 2>&1
-    sleep "$SCREEN_WAIT"
-    if ! app_alive; then
-      fail "app process died after opening /$route"
+    attempt=1
+    while :; do
+      log "open $SCHEME:///$route"
+      # 앱이 시스템에 의해 끝난 뒤 다시 할 때는 이 딥링크가 앱을 새로 띄운다
+      adb shell "am start -W -a android.intent.action.VIEW -d '$SCHEME:///$route' $PKG" > /dev/null 2>&1
+      sleep "$SCREEN_WAIT"
+      app_alive && break
+      if killed_by_dying_provider && [ $attempt -lt $MAX_ATTEMPTS ]; then
+        note_retry "after opening /$route"
+        attempt=$((attempt + 1))
+        continue
+      fi
+      fail "app process died after opening /$route$(kill_suffix)"
       screenshot "$name"
-      break
-    fi
+      break 2
+    done
     close_system_dialogs
     screenshot "$name"
     dump_ui "$name" || true
