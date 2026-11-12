@@ -26,6 +26,7 @@ import { listEntering } from '@/lib/theme/motion';
 import { fetchQuizMarkdown } from '@/lib/local/storage';
 import { parseQuizMarkdown } from '@/lib/parser/quizParser';
 import { shuffleQuiz } from '@/lib/quiz/shuffler';
+import { stashQuizSetup } from '@/lib/quiz/setupStore';
 
 export default function StatsScreen() {
   // 화면 회전·창 크기 변경에 맞춰 차트 폭을 다시 계산한다
@@ -191,7 +192,7 @@ export default function StatsScreen() {
       router.push({
         pathname: `/${categoryId}/quiz`,
         params: {
-          setup: JSON.stringify({
+          setupId: stashQuizSetup({
             shuffled,
             mode: 'immediate',
             categoryId,

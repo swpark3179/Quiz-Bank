@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/sessions';
 import type { SessionRow, AnswerRow } from '@/lib/db/sessions';
 import { buildWrongAnswerQuiz } from '@/lib/quiz/retry';
+import { stashQuizSetup } from '@/lib/quiz/setupStore';
 import { fetchCategoryNames } from '@/lib/local/categories';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { NordButton } from '@/components/ui/NordButton';
@@ -75,7 +76,7 @@ export default function SessionDetailScreen() {
 
       router.push({
         pathname: `/${session.category_id}/quiz`,
-        params: { setup: JSON.stringify(setup) },
+        params: { setupId: stashQuizSetup(setup) },
       });
     } catch (e) {
       console.error('오답 재시험 준비 오류:', e);

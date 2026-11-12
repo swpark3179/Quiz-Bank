@@ -18,6 +18,7 @@ import type { QuizSetup } from '@/lib/quiz/retry';
 import { fetchCategorySummary, fetchAnsweredQuestionIds } from '@/lib/db/stats';
 import { countUnseen, filterUnseen, type AnsweredIds } from '@/lib/quiz/unseen';
 import { prepareQuizVocab } from '@/lib/quiz/prepareVocab';
+import { stashQuizSetup } from '@/lib/quiz/setupStore';
 import { waitForPaint } from '@/lib/utils/frame';
 import { Colors, Typography, Spacing, Radius, Shadow, accuracyTone } from '@/lib/theme';
 import { QuizSetupModal, QuizSetupOptions } from '@/components/QuizSetupModal';
@@ -179,14 +180,14 @@ export default function CategoryScreen() {
     }
   };
 
-  /** 설정 시트가 완전히 닫힌 뒤: 준비된 퀴즈가 있으면 퀴즈 화면으로 이동 (state 전달) */
+  /** 설정 시트가 완전히 닫힌 뒤: 준비된 퀴즈가 있으면 퀴즈 화면으로 이동 (설정은 보관소에, 주소에는 id 만) */
   const handleSetupHidden = () => {
     const setup = pendingQuizRef.current;
     if (!setup) return;
     pendingQuizRef.current = null;
     router.push({
       pathname: `/${categoryId}/quiz`,
-      params: { setup: JSON.stringify(setup) },
+      params: { setupId: stashQuizSetup(setup) },
     });
   };
 
