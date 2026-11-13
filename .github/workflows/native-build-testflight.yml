@@ -129,6 +129,10 @@ jobs:
     name: Build Android APK & AAB (local)
     needs: bump-version
     runs-on: ubuntu-latest
+    # 아티팩트를 내려받는 job 들이 받은 파일이 온전한지 이 지문과 비교한다. (Record checksums 참고)
+    outputs:
+      apk_sha256: ${{ steps.checksums.outputs.apk_sha256 }}
+      aab_sha256: ${{ steps.checksums.outputs.aab_sha256 }}
     steps:
       - name: Checkout tagged code
         uses: actions/checkout@v4
@@ -410,6 +414,20 @@ jobs:
           fi
           echo "APK and AAB are signed with the release keystore."
 
+      # actions/download-artifact 는 다운로드가 멈추면 파일이 반쯤 받아진 채로도 단계를
+      # 성공으로 끝낼 수 있다. (v1.9.3: 65MB AAB 가 25MB 로 잘려 Play 업로드가
+      # "APK is not a valid ZIP archive" 로 실패했고, 잘린 AAB 가 GitHub Release 에도 첨부되었다)
+      # 그래서 여기서 SHA-256 을 job output 으로 남기고, 내려받는 쪽에서 모두 비교한다.
+      - name: Record checksums
+        id: checksums
+        run: |
+          APK_SHA256=$(sha256sum app-release.apk | cut -d' ' -f1)
+          AAB_SHA256=$(sha256sum app-release.aab | cut -d' ' -f1)
+          echo "apk_sha256=$APK_SHA256" >> "$GITHUB_OUTPUT"
+          echo "aab_sha256=$AAB_SHA256" >> "$GITHUB_OUTPUT"
+          echo "app-release.apk  $(wc -c < app-release.apk) bytes  sha256 $APK_SHA256"
+          echo "app-release.aab  $(wc -c < app-release.aab) bytes  sha256 $AAB_SHA256"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -446,9 +464,20 @@ jobs:
           ref: v${{ needs.bump-version.outputs.new_version }}
 
       - name: Download APK artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-release-apk
+
+      - name: Verify downloaded APK
+        env:
+          EXPECTED_SHA256: ${{ needs.build-android.outputs.apk_sha256 }}
+        run: |
+          ACTUAL=$(sha256sum app-release.apk 2>/dev/null | cut -d' ' -f1 || true)
+          if [ -z "$EXPECTED_SHA256" ] || [ "$ACTUAL" != "$EXPECTED_SHA256" ]; then
+            echo "::error::app-release.apk is incomplete or corrupted after download ($(wc -c 2>/dev/null < app-release.apk || echo 0) bytes, sha256 ${ACTUAL:-none}, expected ${EXPECTED_SHA256:-none}). Re-run the failed jobs."
+            exit 1
+          fi
+          echo "app-release.apk: sha256 OK"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -485,6 +514,8 @@ jobs:
     # Apple requires apps uploaded to App Store Connect (incl. TestFlight) to be
     # built with the iOS 26 SDK / Xcode 26+. Only macos-26 runners ship Xcode 26.
     runs-on: macos-26
+    outputs:
+      ipa_sha256: ${{ steps.checksums.outputs.ipa_sha256 }}
     steps:
       - name: Checkout tagged code
         uses: actions/checkout@v4
@@ -634,6 +665,14 @@ jobs:
           IPA=$(find "$PWD/build/ipa" -name "*.ipa" | head -n1)
           cp "$IPA" "$GITHUB_WORKSPACE/app-release.ipa"
 
+      # build-android 의 Record checksums 와 같은 이유로 IPA 지문을 남긴다.
+      - name: Record checksums
+        id: checksums
+        run: |
+          IPA_SHA256=$(shasum -a 256 app-release.ipa | cut -d' ' -f1)
+          echo "ipa_sha256=$IPA_SHA256" >> "$GITHUB_OUTPUT"
+          echo "app-release.ipa  $(wc -c < app-release.ipa | tr -d ' ') bytes  sha256 $IPA_SHA256"
+
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
@@ -648,9 +687,20 @@ jobs:
     runs-on: macos-26
     steps:
       - name: Download iOS artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-release-ipa
+
+      - name: Verify downloaded IPA
+        env:
+          EXPECTED_SHA256: ${{ needs.build-ios.outputs.ipa_sha256 }}
+        run: |
+          ACTUAL=$(shasum -a 256 app-release.ipa 2>/dev/null | cut -d' ' -f1 || true)
+          if [ -z "$EXPECTED_SHA256" ] || [ "$ACTUAL" != "$EXPECTED_SHA256" ]; then
+            echo "::error::app-release.ipa is incomplete or corrupted after download ($(wc -c 2>/dev/null < app-release.ipa | tr -d ' ') bytes, sha256 ${ACTUAL:-none}, expected ${EXPECTED_SHA256:-none}). Re-run the failed jobs."
+            exit 1
+          fi
+          echo "app-release.ipa: sha256 OK"
 
       - name: Verify TestFlight secrets
         run: |
@@ -757,9 +807,22 @@ jobs:
           echo "Service account JSON key looks valid."
 
       - name: Download AAB artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-release-aab
+
+      # 잘린 AAB 를 올리면 Play 가 "APK is not a valid ZIP archive" 라는 알아보기 어려운
+      # 오류를 내므로, 올리기 전에 build-android 가 남긴 지문과 비교한다.
+      - name: Verify downloaded AAB
+        env:
+          EXPECTED_SHA256: ${{ needs.build-android.outputs.aab_sha256 }}
+        run: |
+          ACTUAL=$(sha256sum app-release.aab 2>/dev/null | cut -d' ' -f1 || true)
+          if [ -z "$EXPECTED_SHA256" ] || [ "$ACTUAL" != "$EXPECTED_SHA256" ]; then
+            echo "::error::app-release.aab is incomplete or corrupted after download ($(wc -c 2>/dev/null < app-release.aab || echo 0) bytes, sha256 ${ACTUAL:-none}, expected ${EXPECTED_SHA256:-none}). Re-run the failed jobs."
+            exit 1
+          fi
+          echo "app-release.aab: sha256 OK"
 
       # 앱이 아직 한 번도 검토·출시되지 않은 초안(draft) 상태라면 status: draft 로 바꿔야 한다.
       # (아니면 "Only releases with status draft may be created on draft app" 오류)
@@ -783,19 +846,41 @@ jobs:
           ref: v${{ needs.bump-version.outputs.new_version }}
 
       - name: Download Android APK artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-release-apk
 
       - name: Download Android AAB artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-release-aab
 
       - name: Download iOS artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-release-ipa
+
+      # 잘린 파일이 Release 자산으로 공개되지 않도록, 릴리스를 만들기 전에 지문을 비교한다.
+      # 실패하면 릴리스는 아직 만들어지지 않았으므로 이 job 을 Re-run 하면 된다.
+      - name: Verify downloaded files
+        env:
+          APK_SHA256: ${{ needs.build-android.outputs.apk_sha256 }}
+          AAB_SHA256: ${{ needs.build-android.outputs.aab_sha256 }}
+          IPA_SHA256: ${{ needs.build-ios.outputs.ipa_sha256 }}
+        run: |
+          FAILED=0
+          for pair in "app-release.apk:$APK_SHA256" "app-release.aab:$AAB_SHA256" "app-release.ipa:$IPA_SHA256"; do
+            FILE=${pair%%:*}
+            EXPECTED=${pair#*:}
+            ACTUAL=$(sha256sum "$FILE" 2>/dev/null | cut -d' ' -f1 || true)
+            if [ -z "$EXPECTED" ] || [ "$ACTUAL" != "$EXPECTED" ]; then
+              echo "::error::$FILE is incomplete or corrupted after download ($(wc -c 2>/dev/null < "$FILE" || echo 0) bytes, sha256 ${ACTUAL:-none}, expected ${EXPECTED:-none}). Re-run the failed jobs."
+              FAILED=1
+            else
+              echo "$FILE: sha256 OK"
+            fi
+          done
+          exit "$FAILED"
 
       - name: Create release
         env:
